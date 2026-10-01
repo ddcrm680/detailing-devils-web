@@ -22,17 +22,17 @@ class DeployController extends Controller
 
         try {
 
-            Artisan::call('migrate:fresh', [
-                '--force' => true,
-            ]);
-
-            //   Artisan::call('migrate', [
+            // Artisan::call('migrate:fresh', [
             //     '--force' => true,
             // ]);
 
+              Artisan::call('migrate', [
+                '--force' => true,
+            ]);
+
             return response()->json([
                 'status' => 'success',
-                'mode' => 'fresh',
+                'mode' => 'migrate',
                 'output' => Artisan::output(),
             ]);
         } catch (\Throwable $e) {
