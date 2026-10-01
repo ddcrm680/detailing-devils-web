@@ -2,15 +2,12 @@
 
 use App\Http\Controllers\EnquiryController;
 use App\Http\Controllers\HomeController;
-use App\Http\Controllers\DeployController;
 
 use App\Http\Middleware\AdminBasicAuth;
 use Illuminate\Support\Facades\Route;
 
 // Home page
 Route::get('/', HomeController::class)->name('home');
-
-Route::get('/deploy', DeployController::class);
 
 // Contact / franchise form
 Route::post('/enquiry', [EnquiryController::class, 'store'])
