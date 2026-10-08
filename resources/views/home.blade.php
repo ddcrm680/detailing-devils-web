@@ -225,6 +225,8 @@ footer .brand .logo{height:40px}
 .fr .cta{border-color:#fff;color:#fff}
 .fr .cta::before{background:#fff}
 .fr .cta:hover{color:var(--red)}
+.fr-ctas{display:flex;flex-wrap:wrap;gap:12px;align-items:stretch}
+.fr-ctas .cta{flex:1 1 270px;min-width:0;min-height:56px;justify-content:space-between;padding-inline:clamp(16px,1.8vw,26px);line-height:1.35}
 .fr ol{list-style:none;margin:0;padding:0;border-top:1px solid rgba(255,255,255,.35)}
 .fr li{display:grid;grid-template-columns:48px 1fr;gap:12px;padding:20px 0;border-bottom:1px solid rgba(255,255,255,.35)}
 .fr li .n{font-family:var(--mono);font-size:12px;color:#FFD5CF;padding-top:4px}
@@ -422,7 +424,11 @@ footer .about{color:var(--soft);max-width:34ch;font-size:15px;margin:16px 0 0}
         <span class="lbl">Franchise</span>
         <h2 class="disp">Own a <span class="acc">Devils</span> studio</h2>
         <p>Join India's largest detailing network. You bring the location and the drive. We bring the brand, training, products and systems to run it.</p>
-        <a class="cta" href="#contact" data-franchise>Franchise Enquiry <i>→</i></a>
+        <div class="fr-ctas">
+          @foreach($site['franchise_applications'] as $application)
+          <a class="cta" href="{{ $application['url'] }}">{{ $application['label'] }} <i>↗</i></a>
+          @endforeach
+        </div>
       </div>
       <ol>
         @foreach($site['franchise_steps'] as $i => $step)
@@ -617,7 +623,6 @@ footer .about{color:var(--soft);max-width:34ch;font-size:15px;margin:16px 0 0}
   });
 
   /* ---------- form ---------- */
-  document.querySelectorAll('[data-franchise]').forEach(a=>a.addEventListener('click',()=>{document.getElementById('s').value='Franchise enquiry'}));
   document.getElementById('form').addEventListener('submit',async e=>{
     e.preventDefault();
     const f=e.target,note=document.getElementById('note'),btn=f.querySelector('button[type=submit]');

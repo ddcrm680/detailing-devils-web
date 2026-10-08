@@ -55,6 +55,12 @@ return [
         ['title' => 'Wheel & Trim', 'text' => 'Wheel faces and barrels deep-cleaned and coated, calipers detailed and exterior trim restored to a rich, even finish.', 'meta' => 'Wheels off · coated · 1 day', 'image' => 'svc-wheel.webp', 'alt' => 'Detailer brushing a black wheel with yellow calipers'],
     ],
 
+    // Franchise application forms
+    'franchise_applications' => [
+        ['label' => 'Apply for Prime Franchise', 'url' => 'https://www.detailingdevils.com/detailing-devils-prime-form/'],
+        ['label' => 'Apply for FOFO Franchise', 'url' => 'https://www.detailingdevils.com/franchise-owned-franchise-operated-model'],
+    ],
+
     // Franchise steps
     'franchise_steps' => [
         ['title' => 'Apply', 'text' => 'Tell us about yourself and the city you have in mind.'],
