@@ -35,4 +35,11 @@ return [
         ],
     ],
 
+    'sms_alert' => [
+        'enabled' => env('SMS_ALERT_ENABLED', false),
+        'storage_ready' => env('FRANCHISE_OTP_STORAGE_READY', false),
+        'api_key' => env('SMS_ALERT_API_KEY'),
+        'sender' => env('SMS_ALERT_SENDER'),
+    ],
+
 ];

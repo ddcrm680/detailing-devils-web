@@ -19,12 +19,17 @@ This map describes the current Laravel checkout. The original `devils-new-web.zi
 | `routes/deploy.php`, `app/Http/Controllers/DeployController.php` | Deployment-related route and handler; do not invoke during routine testing |
 | `app/Http/Controllers/HomeController.php` | Passes `config('site')` to the home view |
 | `app/Http/Controllers/EnquiryController.php` | Enquiry validation, persistence, mail attempt and admin listing |
+| `app/Http/Requests/Franchise/StorePrimeRequest.php` | Prime server-side validation rules; not yet wired to the submission placeholder |
+| `app/Services/Franchise/PhoneNumberNormalizer.php` | Shared libphonenumber validation, E.164 normalization, and visible-number consistency checks for franchise forms |
+| `app/Http/Requests/Franchise/SendOtpRequest.php`, `VerifyOtpRequest.php` | Shared OTP payload validation for the controller endpoints |
+| `app/Services/Franchise/OtpService.php`, `OtpChallenge.php`, `OtpDeliveryService.php`, `SmsAlertDelivery.php`, `app/Contracts/Franchise/SmsDelivery.php` | Cache-backed OTP core and cancellation; OTP delivery builds the message before passing it to the generic SMS Alert transport; live delivery is disabled by default |
 | `app/Http/Middleware/AdminBasicAuth.php` | Admin enquiry-list access |
 | `app/Models/Enquiry.php`, `database/migrations/` | Enquiry model and schema |
 | `config/site.php` | Brand, contacts, hero settings, statistics, services and franchise steps |
+| `config/form_options.php` | Shared state options and Prime choice values, labels, and JavaScript-dependent IDs |
 | `resources/views/layouts/app.blade.php` | Shared HTML document, metadata, CSS/JS order, components and main content slot |
 | `resources/views/layouts/prime.blade.php`, `resources/views/forms/prime.blade.php` | Independent Prime layout and five-step application view |
-| `app/Http/Controllers/Franchise/` | Prime rendering and temporary 503 submission/OTP handlers; validation, OTP, and storage are not implemented |
+| `app/Http/Controllers/Franchise/` | Prime rendering and 503 application submission placeholder; OTP controller requires explicit provider and storage-readiness configuration |
 | `resources/views/components/header.blade.php` | Shared logo, social links, phone and menu button |
 | `resources/views/components/navbar.blade.php` | Full-screen section menu; links return to homepage anchors from other pages |
 | `resources/views/components/footer.blade.php` | Shared contact details and footer navigation |
@@ -55,7 +60,9 @@ The homepage view owns the hero, introduction, approach, statement, statistics, 
 
 `config/site.php` supplies the hero text/frame pattern, statistics, services, brand/contact details, social destinations and franchise steps. The franchise CTAs and other section copy are in `home.blade.php`. Images are under `public/img/`; frame files follow `ezgif-frame-001.jpg` through `ezgif-frame-240.jpg`.
 
-The Prime button uses the named `prime.show` route, which renders the migrated five-step frontend at `/franchise/prime-form`. The FOFO button is temporarily `href="#"` until its Laravel form and named route are built. Prime submission and OTP endpoints currently return HTTP 503; validation, SMS, and application storage are not implemented.
+The Prime button uses the named `prime.show` route, which renders the migrated five-step frontend at `/franchise/prime-form`. The FOFO button is temporarily `href="#"` until its Laravel form and named route are built. Prime application submission still returns HTTP 503. OTP endpoints are wired but return HTTP 503 until SMS Alert credentials and both explicit readiness flags are configured; application storage is not implemented.
+
+`PrimeController::create` passes `config/form_options.php` choices to the Prime view; `StorePrimeRequest` reads the same allowed values and uses `PhoneNumberNormalizer` to verify mobile and WhatsApp inputs. Validated requests expose canonical E.164 values through `normalizedPhoneNumbers()`. The request is not used by `PrimeController::store` yet, so the public submission endpoint still returns HTTP 503.
 
 ## Routes and enquiry flow
 
@@ -64,7 +71,7 @@ The Prime button uses the named `prime.show` route, which renders the migrated f
 | `GET /` | `HomeController::__invoke` | Renders the homepage with site configuration |
 | `GET /franchise/prime-form` | `PrimeController::create` | Renders the independent Prime application view |
 | `POST /franchise/prime` | `PrimeController::store` | Temporary HTTP 503 response; application storage is not implemented |
-| `POST /otp/send`, `POST /otp/verify` | `OtpController::send`, `OtpController::verify` | Temporary HTTP 503 responses; OTP integration is not implemented |
+| `POST /otp/send`, `POST /otp/verify` | `OtpController::send`, `OtpController::verify` | Validated, purpose-bound OTP workflow; unavailable by default until provider and storage readiness are enabled |
 | `POST /enquiry` | `EnquiryController::store` | Validates, stores, attempts mail, returns JSON or redirect; IP throttle is 10/min |
 | `GET /admin/enquiries` | `EnquiryController::index` with `AdminBasicAuth` | Protected, paginated enquiry listing |
 | `GET /deploy` | `DeployController::__invoke` | Token-protected deployment/migration action |

@@ -110,13 +110,8 @@
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jquery-validation@1.22.1/dist/jquery.validate.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/intl-tel-input@29.1.2/dist/js/intlTelInput.min.js"></script>
-    <script>
-        jQuery.ajaxSetup({
-            headers: {
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-            }
-        });
-    </script>
+    <script src="{{ asset('assets/vendor/axios.min.js') }}"></script>
+    <script src="{{ asset('assets/js/common/axios.js') }}"></script>
 
     {{-- forms/prime.blade.php will push prime.js here once migrated. --}}
     @stack('js')

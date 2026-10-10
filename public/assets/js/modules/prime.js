@@ -13,6 +13,10 @@
 
     let currentStep = 1;
     const totalSteps = 5;
+    let otpSendRequest = null;
+    let otpVerificationInFlight = false;
+    let submissionInFlight = false;
+    let applicationSubmitted = false;
     const mobileInput = document.querySelector('#mobile_number');
     const whatsappInput = document.querySelector('#whatsapp_number');
 
@@ -59,7 +63,7 @@
     }, 'Choose at least one contact method.');
 
     const validator = form.validate({
-        ignore: ':hidden:not(.select2-hidden-accessible):not(#whatsapp_number)',
+        ignore: [],
         errorElement: 'label',
         errorClass: 'error',
         validClass: 'valid',
@@ -179,6 +183,13 @@
 
             error.insertAfter(element);
         },
+        showErrors: function (errors) {
+            this.defaultShowErrors();
+
+            if (errors['contact_methods[]']) {
+                $('#contact_methods_error').removeClass('d-none').text(errors['contact_methods[]']).show();
+            }
+        },
         highlight: function (element) {
             const $element = $(element);
             $element.addClass('error');
@@ -196,7 +207,24 @@
                 $('#contact_methods_error').addClass('d-none').text('');
             }
         },
+        invalidHandler: function (_event, validation) {
+            const firstError = validation.errorList[0];
+            if (!firstError) return;
+
+            const field = $(firstError.element);
+            const step = Number(field.closest('.form-step').data('step')) || currentStep;
+            showStep(step);
+
+            $('#formAlert').removeClass('d-none alert-success').addClass('alert-danger')
+                .text('Please review this step: ' + firstError.message);
+
+            const target = field.hasClass('contact-method') ? field.closest('.contact-options')
+                : field.hasClass('select2-hidden-accessible') ? field.next('.select2')
+                : field.is(':hidden') ? field.closest('fieldset') : field;
+            $('html, body').animate({ scrollTop: Math.max(0, target.offset().top - 140) }, 250);
+        },
         submitHandler: function () {
+            if (otpVerificationInFlight || submissionInFlight || applicationSubmitted) return false;
             syncPhoneValues();
             sendOtp();
             return false;
@@ -272,7 +300,9 @@
         }
     }
 
-        function sendOtp() {
+    function sendOtp() {
+
+        if (otpSendRequest) return otpSendRequest;
 
         const button = $('.btn-submit');
         const alert = $('#formAlert');
@@ -293,26 +323,23 @@
         // Clear modal error every time
         $('#otpError').addClass('d-none').text('');
 
-        $.ajax({
-            url: SEND_OTP_API_URL,
-            type: 'POST',
-            data: {
-                name: $('#first_name').val().trim(),
-                mobile: $('#mobile_e164').val().trim()
-            },
-            dataType: 'json'
-        })
+        otpSendRequest = axios.post(SEND_OTP_API_URL, {
+            purpose: 'prime',
+            name: $('#first_name').val().trim(),
+            mobile: $('#mobile_e164').val().trim()
+        }, { skipGlobalErrorHandler: true })
 
-        .done(function (response) {
+        .then(function (response) {
 
-            if (!response.status) {
-                return showOtpError(response.message || 'Unable to send OTP.', modalOpen);
+            if (!isSuccessfulResponse(response.data)) {
+                showOtpError(responseErrorMessage(response.data, null, 'Unable to send OTP.'), modalOpen);
+                return { success: false };
             }
 
             // Resend
             if (modalOpen) {
                 $('#otpCode').val('').trigger('focus');
-                return;
+                return { success: true };
             }
 
             // First Send
@@ -324,13 +351,17 @@
                     $('#otpCode').trigger('focus');
                 })
                 .modal('show');
+            return { success: true };
         })
 
-        .fail(function () {
-            showOtpError('Unable to send OTP. Please try again.', modalOpen);
+        .catch(function (error) {
+            showOtpError(requestErrorMessage(error, 'Unable to send OTP. Please try again.'), modalOpen);
+            return { success: false, status: error.response?.status, retryAfter: error.response?.headers?.get?.('Retry-After') ?? error.response?.headers?.['retry-after'] };
         })
 
-        .always(function () {
+        .finally(function () {
+
+            otpSendRequest = null;
 
             if (!modalOpen) {
                 button.prop('disabled', false);
@@ -339,6 +370,8 @@
             }
 
         });
+
+        return otpSendRequest;
     }
 
 
@@ -355,29 +388,23 @@
 
         const otp = $('#otpCode').val().trim();
 
-        if (otp.length !== 6) {
+        if (otp.length !== 6 || otpVerificationInFlight) {
             return;
         }
 
+        otpVerificationInFlight = true;
         $('#otpCode').prop('disabled', true);
         $('#otpVerifying').removeClass('d-none');
         $('#otpError').addClass('d-none').text('');
 
-        $.ajax({
-            url: VERIFY_OTP_API_URL,
-            type: 'POST',
-            dataType: 'json',
-            data: { otp }
-        })
+        axios.post(VERIFY_OTP_API_URL, { purpose: 'prime', otp }, { skipGlobalErrorHandler: true })
 
-        .done(function (response) {
+        .then(function (response) {
 
-            if (!response.status) {
-                $('#otpError')
-                    .removeClass('d-none')
-                    .text(response.message);
+            if (!isSuccessfulResponse(response.data)) {
+                showOtpError(responseErrorMessage(response.data, null, 'Unable to verify the code.'), true);
 
-               $('#otpCode').prop('disabled', false).val('').trigger('focus');
+                $('#otpCode').prop('disabled', false).val('').trigger('focus');
 
                 return;
             }
@@ -387,13 +414,9 @@
 
         })
 
-        .fail(function (xhr) {
+        .catch(function (error) {
 
-            const response = xhr.responseJSON || {};
-
-            $('#otpError')
-                .removeClass('d-none')
-                .text(response.message || 'Something went wrong. Please try again.');
+            showOtpError(requestErrorMessage(error, 'Unable to verify the code. Please try again.'), true);
 
             $('#otpCode')
                 .prop('disabled', false)
@@ -402,8 +425,9 @@
 
         })
 
-        .always(function () {
+        .finally(function () {
 
+            otpVerificationInFlight = false;
             $('#otpCode').prop('disabled', false);
             $('#otpVerifying').addClass('d-none');
 
@@ -431,27 +455,36 @@
             return;
         }
 
-        sendOtp();
+        button.prop('disabled', true);
 
-        let seconds = 30;
+        sendOtp().then(function (result) {
+            if (result.success) {
+                startResendCooldown(button, 30);
+            } else if (result.status === 429) {
+                const retryAfter = Number(result.retryAfter);
+                startResendCooldown(button, Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : 30);
+            } else {
+                button.prop('disabled', false).text('Resend Code');
+            }
+        });
 
+    });
+
+    function startResendCooldown(button, duration) {
+        let seconds = Math.ceil(duration);
         button.prop('disabled', true).text('Resend Code (' + seconds + ')');
 
         const timer = setInterval(function () {
-
             seconds--;
 
             if (seconds === 0) {
                 clearInterval(timer);
                 button.prop('disabled', false).text('Resend Code');
-                return;
+            } else {
+                button.text('Resend Code (' + seconds + ')');
             }
-
-            button.text('Resend Code (' + seconds + ')');
-
         }, 1000);
-
-    });
+    }
 
     function showOtpError(message, modalOpen) {
 
@@ -606,6 +639,9 @@ function trackPrimeLead() {
 }
 
     function submitForm() {
+        if (submissionInFlight || applicationSubmitted) return;
+
+        submissionInFlight = true;
         const button = $('.btn-submit');
         const alert = $('#formAlert');
 
@@ -614,22 +650,21 @@ function trackPrimeLead() {
         button.find('.spinner-border').removeClass('d-none');
         alert.addClass('d-none').removeClass('alert-success alert-danger');
 
-        $.ajax({
-            url: API_URL,
-            method: 'POST',
-            data: form.serialize(),
-            dataType: 'json'
-        }).done(function (response) {
-            if (!response.status) {
-                handleServerErrors(response);
+        axios.post(API_URL, form.serialize(), {
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+            skipGlobalErrorHandler: true
+        }).then(function (response) {
+            if (!isSuccessfulResponse(response.data)) {
+                handleServerErrors(response.data, null);
                 return;
             }
+            applicationSubmitted = true;
             //fb track pixel code
             trackPrimeLead();
 
             alert.removeClass('d-none')
                 .addClass('alert-success')
-                .html('<strong>Application submitted.</strong> ' + escapeHtml(response.message));
+                .html('<strong>Application submitted.</strong> ' + escapeHtml(response.data.message));
 
             $('.form-step[data-step="5"]').children().not('#formAlert').hide();
             $('.wizard-actions').hide();
@@ -639,35 +674,99 @@ function trackPrimeLead() {
                 scrollTop: Math.max(0, alert.offset().top - 120)
             }, 300);
 
-        }).fail(function (xhr) {
-            const response = xhr.responseJSON || {};
-            handleServerErrors(response);
-        }).always(function () {
+        }).catch(function (error) {
+            handleServerErrors(error.response?.data || {}, error.response?.status ?? 0);
+        }).finally(function () {
+            submissionInFlight = false;
             button.prop('disabled', false);
             button.find('.submit-text').text('Submit Application');
             button.find('.spinner-border').addClass('d-none');
         });
     }
 
-    function handleServerErrors(response) {
-        const alert = $('#formAlert');
-        const errors = (response.data && response.data.errors) || {};
-        alert.removeClass('d-none').addClass('alert-danger').html('<strong>Unable to submit.</strong> ' + escapeHtml(response.message || 'Please review the form and try again.'));
+    function isSuccessfulResponse(response) {
+        return Boolean(response && response.success === true);
+    }
 
-        Object.keys(errors).forEach(function (name) {
-            const target = name === 'contact_methods' ? $('[name="contact_methods[]"]').first() : $('[name="' + name + '"]').first();
-            if (target.length) validator.showErrors({ [target.attr('name')]: errors[name] });
+    function responseErrors(response) {
+        const errors = response && (response.errors || (response.data && response.data.errors));
+        return errors && typeof errors === 'object' && !Array.isArray(errors) ? errors : {};
+    }
+
+    function firstMessage(value) {
+        if (typeof value === 'string') return value.trim();
+        if (Array.isArray(value)) {
+            for (const item of value) {
+                const message = firstMessage(item);
+                if (message) return message;
+            }
+        }
+        return '';
+    }
+
+    function statusFallback(status, fallback) {
+        if (status === 419) return 'Your session expired. Refresh the page and try again.';
+        if (status === 429) return 'Too many attempts. Please wait before trying again.';
+        if (status === 503) return 'This service is temporarily unavailable. Please try again later.';
+        if (status === 0) return 'Connection failed. Please check your network and try again.';
+        return fallback;
+    }
+
+    function responseErrorMessage(response, status, fallback) {
+        const fieldMessage = Object.values(responseErrors(response)).map(firstMessage).find(Boolean) || '';
+        const message = firstMessage(response && response.message);
+        return (status === 422 ? fieldMessage || message : message || fieldMessage) || fallback;
+    }
+
+    function requestErrorMessage(error, fallback) {
+        const status = error.response?.status ?? 0;
+        return responseErrorMessage(error.response?.data, status, statusFallback(status, fallback));
+    }
+
+    function fieldNameForError(key) {
+        const name = key.split(/[.[]/)[0];
+        if (name === 'contact_methods') return 'contact_methods[]';
+        if (name === 'mobile_e164') return 'mobile_number';
+        if (name === 'whatsapp_e164' || (name === 'whatsapp_number' && $('#same_as_mobile').is(':checked'))) {
+            return $('#same_as_mobile').is(':checked') ? 'mobile_number' : 'whatsapp_number';
+        }
+        return name;
+    }
+
+    function revealConditionalField(name) {
+        if (name === 'business_name' || name === 'industry') $('#businessDetails').removeClass('d-none');
+        if (name === 'property_location' || name === 'carpet_area' || name === 'road_facing') $('#propertyDetails').removeClass('d-none');
+        if (name === 'whatsapp_number') $('#whatsappField').removeClass('d-none');
+    }
+
+    function handleServerErrors(response, status) {
+        const alert = $('#formAlert');
+        const errors = responseErrors(response);
+        const message = responseErrorMessage(response, status, statusFallback(status, 'Please review the form and try again.'));
+        alert.removeClass('d-none').addClass('alert-danger').html('<strong>Unable to submit.</strong> ' + escapeHtml(message));
+
+        const fieldErrors = {};
+        let firstField = null;
+
+        Object.entries(errors).forEach(function ([key, messages]) {
+            const name = fieldNameForError(key);
+            const field = form.find(':input').filter(function () { return this.name === name; }).first();
+            const fieldMessage = firstMessage(messages);
+            if (!field.length || !field.closest('.form-step').length || field.attr('type') === 'hidden' || !fieldMessage) return;
+
+            if (!fieldErrors[name]) fieldErrors[name] = fieldMessage;
+            if (!firstField) firstField = field;
+            revealConditionalField(name);
         });
 
-        const firstFieldName = Object.keys(errors)[0];
-        if (firstFieldName) {
-            const selectorName = firstFieldName === 'contact_methods' ? 'contact_methods[]' : firstFieldName;
-            const firstField = $('[name="' + selectorName + '"]').first();
+        if (firstField) {
             const step = Number(firstField.closest('.form-step').data('step')) || currentStep;
             showStep(step);
+            validator.showErrors(fieldErrors);
         }
 
-        $('html, body').animate({ scrollTop: Math.max(0, alert.offset().top - 120) }, 300);
+        const scrollTarget = firstField || alert;
+        $('html, body').animate({ scrollTop: Math.max(0, scrollTarget.offset().top - 120) }, 300);
     }
 
     function escapeHtml(value) {

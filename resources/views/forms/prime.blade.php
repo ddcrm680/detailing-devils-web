@@ -2,18 +2,6 @@
 
 @section('title', 'Franchise Application | Detailing Devils Prime')
 
-{{-- Temporary state list migrated from the legacy form; move to a controller/config when wiring the backend. --}}
-@php
-    $states = $states ?? [
-        'Andaman and Nicobar Islands', 'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar',
-        'Chandigarh', 'Chhattisgarh', 'Dadra and Nagar Haveli and Daman and Diu', 'Delhi', 'Goa',
-        'Gujarat', 'Haryana', 'Himachal Pradesh', 'Jammu and Kashmir', 'Jharkhand', 'Karnataka',
-        'Kerala', 'Ladakh', 'Lakshadweep', 'Madhya Pradesh', 'Maharashtra', 'Manipur', 'Meghalaya',
-        'Mizoram', 'Nagaland', 'Odisha', 'Puducherry', 'Punjab', 'Rajasthan', 'Sikkim', 'Tamil Nadu',
-        'Telangana', 'Tripura', 'Uttar Pradesh', 'Uttarakhand', 'West Bengal'
-    ];
-@endphp
-
 @section('content')
 <section class="hero-section">
     <div class="container">
@@ -144,16 +132,18 @@
                                 <label class="form-label" for="age_group">Age <span>*</span></label>
                                 <select class="form-select select2" id="age_group" name="age_group" data-placeholder="Select age">
                                     <option value=""></option>
-                                    <option value="18-24">18–24 years</option>
-                                    <option value="25+">25+ years</option>
+                                    @foreach ($primeOptions['age_groups'] as $option)
+                                        <option value="{{ $option['value'] }}">{{ $option['label'] }}</option>
+                                    @endforeach
                                 </select>
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label" for="occupation">Current Occupation <span>*</span></label>
                                 <select class="form-select select2" id="occupation" name="occupation" data-placeholder="Select occupation">
                                     <option value=""></option>
-                                    <option value="Business Owner">Business Owner</option>
-                                    <option value="Entrepreneur">Entrepreneur</option>
+                                    @foreach ($primeOptions['occupations'] as $option)
+                                        <option value="{{ $option['value'] }}">{{ $option['label'] }}</option>
+                                    @endforeach
                                 </select>
                             </div>
                         </div>
@@ -197,14 +187,12 @@
                         <fieldset class="choice-group">
                             <legend>Have you previously owned or managed a business? <span>*</span></legend>
                             <div class="row g-3">
-                                <div class="col-sm-6">
-                                    <input class="btn-check" type="radio" name="business_experience" id="business_yes" value="yes">
-                                    <label class="choice-card" for="business_yes"><span class="choice-icon">✓</span><span><strong>Yes</strong><small>I have business or management experience</small></span></label>
-                                </div>
-                                <div class="col-sm-6">
-                                    <input class="btn-check" type="radio" name="business_experience" id="business_no" value="no">
-                                    <label class="choice-card" for="business_no"><span class="choice-icon">—</span><span><strong>No</strong><small>This would be my first business venture</small></span></label>
-                                </div>
+                                @foreach ($primeOptions['business_experience'] as $option)
+                                    <div class="col-sm-6">
+                                        <input class="btn-check" type="radio" name="business_experience" id="{{ $option['id'] }}" value="{{ $option['value'] }}">
+                                        <label class="choice-card" for="{{ $option['id'] }}"><span class="choice-icon">{{ $option['icon'] }}</span><span><strong>{{ $option['label'] }}</strong><small>{{ $option['description'] }}</small></span></label>
+                                    </div>
+                                @endforeach
                             </div>
                         </fieldset>
 
@@ -232,18 +220,12 @@
                         <fieldset class="choice-group">
                             <legend>Do you already have a commercial property? <span>*</span></legend>
                             <div class="row g-3">
-                                <div class="col-md-4">
-                                    <input class="btn-check" type="radio" name="property_status" id="property_yes" value="yes">
-                                    <label class="choice-card" for="property_yes"><span class="choice-icon">✓</span><span><strong>Yes</strong><small>I already have a property</small></span></label>
-                                </div>
-                                <div class="col-md-4">
-                                    <input class="btn-check" type="radio" name="property_status" id="property_no" value="no">
-                                    <label class="choice-card" for="property_no"><span class="choice-icon">—</span><span><strong>No</strong><small>I do not have a property yet</small></span></label>
-                                </div>
-                                <div class="col-md-4">
-                                    <input class="btn-check" type="radio" name="property_status" id="property_rent" value="looking_to_rent">
-                                    <label class="choice-card" for="property_rent"><span class="choice-icon">⌂</span><span><strong>Looking to rent</strong><small>I am actively exploring options</small></span></label>
-                                </div>
+                                @foreach ($primeOptions['property_status'] as $option)
+                                    <div class="col-md-4">
+                                        <input class="btn-check" type="radio" name="property_status" id="{{ $option['id'] }}" value="{{ $option['value'] }}">
+                                        <label class="choice-card" for="{{ $option['id'] }}"><span class="choice-icon">{{ $option['icon'] }}</span><span><strong>{{ $option['label'] }}</strong><small>{{ $option['description'] }}</small></span></label>
+                                    </div>
+                                @endforeach
                             </div>
                         </fieldset>
 
@@ -261,10 +243,10 @@
                                     <fieldset>
                                         <legend class="form-label">Road-facing? <span>*</span></legend>
                                         <div class="segmented-control">
-                                            <input class="btn-check" type="radio" name="road_facing" id="road_yes" value="yes">
-                                            <label class="btn" for="road_yes">Yes</label>
-                                            <input class="btn-check" type="radio" name="road_facing" id="road_no" value="no">
-                                            <label class="btn" for="road_no">No</label>
+                                            @foreach ($primeOptions['road_facing'] as $option)
+                                                <input class="btn-check" type="radio" name="road_facing" id="{{ $option['id'] }}" value="{{ $option['value'] }}">
+                                                <label class="btn" for="{{ $option['id'] }}">{{ $option['label'] }}</label>
+                                            @endforeach
                                         </div>
                                     </fieldset>
                                 </div>
@@ -293,11 +275,9 @@
                                 <label class="form-label" for="start_timeline">When do you wish to start your franchise? <span>*</span></label>
                                 <select class="form-select select2" id="start_timeline" name="start_timeline" data-placeholder="Select your expected timeline">
                                     <option value=""></option>
-                                    <option value="Immediately (within 30 days)">Immediately (within 30 days)</option>
-                                    <option value="Within 1-3 months">Within 1–3 months</option>
-                                    <option value="Within 3-6 months">Within 3–6 months</option>
-                                    <option value="Within 6-12 months">Within 6–12 months</option>
-                                    <option value="Just exploring the opportunity">Just exploring the opportunity</option>
+                                    @foreach ($primeOptions['timelines'] as $option)
+                                        <option value="{{ $option['value'] }}">{{ $option['label'] }}</option>
+                                    @endforeach
                                 </select>
                             </div>
 
@@ -305,18 +285,12 @@
                                 <fieldset class="choice-group compact-choice-group">
                                     <legend>Are you the primary decision-maker for this investment? <span>*</span></legend>
                                     <div class="row g-3">
-                                        <div class="col-md-4">
-                                            <input class="btn-check" type="radio" name="decision_maker" id="decision_yes" value="yes">
-                                            <label class="choice-card compact" for="decision_yes"><strong>Yes</strong></label>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <input class="btn-check" type="radio" name="decision_maker" id="decision_no" value="no">
-                                            <label class="choice-card compact" for="decision_no"><strong>No</strong></label>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <input class="btn-check" type="radio" name="decision_maker" id="decision_joint" value="joint">
-                                            <label class="choice-card compact" for="decision_joint"><strong>Joint decision with family / business partner</strong></label>
-                                        </div>
+                                        @foreach ($primeOptions['decision_maker'] as $option)
+                                            <div class="col-md-4">
+                                                <input class="btn-check" type="radio" name="decision_maker" id="{{ $option['id'] }}" value="{{ $option['value'] }}">
+                                                <label class="choice-card compact" for="{{ $option['id'] }}"><strong>{{ $option['label'] }}</strong></label>
+                                            </div>
+                                        @endforeach
                                     </div>
                                 </fieldset>
                             </div>
@@ -325,14 +299,10 @@
                                 <fieldset class="contact-options">
                                     <legend>How would you like our team to contact you? <span>*</span></legend>
                                     <div class="d-flex flex-wrap gap-2">
-                                        <input class="btn-check contact-method" type="checkbox" name="contact_methods[]" id="contact_phone" value="Phone Call">
-                                        <label class="btn contact-btn" for="contact_phone">☎ Phone Call</label>
-
-                                        <input class="btn-check contact-method" type="checkbox" name="contact_methods[]" id="contact_whatsapp" value="WhatsApp">
-                                        <label class="btn contact-btn" for="contact_whatsapp">◉ WhatsApp</label>
-
-                                        <input class="btn-check contact-method" type="checkbox" name="contact_methods[]" id="contact_email" value="Email">
-                                        <label class="btn contact-btn" for="contact_email">✉ Email</label>
+                                        @foreach ($primeOptions['contact_methods'] as $option)
+                                            <input class="btn-check contact-method" type="checkbox" name="contact_methods[]" id="{{ $option['id'] }}" value="{{ $option['value'] }}">
+                                            <label class="btn contact-btn" for="{{ $option['id'] }}">{{ $option['label'] }}</label>
+                                        @endforeach
                                     </div>
                                     <label id="contact_methods_error" class="error d-none" for="contact_phone"></label>
                                 </fieldset>

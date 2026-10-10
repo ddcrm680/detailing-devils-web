@@ -10,14 +10,17 @@ class PrimeController extends Controller
 {
     public function create(): View
     {
-        return view('forms.prime');
+        return view('forms.prime', [
+            'states' => config('form_options.common.states'),
+            'primeOptions' => config('form_options.prime'),
+        ]);
     }
 
     // Temporary: application submission is not implemented yet.
     public function store(): JsonResponse
     {
         return response()->json([
-            'status' => false,
+            'success' => false,
             'message' => 'Prime applications are not available yet.',
         ], 503);
     }
