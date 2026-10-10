@@ -134,9 +134,8 @@
         <h2 class="disp">Own a <span class="acc">Devils</span> studio</h2>
         <p>Join India's largest detailing network. You bring the location and the drive. We bring the brand, training, products and systems to run it.</p>
         <div class="fr-ctas">
-          @foreach($site['franchise_applications'] as $application)
-          <a class="cta" href="{{ $application['url'] }}">{{ $application['label'] }} <i>↗</i></a>
-          @endforeach
+          <a class="cta" href="{{ route('prime.show') }}">Apply for Prime Franchise<i>↗</i></a>
+          <a class="cta" href="#">Apply for FOFO Franchise<i>↗</i></a>
         </div>
       </div>
       <ol>

@@ -13,7 +13,7 @@
     <title>@yield('title', $site['brand'] ?? config('site.brand', 'Detailing Devils'))</title>
     <meta name="description" content="@yield('description', $site['description'] ?? config('site.description', 'Detailing Devils'))">
 
-    <link rel="icon" href="{{ asset('img/logo.png') }}">
+    <link rel="icon" href="{{ asset('favicon.webp') }}" type="image/webp">
 
     {{-- Fonts --}}
     <link rel="preconnect" href="https://fonts.googleapis.com">

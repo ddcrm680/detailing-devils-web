@@ -14,15 +14,17 @@ This map describes the current Laravel checkout. The original `devils-new-web.zi
 
 | Location | Responsibility |
 | --- | --- |
-| `routes/web.php` | Home, enquiry submission and admin enquiry routes |
+| `routes/web.php` | Home route and central entry point for the franchise, OTP, and enquiry route files |
+| `routes/forms.php`, `routes/otp.php`, `routes/enquiry.php` | Prime form routes, shared OTP routes, and existing enquiry/admin routes |
 | `routes/deploy.php`, `app/Http/Controllers/DeployController.php` | Deployment-related route and handler; do not invoke during routine testing |
 | `app/Http/Controllers/HomeController.php` | Passes `config('site')` to the home view |
 | `app/Http/Controllers/EnquiryController.php` | Enquiry validation, persistence, mail attempt and admin listing |
 | `app/Http/Middleware/AdminBasicAuth.php` | Admin enquiry-list access |
 | `app/Models/Enquiry.php`, `database/migrations/` | Enquiry model and schema |
-| `config/site.php` | Brand, contacts, hero settings, statistics, services, franchise application links and steps |
+| `config/site.php` | Brand, contacts, hero settings, statistics, services and franchise steps |
 | `resources/views/layouts/app.blade.php` | Shared HTML document, metadata, CSS/JS order, components and main content slot |
-| `resources/views/layouts/prime.blade.php` | Empty placeholder; no Prime page implementation in this checkout |
+| `resources/views/layouts/prime.blade.php`, `resources/views/forms/prime.blade.php` | Independent Prime layout and five-step application view |
+| `app/Http/Controllers/Franchise/` | Prime rendering and temporary 503 submission/OTP handlers; validation, OTP, and storage are not implemented |
 | `resources/views/components/header.blade.php` | Shared logo, social links, phone and menu button |
 | `resources/views/components/navbar.blade.php` | Full-screen section menu; links return to homepage anchors from other pages |
 | `resources/views/components/footer.blade.php` | Shared contact details and footer navigation |
@@ -31,6 +33,7 @@ This map describes the current Laravel checkout. The original `devils-new-web.zi
 | `resources/views/admin/enquiries.blade.php` | Admin enquiry table; inspect its own layout before changing shared website assets |
 | `public/assets/css/style.css` | Shared design tokens, header, menu, footer and common elements |
 | `public/assets/css/home.css` | Homepage sections, responsive rules and page-specific reduced-motion styles |
+| `public/assets/css/prime.css`, `public/assets/js/modules/prime.js` | Prime wizard styling, client-side validation, OTP modal, and AJAX requests |
 | `public/assets/js/modules/navigation.js` | Shared menu open/close behavior and header scroll state |
 | `public/assets/js/modules/home.js` | Hero frames/canvas, service switching, enquiry-form browser handler, Lenis and GSAP animations |
 | `public/assets/js/common/` | Shared DOM, Axios/CSRF, loader, notification, validation and response helpers |
@@ -50,15 +53,18 @@ The layout loads fonts, optional non-homepage Bootstrap/Bootstrap Icons/Tom Sele
 
 The homepage view owns the hero, introduction, approach, statement, statistics, services, work animation, studio cards, five-car lineup, franchise section and enquiry section. Shared header, menu and footer markup live in their components. Shared style rules live in `style.css`; section rules live in `home.css`.
 
-`config/site.php` supplies the hero text/frame pattern, statistics, services, brand/contact details, social destinations, franchise application URLs and franchise steps. Other section copy remains in `home.blade.php`. Images are under `public/img/`; frame files follow `ezgif-frame-001.jpg` through `ezgif-frame-240.jpg`.
+`config/site.php` supplies the hero text/frame pattern, statistics, services, brand/contact details, social destinations and franchise steps. The franchise CTAs and other section copy are in `home.blade.php`. Images are under `public/img/`; frame files follow `ezgif-frame-001.jpg` through `ezgif-frame-240.jpg`.
 
-The Prime and FOFO franchise buttons link to the existing legacy application paths. A future launch on the same domain must preserve those paths and their dependent assets, APIs, sessions, OTP and submission handlers through deployment routing; this repository does not implement the legacy forms.
+The Prime button uses the named `prime.show` route, which renders the migrated five-step frontend at `/franchise/prime-form`. The FOFO button is temporarily `href="#"` until its Laravel form and named route are built. Prime submission and OTP endpoints currently return HTTP 503; validation, SMS, and application storage are not implemented.
 
 ## Routes and enquiry flow
 
 | Endpoint | Handler | Behavior |
 | --- | --- | --- |
 | `GET /` | `HomeController::__invoke` | Renders the homepage with site configuration |
+| `GET /franchise/prime-form` | `PrimeController::create` | Renders the independent Prime application view |
+| `POST /franchise/prime` | `PrimeController::store` | Temporary HTTP 503 response; application storage is not implemented |
+| `POST /otp/send`, `POST /otp/verify` | `OtpController::send`, `OtpController::verify` | Temporary HTTP 503 responses; OTP integration is not implemented |
 | `POST /enquiry` | `EnquiryController::store` | Validates, stores, attempts mail, returns JSON or redirect; IP throttle is 10/min |
 | `GET /admin/enquiries` | `EnquiryController::index` with `AdminBasicAuth` | Protected, paginated enquiry listing |
 | `GET /deploy` | `DeployController::__invoke` | Token-protected deployment/migration action |
@@ -72,4 +78,4 @@ The homepage form posts through the native `fetch` handler in `home.js` with the
 - Keep real enquiry data, `.env`, logs and credentials out of commits and documentation. Do not run database-writing tests, migrations or the deployment route without explicit authorization and an isolated target.
 - Social destinations in `config/site.php` are currently `#`; Recent Work and Find a Studio cards lead to the contact section; Privacy/Terms/Cookies are display text. These are not dedicated pages.
 - The deployment endpoint and admin credential handling warrant separate security work. Neither is changed by the frontend layout refactor.
-- For shared-site changes, start with `layouts/app.blade.php`, the relevant component, `style.css` and `navigation.js`. For homepage changes, add `home.blade.php`, `home.css` and `home.js`. For enquiry changes, also inspect `routes/web.php`, `EnquiryController`, the model and migrations.
+- For shared-site changes, start with `layouts/app.blade.php`, the relevant component, `style.css` and `navigation.js`. For homepage changes, add `home.blade.php`, `home.css` and `home.js`. For enquiry changes, also inspect `routes/enquiry.php`, `EnquiryController`, the model and migrations.
