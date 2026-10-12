@@ -209,6 +209,34 @@ class StorePrimeRequestTest extends TestCase
             ->assertJsonStructure(['message', 'errors' => ['first_name']]);
     }
 
+    public function test_combined_name_must_fit_the_crm_column(): void
+    {
+        $application = $this->validApplication();
+        $application['first_name'] = str_repeat('A', 50);
+        $application['middle_name'] = str_repeat('B', 50);
+        $application['last_name'] = 'Sharma';
+
+        $this->postJson('/_test/prime-validation', $application)
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['last_name']);
+
+        $application['middle_name'] = str_repeat('B', 40);
+        $this->postJson('/_test/prime-validation', $application)->assertOk();
+    }
+
+    public function test_partnership_reason_must_fit_the_crm_column(): void
+    {
+        $application = $this->validApplication();
+        $application['partnership_reason'] = str_repeat('a', 256);
+
+        $this->postJson('/_test/prime-validation', $application)
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['partnership_reason']);
+
+        $application['partnership_reason'] = str_repeat('a', 255);
+        $this->postJson('/_test/prime-validation', $application)->assertOk();
+    }
+
     private function validApplication(): array
     {
         return [

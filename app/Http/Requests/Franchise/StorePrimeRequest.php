@@ -61,7 +61,7 @@ class StorePrimeRequest extends FormRequest
             'decision_maker' => ['required', Rule::in($primeValues('decision_maker'))],
             'contact_methods' => ['required', 'array', 'min:1', 'max:3'],
             'contact_methods.*' => ['required', 'string', 'distinct', Rule::in($primeValues('contact_methods'))],
-            'partnership_reason' => ['nullable', 'string', 'max:2000'],
+            'partnership_reason' => ['nullable', 'string', 'max:255'],
             'consent' => ['accepted'],
             'website' => ['prohibited'],
         ];
@@ -70,6 +70,20 @@ class StorePrimeRequest extends FormRequest
     public function after(): array
     {
         return [function (Validator $validator): void {
+            if (! $validator->errors()->has('first_name')
+                && ! $validator->errors()->has('middle_name')
+                && ! $validator->errors()->has('last_name')) {
+                $name = trim(implode(' ', [
+                    (string) $this->input('first_name', ''),
+                    (string) $this->input('middle_name', ''),
+                    (string) $this->input('last_name', ''),
+                ]));
+
+                if (mb_strlen($name) > 100) {
+                    $validator->errors()->add('last_name', 'Your full name must be 100 characters or fewer.');
+                }
+            }
+
             $normalizer = app(PhoneNumberNormalizer::class);
             $this->normalizedMobile = $this->validatePhonePair($validator, $normalizer, 'mobile_number', 'mobile_e164');
 

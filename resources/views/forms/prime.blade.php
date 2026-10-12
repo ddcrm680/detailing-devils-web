@@ -310,8 +310,8 @@
 
                             <div class="col-12">
                                 <label class="form-label" for="partnership_reason">Why do you want to partner with Detailing Devils Prime?</label>
-                                <textarea class="form-control" id="partnership_reason" name="partnership_reason" rows="5" maxlength="2000" placeholder="Tell us about your goals, interest in the automotive detailing industry, or what you expect from this partnership."></textarea>
-                                <div class="d-flex justify-content-between form-text"><span>Optional, but helps our team understand your plans.</span><span id="reasonCounter">0 / 2000</span></div>
+                                <textarea class="form-control" id="partnership_reason" name="partnership_reason" rows="5" maxlength="255" placeholder="Tell us about your goals, interest in the automotive detailing industry, or what you expect from this partnership."></textarea>
+                                <div class="d-flex justify-content-between form-text"><span>Optional, but helps our team understand your plans.</span><span id="reasonCounter">0 / 255</span></div>
                             </div>
 
                             <div class="col-12">

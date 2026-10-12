@@ -45,6 +45,12 @@
         return this.optional(element) || /^[\p{L}][\p{L}\s'.-]{1,49}$/u.test(value.trim());
     }, 'Enter a valid name.');
 
+    $.validator.addMethod('crmFullName', function () {
+        const name = [$('#first_name').val(), $('#middle_name').val(), $('#last_name').val()]
+            .map(value => value.trim()).join(' ').trim();
+        return Array.from(name).length <= 100;
+    }, 'Your full name must be 100 characters or fewer.');
+
     $.validator.addMethod('cityName', function (value, element) {
         return this.optional(element) || /^[\p{L}][\p{L}\s'.()-]{1,79}$/u.test(value.trim());
     }, 'Enter a valid city.');
@@ -71,7 +77,7 @@
         rules: {
             first_name: { required: true, personName: true },
             middle_name: { personName: true },
-            last_name: { required: true, personName: true },
+            last_name: { required: true, personName: true, crmFullName: true },
             mobile_number: { required: true, intlPhone: mobileIti },
             whatsapp_number: {
                 required: { depends: function () { return !$('#same_as_mobile').is(':checked'); } },
@@ -114,7 +120,7 @@
             start_timeline: { required: true },
             decision_maker: { required: true },
             'contact_methods[]': { contactMethodRequired: true },
-            partnership_reason: { maxlength: 2000 },
+            partnership_reason: { maxlength: 255 },
             consent: { required: true }
         },
         messages: {
@@ -659,12 +665,13 @@ function trackPrimeLead() {
                 return;
             }
             applicationSubmitted = true;
-            //fb track pixel code
-            trackPrimeLead();
+            if (response.data.created === true) {
+                trackPrimeLead();
+            }
 
             alert.removeClass('d-none')
                 .addClass('alert-success')
-                .html('<strong>Application submitted.</strong> ' + escapeHtml(response.data.message));
+                .html('<strong>' + (response.data.created === true ? 'Application submitted.' : 'Application already received.') + '</strong> ' + escapeHtml(response.data.message));
 
             $('.form-step[data-step="5"]').children().not('#formAlert').hide();
             $('.wizard-actions').hide();
@@ -822,7 +829,7 @@ function trackPrimeLead() {
     });
 
     $('#partnership_reason').on('input', function () {
-        $('#reasonCounter').text(this.value.length + ' / 2000');
+        $('#reasonCounter').text(this.value.length + ' / 255');
     });
 
     $('#pin_code').on('input', function () {

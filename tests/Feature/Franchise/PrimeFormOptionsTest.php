@@ -70,12 +70,11 @@ class PrimeFormOptionsTest extends TestCase
         $this->assertSame(5, $xpath->query('//section[contains(concat(" ", normalize-space(@class), " "), " form-step ")]')->length);
     }
 
-    public function test_prime_submission_placeholder_returns_success_false(): void
+    public function test_prime_submission_requires_a_valid_application(): void
     {
         $this->postJson(route('prime.submit'), [])
-            ->assertStatus(503)
-            ->assertJsonPath('success', false)
-            ->assertJsonMissingPath('status');
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['first_name', 'last_name', 'mobile_number']);
     }
 
     private function primePageXPath(): DOMXPath

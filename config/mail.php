@@ -115,4 +115,6 @@ return [
         'name' => env('MAIL_FROM_NAME', env('APP_NAME', 'Laravel')),
     ],
 
+    'prime_team_address' => env('PRIME_FRANCHISE_TEAM_EMAIL'),
+
 ];
