@@ -17,6 +17,13 @@ class OtpController extends Controller
 {
     public function send(SendOtpRequest $request, OtpDeliveryService $delivery): JsonResponse
     {
+        if ($request->validated('purpose') === 'prime' && ! config('services.prime.submission_enabled')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Prime franchise applications are temporarily unavailable.',
+            ], 503);
+        }
+
         if (! $this->available()) {
             return $this->unavailable();
         }

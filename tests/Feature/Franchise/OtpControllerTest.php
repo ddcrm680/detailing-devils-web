@@ -21,6 +21,7 @@ class OtpControllerTest extends TestCase
 
         config()->set('cache.default', 'array');
         config()->set('session.driver', 'array');
+        config()->set('services.prime.submission_enabled', true);
         config()->set('app.key', 'base64:'.base64_encode(str_repeat('a', 32)));
         config()->set('services.sms_alert', [
             'enabled' => true,
@@ -34,6 +35,19 @@ class OtpControllerTest extends TestCase
 
         $this->sms = new FakeSmsDelivery;
         $this->app->instance(SmsDelivery::class, $this->sms);
+    }
+
+    public function test_disabled_prime_send_does_not_send_sms_or_block_fofo(): void
+    {
+        config()->set('services.prime.submission_enabled', false);
+
+        $this->postJson('/otp/send', $this->sendPayload())
+            ->assertStatus(503)->assertJsonPath('success', false);
+        $this->assertSame([], $this->sms->sent);
+
+        $this->postJson('/otp/send', $this->sendPayload('fofo'))
+            ->assertOk()->assertJsonPath('success', true);
+        $this->assertCount(1, $this->sms->sent);
     }
 
     public function test_send_and_verify_prime_with_encrypted_session_context_and_single_use_proof(): void

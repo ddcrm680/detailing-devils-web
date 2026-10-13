@@ -20,11 +20,19 @@ class PrimeController extends Controller
         return view('forms.prime', [
             'states' => config('form_options.common.states'),
             'primeOptions' => config('form_options.prime'),
+            'submissionEnabled' => (bool) config('services.prime.submission_enabled'),
         ]);
     }
 
     public function store(StorePrimeRequest $request, SaveFranchiseLeadAction $save): JsonResponse
     {
+        if (! config('services.prime.submission_enabled')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Prime franchise applications are temporarily unavailable.',
+            ], 503);
+        }
+
         try {
             $created = $save->savePrime($request->validated(), $request->normalizedPhoneNumbers());
         } catch (ValidationException $exception) {

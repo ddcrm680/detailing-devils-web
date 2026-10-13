@@ -72,9 +72,32 @@ class PrimeFormOptionsTest extends TestCase
 
     public function test_prime_submission_requires_a_valid_application(): void
     {
+        config()->set('services.prime.submission_enabled', true);
+
         $this->postJson(route('prime.submit'), [])
             ->assertUnprocessable()
             ->assertJsonValidationErrors(['first_name', 'last_name', 'mobile_number']);
+    }
+
+    public function test_disabled_prime_page_keeps_all_five_steps_but_disables_submission(): void
+    {
+        config()->set('services.prime.submission_enabled', false);
+        $xpath = $this->primePageXPath();
+
+        $this->assertSame(5, $xpath->query('//section[contains(concat(" ", normalize-space(@class), " "), " form-step ")]')->length);
+        $this->assertSame('false', $xpath->query('//form[@id="franchiseForm"]')->item(0)->getAttribute('data-submission-enabled'));
+        $this->assertTrue($xpath->query('//button[contains(concat(" ", normalize-space(@class), " "), " btn-submit ")]')->item(0)->hasAttribute('disabled'));
+        $this->assertSame(1, $xpath->query('//*[contains(text(), "Application preview.")]')->length);
+    }
+
+    public function test_enabled_prime_page_retains_submission_action(): void
+    {
+        config()->set('services.prime.submission_enabled', true);
+        $xpath = $this->primePageXPath();
+
+        $this->assertSame('true', $xpath->query('//form[@id="franchiseForm"]')->item(0)->getAttribute('data-submission-enabled'));
+        $this->assertFalse($xpath->query('//button[contains(concat(" ", normalize-space(@class), " "), " btn-submit ")]')->item(0)->hasAttribute('disabled'));
+        $this->assertSame(0, $xpath->query('//*[contains(text(), "Application preview.")]')->length);
     }
 
     private function primePageXPath(): DOMXPath

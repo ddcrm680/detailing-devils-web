@@ -65,6 +65,11 @@
             </aside>
 
             <div class="wizard-content">
+                @unless($submissionEnabled)
+                    <div class="alert alert-secondary" role="status">
+                        <strong>Application preview.</strong> Final submission is not available right now. Your details will not be sent or saved.
+                    </div>
+                @endunless
                 <div id="formAlert" class="alert d-none" role="alert" aria-live="polite"></div>
 
                 <form id="franchiseForm"
@@ -73,6 +78,7 @@
                         data-submit-url="{{ route('prime.submit') }}"
                         data-send-otp-url="{{ route('otp.send') }}"
                         data-verify-otp-url="{{ route('otp.verify') }}"
+                        data-submission-enabled="{{ $submissionEnabled ? 'true' : 'false' }}"
 
                 >
                     @csrf
@@ -332,8 +338,8 @@
                         <div class="ms-auto d-flex align-items-center gap-3">
                             <span class="required-note"><span>*</span> Required fields</span>
                             <button class="btn btn-dark btn-next" type="button">Continue <span aria-hidden="true">→</span></button>
-                            <button class="btn btn-primary btn-submit d-none" type="submit">
-                                <span class="submit-text">Submit Application</span>
+                            <button class="btn btn-primary btn-submit d-none" type="submit" @disabled(! $submissionEnabled)>
+                                <span class="submit-text">{{ $submissionEnabled ? 'Submit Application' : 'Submission Unavailable' }}</span>
                                 <span class="spinner-border spinner-border-sm d-none" aria-hidden="true"></span>
                             </button>
                         </div>

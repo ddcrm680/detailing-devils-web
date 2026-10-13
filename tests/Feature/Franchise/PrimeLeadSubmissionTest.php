@@ -34,6 +34,7 @@ class PrimeLeadSubmissionTest extends TestCase
 
         config()->set('cache.default', 'array');
         config()->set('session.driver', 'array');
+        config()->set('services.prime.submission_enabled', true);
         config()->set('app.key', 'base64:'.base64_encode(str_repeat('a', 32)));
         config()->set('services.sms_alert', [
             'enabled' => true,
@@ -82,6 +83,20 @@ class PrimeLeadSubmissionTest extends TestCase
             $table->boolean('consent')->nullable();
             $table->string('closed_leads', 2);
         });
+    }
+
+    public function test_disabled_submission_cannot_save_or_schedule_emails_even_with_verified_otp(): void
+    {
+        $this->verifyMobile();
+        config()->set('services.prime.submission_enabled', false);
+
+        $this->postJson(route('prime.submit'), $this->validApplication())
+            ->assertStatus(503)
+            ->assertJsonPath('success', false)
+            ->assertJsonMissingPath('created');
+
+        $this->assertSame(0, DB::table('tbl_common_leads')->count());
+        Mail::shouldNotHaveReceived('send');
     }
 
     public function test_verified_application_is_saved_once_with_legacy_mapping(): void

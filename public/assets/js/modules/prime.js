@@ -9,6 +9,7 @@
     const API_URL = form.attr('data-submit-url');
     const SEND_OTP_API_URL = form.attr('data-send-otp-url');
     const VERIFY_OTP_API_URL = form.attr('data-verify-otp-url');
+    const submissionEnabled = form.attr('data-submission-enabled') === 'true';
 
 
     let currentStep = 1;
@@ -230,6 +231,7 @@
             $('html, body').animate({ scrollTop: Math.max(0, target.offset().top - 140) }, 250);
         },
         submitHandler: function () {
+            if (!submissionEnabled) return false;
             if (otpVerificationInFlight || submissionInFlight || applicationSubmitted) return false;
             syncPhoneValues();
             sendOtp();
@@ -307,6 +309,8 @@
     }
 
     function sendOtp() {
+
+        if (!submissionEnabled) return Promise.resolve({ success: false });
 
         if (otpSendRequest) return otpSendRequest;
 
@@ -391,6 +395,8 @@
     });
 
     function verifyOtp() {
+
+        if (!submissionEnabled) return;
 
         const otp = $('#otpCode').val().trim();
 
@@ -645,6 +651,7 @@ function trackPrimeLead() {
 }
 
     function submitForm() {
+        if (!submissionEnabled) return;
         if (submissionInFlight || applicationSubmitted) return;
 
         submissionInFlight = true;

@@ -46,6 +46,10 @@ return [
         'api_key' => env('ZEROBOUNCE_API_KEY'),
     ],
 
+    'prime' => [
+        'submission_enabled' => env('PRIME_SUBMISSION_ENABLED', false),
+    ],
+
     'fofo' => [
         'submission_enabled' => env('FOFO_SUBMISSION_ENABLED', false),
         'call_enabled' => env('FOFO_CALL_ENABLED', false),
