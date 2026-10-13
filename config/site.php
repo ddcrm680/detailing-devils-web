@@ -20,11 +20,11 @@ return [
     'email' => 'info@detailingdevils.com',      // also receives new enquiries
     'address' => 'B-24, Pushpanjali Enclave, Pitampura, Delhi 110034',
 
-    // Social links (header and footer). Replace '#' with your page links.
+    // Social links (header, footer and franchise emails).
     'social' => [
-        'Instagram' => '#',
-        'Facebook' => '#',
-        'YouTube' => '#',
+        'Instagram' => 'https://www.instagram.com/detailingdevils/',
+        'Facebook' => 'https://www.facebook.com/DetailingDevils/',
+        'YouTube' => 'https://www.youtube.com/channel/UCixCVs6Aucy83FJsbMysKYg',
     ],
 
     // Home page banner

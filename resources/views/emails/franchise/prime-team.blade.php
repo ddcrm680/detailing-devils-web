@@ -8,7 +8,7 @@
 <body style="margin:0;padding:20px 10px;background:#f5f5f5;font-family:Arial,Helvetica,sans-serif;color:#222;">
     <div style="max-width:800px;margin:0 auto;background:#fff;border:1px solid #ddd;">
         <div style="padding:20px 25px;background:#111;color:#fff;">
-            <h1 style="margin:0;font-size:22px;">New Detailing Devils Prime Franchise Enquiry</h1>
+            <h1 style="margin:0;font-size:22px;">New {{ config('site.brand') }} Prime Franchise Enquiry</h1>
             <p style="margin:8px 0 0;font-size:13px;color:#d9d9d9;">A new franchise enquiry has been received. The applicant details are provided below.</p>
         </div>
         <div style="padding:25px;">
@@ -59,7 +59,7 @@
             <div style="padding:12px;background:#f8f8f8;border-left:4px solid #d4a017;white-space:pre-wrap;overflow-wrap:anywhere;">{{ filled($application['partnership_reason'] ?? null) ? $application['partnership_reason'] : '-' }}</div>
             <p><strong>Consent Given:</strong> {{ ! empty($application['consent']) ? 'Yes' : 'No' }}</p>
             <p><strong>Submitted On:</strong> {{ $submittedOn }}</p>
-            <p style="border-top:1px solid #ddd;padding-top:15px;color:#777;font-size:12px;text-align:center;">This is an automated notification from the Detailing Devils Prime Franchise page.</p>
+            <p style="border-top:1px solid #ddd;padding-top:15px;color:#777;font-size:12px;text-align:center;">This is an automated notification from the {{ config('site.brand') }} Prime Franchise page.</p>
         </div>
     </div>
 </body>

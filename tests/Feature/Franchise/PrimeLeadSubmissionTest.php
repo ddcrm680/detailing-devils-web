@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\URL;
 use RuntimeException;
 use Symfony\Component\Mime\Email;
 use Tests\Fakes\Franchise\FakeSmsDelivery;
@@ -142,6 +143,7 @@ class PrimeLeadSubmissionTest extends TestCase
     public function test_comma_separated_team_recipients_receive_one_team_email(): void
     {
         config()->set('mail.prime_team_address', ' team@example.test, , second@example.test ');
+        config()->set('site.brand', 'Example Studios');
         $this->verifyMobile();
         $application = $this->validApplication();
         $application['middle_name'] = 'Kumar';
@@ -194,6 +196,22 @@ class PrimeLeadSubmissionTest extends TestCase
         $this->assertSame(2, DB::table('tbl_common_leads')->count());
         $this->assertSame(1, DB::table('tbl_common_leads')->where('phone', '919876543210')->where('record_type', 'other')->count());
         $this->assertSame(1, DB::table('tbl_common_leads')->where('phone', '919876543210')->where('record_type', 'prime-franchise')->count());
+    }
+
+    public function test_fofo_historical_phone_matching_does_not_change_prime_duplicate_behavior(): void
+    {
+        DB::table('tbl_common_leads')->insert([
+            'name' => 'Existing', 'phone' => '9876543210',
+            'record_type' => 'prime-franchise', 'closed_leads' => '0',
+        ]);
+        $this->verifyMobile();
+
+        $this->postJson(route('prime.submit'), $this->validApplication())
+            ->assertOk()->assertJsonPath('created', true);
+
+        $this->assertSame(2, DB::table('tbl_common_leads')->count());
+        $this->assertSame(1, DB::table('tbl_common_leads')
+            ->where('phone', '919876543210')->where('record_type', 'prime-franchise')->count());
     }
 
     public function test_submission_without_verified_otp_cannot_save(): void
@@ -267,6 +285,19 @@ class PrimeLeadSubmissionTest extends TestCase
         $this->assertSame(1, DB::table('tbl_common_leads')->count());
     }
 
+    public function test_applicant_email_uses_public_https_assets(): void
+    {
+        URL::forceRootUrl('https://www.detailingdevils.com');
+        URL::forceScheme('https');
+
+        $html = view('emails.franchise.prime-applicant', ['name' => 'Test'])->render();
+
+        $this->assertStringContainsString('src="https://www.detailingdevils.com/img/dd-logo-top.png"', $html);
+        $this->assertStringContainsString('href="https://www.detailingdevils.com/pdf/Prime-Franchise-Proposal.pdf"', $html);
+        $this->assertFileExists(public_path('img/dd-logo-top.png'));
+        $this->assertFileExists(public_path('pdf/Prime-Franchise-Proposal.pdf'));
+    }
+
     private function assertIndependentEmailFailure(string $failedView): void
     {
         $attempts = [];
@@ -307,9 +338,11 @@ class PrimeLeadSubmissionTest extends TestCase
             ));
             $html = view($view, $data)->render();
             $this->assertStringContainsString('Asha Kumar Sharma', $html);
+            $this->assertStringContainsString(config('site.brand'), $html);
 
             if ($view === 'emails.franchise.prime-applicant') {
-                $this->assertStringContainsString('https://www.detailingdevils.com/detailing-devils-prime-form/downloads/Prime-Franchise-Proposal.pdf', $html);
+                $this->assertStringContainsString(asset('img/dd-logo-top.png'), $html);
+                $this->assertStringContainsString(asset('pdf/Prime-Franchise-Proposal.pdf'), $html);
                 $this->assertStringContainsString('What Happens Next?', $html);
             } else {
                 $this->assertStringContainsString('Property Details', $html);

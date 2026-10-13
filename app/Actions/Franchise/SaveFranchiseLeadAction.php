@@ -4,9 +4,13 @@ namespace App\Actions\Franchise;
 
 use App\Services\Franchise\OtpService;
 use Closure;
+use Illuminate\Contracts\Session\Session;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use RuntimeException;
@@ -32,15 +36,55 @@ class SaveFranchiseLeadAction
         });
     }
 
-    private function saveLead(string $recordType, string $normalizedMobile, array $row, Closure $verify): bool
+    public function saveFofo(array $data, string $normalizedMobile, Session $session): bool
+    {
+        $storedImage = null;
+
+        try {
+            $created = $this->saveLead(
+                'FOFO',
+                $normalizedMobile,
+                $this->fofoRow($data),
+                fn (): bool => $this->verifyFofoEmail($data['email'], $session),
+                function (array $row) use ($data, &$storedImage): array {
+                    if ($data['spacearound'] === 'YES') {
+                        $storedImage = $this->storeFofoImage($data['locationimage']);
+                        $row['image_franchise'] = $storedImage;
+                    }
+
+                    return $row;
+                },
+                $this->fofoDuplicatePhones($normalizedMobile),
+            );
+        } catch (Throwable $exception) {
+            if ($storedImage !== null) {
+                try {
+                    if (! Storage::disk('fofo_images')->delete($storedImage)) {
+                        Log::warning('A failed FOFO lead image could not be removed.');
+                    }
+                } catch (Throwable) {
+                    Log::warning('A failed FOFO lead image could not be removed.');
+                }
+            }
+
+            throw $exception;
+        }
+
+        $session->forget('email_validation.proof');
+
+        return $created;
+    }
+
+    private function saveLead(string $recordType, string $normalizedMobile, array $row, Closure $verify, ?Closure $prepareInsert = null, ?array $duplicatePhones = null): bool
     {
         $phone = ltrim($normalizedMobile, '+');
+        $duplicatePhones ??= [$phone];
 
-        return $this->withLeadLock($recordType, $phone, function () use ($recordType, $row, $phone, $verify): bool {
-            return DB::transaction(function () use ($recordType, $row, $phone, $verify): bool {
+        return $this->withLeadLock($recordType, $phone, function () use ($recordType, $row, $phone, $duplicatePhones, $verify, $prepareInsert): bool {
+            return DB::transaction(function () use ($recordType, $row, $phone, $duplicatePhones, $verify, $prepareInsert): bool {
                 $exists = DB::table('tbl_common_leads')
-                    ->where('phone', $phone)
                     ->where('record_type', $recordType)
+                    ->whereIn('phone', $duplicatePhones)
                     ->exists();
 
                 // Each form defines its own verification, including for duplicate leads.
@@ -54,6 +98,10 @@ class SaveFranchiseLeadAction
                     return false;
                 }
 
+                if ($prepareInsert !== null) {
+                    $row = $prepareInsert($row);
+                }
+
                 if (! DB::table('tbl_common_leads')->insert(array_replace($row, [
                     'phone' => $phone,
                     'record_type' => $recordType,
@@ -64,6 +112,131 @@ class SaveFranchiseLeadAction
                 return true;
             });
         });
+    }
+
+    private function fofoDuplicatePhones(string $normalizedMobile): array
+    {
+        if (! preg_match('/\A\+91([0-9]{10})\z/', $normalizedMobile, $matches)) {
+            return [ltrim($normalizedMobile, '+')];
+        }
+
+        $national = $matches[1];
+
+        return [$national, '0'.$national, '91'.$national, '+91'.$national];
+    }
+
+    private function verifyFofoEmail(string $email, Session $session): bool
+    {
+        $proof = $session->get('email_validation.proof');
+        $expected = hash_hmac('sha256', strtolower(trim($email)), (string) config('app.key'));
+
+        if (! is_array($proof)
+            || ! is_string($proof['email_hash'] ?? null)
+            || ! is_int($proof['expires_at'] ?? null)
+            || $proof['expires_at'] <= now()->timestamp
+            || ! hash_equals($expected, $proof['email_hash'])) {
+            throw ValidationException::withMessages([
+                'email' => 'Please validate this email address again before submitting.',
+            ]);
+        }
+
+        return true;
+    }
+
+    private function fofoRow(array $data): array
+    {
+        if ($data['country'] === 'other') {
+            $country = trim($data['another_country_name']);
+            $state = trim($data['another_state_name']);
+            $city = trim($data['another_city_name']);
+        } else {
+            $country = DB::table('tbl_country_phone')->where('id', $data['country'])->value('countryname');
+            $state = DB::table('tbl_states')->where('id', $data['state'])->where('country_id', $data['country'])->value('name');
+            $city = DB::table('tbl_cities')->where('id', $data['city'])->where('state_id', $data['state'])->value('name');
+
+            if ($country === null || $state === null || $city === null) {
+                throw ValidationException::withMessages([
+                    'country' => 'Please choose your location again before submitting.',
+                ]);
+            }
+        }
+
+        return [
+            'name' => trim($data['name'].' '.$data['lname']),
+            'email' => strtolower(trim($data['email'])),
+            'country' => $country,
+            'state' => $state,
+            'city' => $city,
+            'website' => trim((string) ($data['website'] ?? '')),
+            'profession' => trim((string) ($data['profession'] ?? '')),
+            'dob' => $data['dob'],
+            'contacted' => $data['contacted'],
+            'hearabout' => $data['hearabout'],
+            'newbussiness' => trim($data['newbussiness']),
+            'wantstart' => $data['wantstart'],
+            'bussinessowner' => $data['bussinessowner'],
+            'type_of_bussiness' => trim((string) ($data['type_of_bussiness'] ?? '')),
+            'product_service' => trim((string) ($data['product_service'] ?? '')),
+            'bussiness_description' => trim((string) ($data['bussiness_description'] ?? '')),
+            'experienceautomotive' => $data['experienceautomotive'],
+            'experience' => trim((string) ($data['experience'] ?? '')),
+            'existingautomotive' => $data['existingautomotive'],
+            'existingfacility' => trim((string) ($data['existingfacility'] ?? '')),
+            'spacearound' => $data['spacearound'],
+            'elaboratelocation' => trim((string) ($data['elaboratelocation'] ?? '')),
+            'whichcityfranchise' => trim($data['franchiseapply']),
+            'civillitigation' => $data['civillitigation'],
+            'spendfranchise' => $data['spendfranchise'],
+            'created_date' => now()->toDateString(),
+            'closed_leads' => '0',
+        ];
+    }
+
+    private function storeFofoImage(UploadedFile $image): string
+    {
+        $extension = match ($image->getMimeType()) {
+            'image/jpeg' => 'jpg',
+            'image/png' => 'png',
+            'image/webp' => 'webp',
+            default => throw new RuntimeException('The location image has an unsupported format.'),
+        };
+        $disk = Storage::disk('fofo_images');
+        File::ensureDirectoryExists($disk->path(''));
+        $source = fopen($image->getRealPath(), 'rb');
+
+        if ($source === false) {
+            throw new RuntimeException('The location image could not be read.');
+        }
+
+        try {
+            for ($attempt = 0; $attempt < 3; $attempt++) {
+                $filename = Str::random(32).'.'.$extension;
+                $destination = @fopen($disk->path($filename), 'x+b');
+
+                if ($destination === false) {
+                    continue;
+                }
+
+                try {
+                    $written = stream_copy_to_stream($source, $destination);
+                    if ($written === false || $written !== $image->getSize()) {
+                        throw new RuntimeException('The location image could not be saved.');
+                    }
+                } catch (Throwable $exception) {
+                    fclose($destination);
+                    $disk->delete($filename);
+                    throw $exception;
+                }
+
+                fclose($destination);
+
+                return $filename;
+            }
+        } finally {
+            fclose($source);
+        }
+
+        throw new RuntimeException('The location image could not be saved.');
     }
 
     private function withLeadLock(string $recordType, string $phone, Closure $operation): bool

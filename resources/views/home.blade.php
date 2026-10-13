@@ -135,7 +135,7 @@
         <p>Join India's largest detailing network. You bring the location and the drive. We bring the brand, training, products and systems to run it.</p>
         <div class="fr-ctas">
           <a class="cta" href="{{ route('prime.show') }}">Apply for Prime Franchise<i>↗</i></a>
-          <a class="cta" href="#">Apply for FOFO Franchise<i>↗</i></a>
+          <a class="cta" href="{{ route('fofo.show') }}">Apply for FOFO Franchise<i>↗</i></a>
         </div>
       </div>
       <ol>

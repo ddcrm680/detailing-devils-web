@@ -42,4 +42,14 @@ return [
         'sender' => env('SMS_ALERT_SENDER'),
     ],
 
+    'zerobounce' => [
+        'api_key' => env('ZEROBOUNCE_API_KEY'),
+    ],
+
+    'fofo' => [
+        'submission_enabled' => env('FOFO_SUBMISSION_ENABLED', false),
+        'call_enabled' => env('FOFO_CALL_ENABLED', false),
+        'call_url' => env('FOFO_CALL_URL'),
+    ],
+
 ];

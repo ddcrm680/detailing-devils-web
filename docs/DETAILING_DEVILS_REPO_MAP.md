@@ -14,13 +14,13 @@ This map describes the current Laravel checkout. The original `devils-new-web.zi
 
 | Location | Responsibility |
 | --- | --- |
-| `routes/web.php` | Home route and central entry point for the franchise, OTP, and enquiry route files |
-| `routes/forms.php`, `routes/otp.php`, `routes/enquiry.php` | Prime form routes, shared OTP routes, and existing enquiry/admin routes |
+| `routes/web.php` | Home and shared email-validation routes; central entry point for the franchise, location, OTP, and enquiry route files |
+| `routes/forms.php`, `routes/locations.php`, `routes/otp.php`, `routes/enquiry.php` | Prime and FOFO form routes, shared location GET routes, shared OTP routes, and existing enquiry/admin routes |
 | `routes/deploy.php`, `app/Http/Controllers/DeployController.php` | Deployment-related route and handler; do not invoke during routine testing |
 | `app/Http/Controllers/HomeController.php` | Passes `config('site')` to the home view |
 | `app/Http/Controllers/EnquiryController.php` | Enquiry validation, persistence, mail attempt and admin listing |
 | `app/Http/Requests/Franchise/StorePrimeRequest.php` | Prime server-side validation, CRM column-length checks, and normalized phone numbers |
-| `app/Actions/Franchise/SaveFranchiseLeadAction.php` | Prime-specific CRM mapping and OTP check plus a shared transactional save path for backend-selected record type, normalized phone, mapped columns and verification callback; FOFO mapping is not implemented yet |
+| `app/Actions/Franchise/SaveFranchiseLeadAction.php` | Prime and FOFO CRM mappings plus a shared transactional save path; Prime requires OTP, while FOFO requires the submitted email's session-bound ZeroBounce proof |
 | `app/Services/Franchise/PhoneNumberNormalizer.php` | Shared libphonenumber validation, E.164 normalization, and visible-number consistency checks for franchise forms |
 | `app/Http/Requests/Franchise/SendOtpRequest.php`, `VerifyOtpRequest.php` | Shared OTP payload validation for the controller endpoints |
 | `app/Services/Franchise/OtpService.php`, `OtpChallenge.php`, `OtpDeliveryService.php`, `SmsAlertDelivery.php`, `app/Contracts/Franchise/SmsDelivery.php` | Cache-backed OTP core and cancellation; OTP delivery builds the message before passing it to the generic SMS Alert transport; live delivery is disabled by default |
@@ -30,8 +30,11 @@ This map describes the current Laravel checkout. The original `devils-new-web.zi
 | `config/form_options.php` | Shared state options and Prime choice values, labels, and JavaScript-dependent IDs |
 | `resources/views/layouts/app.blade.php` | Shared HTML document, metadata, CSS/JS order, components and main content slot |
 | `resources/views/layouts/prime.blade.php`, `resources/views/forms/prime.blade.php` | Independent Prime layout and five-step application view |
-| `resources/views/emails/franchise/prime-team.blade.php`, `prime-applicant.blade.php` | Prime team notification and applicant thank-you email content |
-| `config/mail.php` | Existing Laravel mail transport/sender settings and configurable Prime team recipient |
+| `app/Http/Controllers/Franchise/FofoController.php`, `resources/views/forms/fofo.blade.php` | FOFO page and disabled-by-default submission; new leads schedule team/applicant emails and an optional calling callback |
+| `app/Http/Controllers/LocationController.php` | Shared read-only CRM country, state and city queries |
+| `app/Http/Controllers/EmailValidationController.php` | Shared ZeroBounce email-deliverability endpoint; API key stays in `config/services.php` |
+| `resources/views/emails/franchise/prime-team.blade.php`, `prime-applicant.blade.php`, `fofo-team.blade.php`, `fofo-applicant.blade.php` | Form-specific team notifications and applicant acknowledgements |
+| `config/mail.php` | Existing Laravel mail transport/sender settings and configurable Prime and FOFO team recipients |
 | `app/Http/Controllers/Franchise/` | Prime rendering/submission and shared OTP endpoints; OTP controller requires explicit provider and storage-readiness configuration |
 | `resources/views/components/header.blade.php` | Shared logo, social links, phone and menu button |
 | `resources/views/components/navbar.blade.php` | Full-screen section menu; links return to homepage anchors from other pages |
@@ -42,6 +45,8 @@ This map describes the current Laravel checkout. The original `devils-new-web.zi
 | `public/assets/css/style.css` | Shared design tokens, header, menu, footer and common elements |
 | `public/assets/css/home.css` | Homepage sections, responsive rules and page-specific reduced-motion styles |
 | `public/assets/css/prime.css`, `public/assets/js/modules/prime.js` | Prime wizard styling, client-side validation, OTP modal, and AJAX requests |
+| `public/assets/css/fofo.css`, `public/assets/js/modules/fofo.js` | FOFO page styling, conditional fields, manual location fallback, email blur check, client-side review and Axios submission |
+| `public/assets/js/common/location.js` | Reusable Axios-backed country, state and city dropdown initializer |
 | `public/assets/js/modules/navigation.js` | Shared menu open/close behavior and header scroll state |
 | `public/assets/js/modules/home.js` | Hero frames/canvas, service switching, enquiry-form browser handler, Lenis and GSAP animations |
 | `public/assets/js/common/` | Shared DOM, Axios/CSRF, loader, notification, validation and response helpers |
@@ -53,7 +58,7 @@ This map describes the current Laravel checkout. The original `devils-new-web.zi
 
 `GET /` → `HomeController::__invoke` → `home.blade.php` → `layouts.app`. The layout emits one HTML document, `<x-header>`, `<x-navbar>`, one `<main id="top">` containing `@yield('content')`, and `<x-footer>`.
 
-The layout loads fonts, optional non-homepage Bootstrap/Bootstrap Icons/Tom Select CSS, SweetAlert2 CSS, `style.css`, then page CSS from `@stack('css')`. At the end of the body it loads local Axios and SweetAlert2, optional non-homepage Bootstrap JS, common utilities, `<x-notification>`, `navigation.js`, then `@stack('js')`. The homepage stack adds CDN GSAP/ScrollTrigger/Lenis, `window.DD_SERVICES` and `window.DD_FRAMES`, then `home.js`. The homepage adds `home.css` through the CSS stack. Bootstrap and Tom Select are deliberately excluded from `/` by the layout's `request()->is('/')` condition.
+The layout loads fonts, optional non-homepage Bootstrap/Bootstrap Icons/Tom Select CSS, SweetAlert2 CSS, `style.css`, then page CSS from `@stack('css')`. At the end of the body it loads local Axios and SweetAlert2, optional non-homepage Bootstrap JS, common utilities (including `location.js` after shared Axios), `<x-notification>`, `navigation.js`, then `@stack('js')`. The homepage stack adds CDN GSAP/ScrollTrigger/Lenis, `window.DD_SERVICES` and `window.DD_FRAMES`, then `home.js`. The homepage adds `home.css` through the CSS stack. Bootstrap and Tom Select are deliberately excluded from `/` by the layout's `request()->is('/')` condition.
 
 `home.js` uses the hero frame URLs generated from `config/site.php` and `public/frames/`; it draws into `#cv` as scrolling advances. It creates six service buttons and images from `DD_SERVICES`, coordinates with the shared menu through `dd:menu-toggle`, and sets up Lenis/ScrollTrigger when motion is enabled. Keep the asset order and element IDs in mind when changing the layout or homepage.
 
@@ -63,7 +68,7 @@ The homepage view owns the hero, introduction, approach, statement, statistics, 
 
 `config/site.php` supplies the hero text/frame pattern, statistics, services, brand/contact details, social destinations and franchise steps. The franchise CTAs and other section copy are in `home.blade.php`. Images are under `public/img/`; frame files follow `ezgif-frame-001.jpg` through `ezgif-frame-240.jpg`.
 
-The Prime button uses the named `prime.show` route, which renders the migrated five-step frontend at `/franchise/prime-form`. The FOFO button is temporarily `href="#"` until its Laravel form and named route are built. Prime submission validates the form, consumes a purpose/mobile/session-bound OTP proof, and saves a new legacy CRM lead or returns an existing-lead result. OTP endpoints are wired but return HTTP 503 until SMS Alert credentials and both explicit readiness flags are configured. Only newly created Prime leads schedule two independent, best-effort emails through Laravel termination callbacks after the save commits; no queue or durable retry is used. The team recipient comes from `PRIME_FRANCHISE_TEAM_EMAIL`, and the sender uses Laravel's `MAIL_FROM_*` settings. The `log` mailer skips Prime emails so applicant details are not written to application logs.
+The Prime button uses the named `prime.show` route, which renders the migrated five-step frontend at `/franchise/prime-form`. The homepage FOFO button uses the named `fofo.show` route; the FOFO form is available directly at `/franchise/fofo-form`, but its submit button and POST handler remain disabled until `FOFO_SUBMISSION_ENABLED=true` is explicitly configured. Shared read-only location GET endpoints use `tbl_country_phone.id` → `tbl_states.country_id` → `tbl_cities.state_id`; tests use isolated SQLite fixtures. Prime submission validates the form, consumes a purpose/mobile/session-bound OTP proof, and saves a new legacy CRM lead or returns an existing-lead result. OTP endpoints are wired but return HTTP 503 until SMS Alert credentials and both explicit readiness flags are configured. Only newly created Prime leads schedule two independent, best-effort emails through Laravel termination callbacks after the save commits; no queue or durable retry is used. The team recipient comes from `PRIME_FRANCHISE_TEAM_EMAIL`, and the sender uses Laravel's `MAIL_FROM_*` settings. The `log` mailer skips Prime emails so applicant details are not written to application logs.
 
 `PrimeController::create` passes `config/form_options.php` choices to the Prime view; `StorePrimeRequest` reads the same allowed values and uses `PhoneNumberNormalizer` to verify mobile and WhatsApp inputs. Validated requests expose canonical E.164 values through `normalizedPhoneNumbers()`. `PrimeController::store` passes those values to `SaveFranchiseLeadAction`. Prime selects its record type and mandatory mobile OTP verification in backend code; its field mapping stays separate from the shared duplicate check and insert. The shared path invokes the form-defined verification callback inside the locked transaction, including for duplicate leads. The action locks by `(record_type, phone)`, but the legacy CRM has no unique constraint on that pair, so other writers that do not use the lock can still create duplicates. The current database queue uses the default database unless separately configured; do not dispatch email jobs to the CRM connection.
 
@@ -73,12 +78,20 @@ The Prime button uses the named `prime.show` route, which renders the migrated f
 | --- | --- | --- |
 | `GET /` | `HomeController::__invoke` | Renders the homepage with site configuration |
 | `GET /franchise/prime-form` | `PrimeController::create` | Renders the independent Prime application view |
+| `GET /franchise/fofo-form` | `FofoController::create` | Renders the FOFO form in the shared website layout; submit button is disabled by default |
+| `POST /franchise/fofo` | `FofoController::store` | Throttled and disabled by default; validates the form and email proof, saves a FOFO lead, returns `success`/`created`, and schedules follow-up only for a new lead |
+| `GET /locations/countries`, `/locations/states?country_id=…`, `/locations/cities?state_id=…` | `LocationController` | Shared read-only country, state and city lists from the CRM location tables |
+| `POST /email/validate` | `EmailValidationController::__invoke` | Throttled ZeroBounce deliverability check; returns boolean `success` plus `result` (`valid`, `invalid` or `unavailable`), without saving an application |
 | `POST /franchise/prime` | `PrimeController::store` | Validates and consumes Prime OTP proof; returns `success: true` with `created: true` for a new CRM row or `created: false` for an existing row; generic HTTP 503 on storage failure |
 | `POST /otp/send`, `POST /otp/verify` | `OtpController::send`, `OtpController::verify` | Validated, purpose-bound OTP workflow; unavailable by default until provider and storage readiness are enabled |
 | `POST /enquiry` | `EnquiryController::store` | Validates, stores, attempts mail, returns JSON or redirect; IP throttle is 10/min |
 | `GET /admin/enquiries` | `EnquiryController::index` with `AdminBasicAuth` | Protected, paginated enquiry listing |
 | `GET /deploy` | `DeployController::__invoke` | Token-protected deployment/migration action |
 | `GET /up` | Laravel health route | Framework health response |
+
+After a ZeroBounce `valid` result, the email endpoint stores `email_validation.proof` in the current Laravel session: an HMAC of the trimmed, lowercase email and an expiry ten minutes later. Each new check clears the previous proof. The FOFO save action checks the submitted email against this server-side proof and enforces the expiry; browser state is not proof. Public FOFO submission remains disabled by default.
+
+The FOFO save entry point maps validated location IDs to CRM names and stores a conditional image filename through the `fofo_images` disk rooted at `public/uploads/images/`. Its record-type-scoped duplicate check compares four exact historical Indian phone representations (`XXXXXXXXXX`, `0XXXXXXXXXX`, `91XXXXXXXXXX`, `+91XXXXXXXXXX`); non-Indian phones retain exact normalized-digit matching. Newly created leads still store normalized digits without `+`. A newly created lead schedules separate FOFO team and applicant emails and, only if `FOFO_CALL_ENABLED=true`, one best-effort HTTPS GET to the legacy calling service using `cust_mob`; these callbacks run after the response and are not durably retried. `FOFO_CALL_URL` and `FOFO_FRANCHISE_TEAM_EMAIL` require deployment configuration. Production image-path persistence still needs confirmation before activation; the calling endpoint's legacy format supports eleven-digit Indian numbers prefixed with zero.
 
 The homepage form posts through the native `fetch` handler in `home.js` with the CSRF meta token from `layouts.app`. The server validates and stores through `EnquiryController` and `Enquiry`, attempts mail, then returns a response message. The shared Axios configuration also reads the CSRF meta token, but the homepage enquiry handler uses `fetch`.
 

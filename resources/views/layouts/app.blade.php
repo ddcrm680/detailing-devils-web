@@ -64,6 +64,7 @@
     {{-- Common JavaScript --}}
     <script src="{{ asset('assets/js/common/dom.js') }}"></script>
     <script src="{{ asset('assets/js/common/axios.js') }}"></script>
+    <script src="{{ asset('assets/js/common/location.js') }}"></script>
     <script src="{{ asset('assets/js/common/loader.js') }}"></script>
     <script src="{{ asset('assets/js/common/notification.js') }}"></script>
     <script src="{{ asset('assets/js/common/validation.js') }}"></script>
