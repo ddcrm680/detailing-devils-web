@@ -341,6 +341,91 @@ body:has(#fofo-form) .hdr {
   color: #8cdda4;
 }
 
+.fofo-email-field .fofo-email-control > input {
+  padding-right: 44px;
+}
+
+.fofo-email-indicator {
+  position: absolute;
+  top: 50%;
+  right: 14px;
+  display: grid;
+  width: 18px;
+  height: 18px;
+  place-items: center;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.fofo-email-indicator > .bi,
+.fofo-email-indicator::before {
+  display: none;
+}
+
+.fofo-email-indicator > .bi {
+  font-size: 17px;
+  line-height: 1;
+}
+
+.fofo-email-indicator::before {
+  box-sizing: border-box;
+  width: 17px;
+  height: 17px;
+  border: 2px solid #b7bbbe;
+  border-top-color: transparent;
+  border-radius: 50%;
+  content: '';
+  animation: fofo-email-spin .8s linear infinite;
+}
+
+.fofo-email-field:has(#fofo-email-feedback[data-email-status="validating"]) .fofo-email-indicator::before,
+.fofo-email-field:has(#fofo-email-feedback[data-email-status="valid"]) .fofo-email-valid-icon,
+.fofo-email-field:has(#fofo-email-feedback[data-email-status="invalid"]) .fofo-email-invalid-icon,
+.fofo-email-field:has(#email.is-invalid):not(:has(#fofo-email-feedback[data-email-status="unavailable"])) .fofo-email-invalid-icon,
+.fofo-email-field:has(#fofo-email-feedback[data-email-status="unavailable"]) .fofo-email-unavailable-icon {
+  display: block;
+}
+
+.fofo-email-field:has(#fofo-email-feedback[data-email-status="valid"]) #email {
+  border-color: #36b86d;
+}
+
+.fofo-email-valid-icon {
+  color: #4ad47f;
+}
+
+.fofo-email-field:has(#fofo-email-feedback[data-email-status="valid"]) #fofo-email-feedback {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.fofo-email-field:has(#fofo-email-feedback[data-email-status="invalid"]) #email {
+  border-color: #e95860;
+}
+
+.fofo-email-invalid-icon {
+  color: #f26770;
+}
+
+.fofo-email-field:has(#fofo-email-feedback[data-email-status="unavailable"]) #email {
+  border-color: #ba9357 !important;
+}
+
+.fofo-email-unavailable-icon,
+.fofo-error[data-email-status="unavailable"] {
+  color: #dfb575;
+}
+
+@keyframes fofo-email-spin {
+  to { transform: rotate(360deg); }
+}
+
 .fofo-radios {
   display: flex;
   flex-wrap: wrap;
@@ -588,5 +673,10 @@ body:has(#fofo-form) .hdr {
   .fofo-field select,
   .fofo-field textarea {
     transition: none;
+  }
+
+  .fofo-email-indicator::before {
+    animation: none;
+    border-style: dotted;
   }
 }
