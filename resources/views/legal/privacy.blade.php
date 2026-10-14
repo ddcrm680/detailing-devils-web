@@ -44,10 +44,10 @@
 
         <h2>Address:</h2>
         <address>
-            <p>D-50, Sector 2, Noida,<br>Uttar Pradesh, India - 201301<br><a href="tel:+919555695695">+91 9555 695 695</a><br><a href="mailto:{{ config('site.support_email') }}">{{ config('site.support_email') }}</a></p>
+            <p>{{ config('site.address') }}<br><a href="tel:{{ config('site.phone_link') }}">{{ config('site.phone') }}</a><br><a href="mailto:{{ config('site.support_email') }}">{{ config('site.support_email') }}</a></p>
         </address>
 
-        <p>Need help?<br><a href="https://www.stagingweb.detailingdevils.com/tips">READ OUR COATING MAINTENANCE TIPS</a></p>
+        <p>Need help?<br><a class="cta" href="tel:{{ config('site.phone_link') }}">Call our team <i aria-hidden="true">→</i></a></p>
     </article>
 </div>
 @endsection

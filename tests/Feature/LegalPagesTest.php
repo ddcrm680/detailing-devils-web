@@ -51,7 +51,12 @@ class LegalPagesTest extends TestCase
 
         $this->get(route('legal.privacy'))->assertOk()
             ->assertSeeText('January 2017')
-            ->assertSeeText('D-50, Sector 2, Noida,')
+            ->assertSeeText(config('site.address'))
+            ->assertDontSeeText('D-50, Sector 2, Noida,')
+            ->assertDontSee('stagingweb.detailingdevils.com/tips')
+            ->assertSee('href="tel:'.config('site.phone_link').'"', false)
+            ->assertSeeText(config('site.phone'))
+            ->assertSeeText('Call our team')
             ->assertSee('id="cookies"', false)
             ->assertSee('mailto:'.$support, false)
             ->assertSeeText($support);
