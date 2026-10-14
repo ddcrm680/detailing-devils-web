@@ -23,3 +23,6 @@ require __DIR__ . '/otp.php';
 
 // Enquiry + Admin  enquiry routes
 require __DIR__ . '/enquiry.php';
+
+// Website legal policies
+require __DIR__ . '/legal.php';

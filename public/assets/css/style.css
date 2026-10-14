@@ -84,8 +84,32 @@ footer ul a{color:var(--soft);font-size:15px}
 footer ul a:hover{color:var(--text)}
 footer .about{color:var(--soft);max-width:34ch;font-size:15px;margin:16px 0 0}
 .legal{display:flex;flex-wrap:wrap;justify-content:space-between;gap:16px;margin-top:48px;padding-top:20px;border-top:1px solid var(--line)}
+.legal-links{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center}
+.legal-links a{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--mute)}
+.legal-links a:hover,.legal-links a:focus-visible{color:var(--text)}
 .giant{font-family:var(--display);font-stretch:125%;font-weight:800;text-transform:uppercase;font-size:clamp(40px,10.4vw,200px);line-height:.8;white-space:nowrap;color:#141413;margin-top:40px;overflow:hidden;letter-spacing:-.02em}
 @media (max-width:760px){footer .row{grid-template-columns:1fr 1fr}}
+
+/* ---------- LEGAL POLICY PAGES ---------- */
+.legal-page{min-width:0}
+.legal-page__hero{padding:clamp(130px,14vw,190px) var(--g) clamp(38px,6vw,76px);background-color:#090607;background-image:linear-gradient(90deg,rgba(3,3,4,.9),rgba(5,5,6,.74) 52%,rgba(5,5,6,.34)),url('../../img/fofo-form-background.png');background-position:center,center 53%;background-size:cover;background-repeat:no-repeat;border-bottom:1px solid var(--line)}
+.legal-page__hero-inner,.legal-page__body{width:min(100%,860px);margin-inline:auto}
+.legal-page__hero .lbl{color:var(--red)}
+.legal-page__hero h1{font-family:var(--display);font-stretch:125%;font-size:clamp(36px,6vw,68px);font-weight:800;line-height:1.03;letter-spacing:-.035em;text-transform:uppercase;text-wrap:balance;margin:14px 0 0}
+.legal-page__body{padding:clamp(36px,5vw,70px) var(--g) clamp(70px,8vw,112px);font-size:17px;line-height:1.75;color:var(--soft)}
+.legal-page__body p{margin:0 0 1.25em}
+.legal-page__body h2{font-family:var(--display);font-size:clamp(21px,2.5vw,26px);line-height:1.2;color:var(--text);margin:2em 0 .7em;padding-top:.8em;border-top:1px solid var(--line)}
+.legal-page__body h2:first-child{margin-top:0;padding-top:0;border:0}
+.legal-page__body h2[id]{scroll-margin-top:100px}
+.legal-page__body ul{margin:0 0 1.5em;padding-left:1.4em}
+.legal-page__body li{padding-left:.3em;margin:.45em 0}
+.legal-page__body li::marker{color:var(--red)}
+.legal-page__body strong{color:var(--text)}
+.legal-page__body a{color:var(--text);text-decoration:underline;text-decoration-color:var(--red);text-underline-offset:3px;overflow-wrap:anywhere}
+.legal-page__body a:hover{color:#fff;text-decoration-color:#fff}
+.legal-page__body address{font-style:normal}
+.legal-page__body .legal-page__intro{color:var(--text);font-weight:600}
+@media (max-width:760px){.legal-page__body{font-size:16px;line-height:1.7}.legal-page__hero{padding-top:118px;background-position:center,24% center;background-image:linear-gradient(90deg,rgba(3,3,4,.88),rgba(3,3,4,.68)),url('../../img/fofo-form-background.png')}.legal-page__hero h1{font-size:clamp(34px,9vw,48px)}}
 
 @media (prefers-reduced-motion:reduce){
   .menu,.menu nav a span{transition:none}
