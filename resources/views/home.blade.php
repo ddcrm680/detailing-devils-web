@@ -161,12 +161,12 @@
       </div>
       <form id="form" method="POST" action="{{ route('enquiry.store') }}" novalidate>
         @csrf
-        <div class="f"><label for="n">Name</label><input id="n" name="name" autocomplete="name" required></div>
-        <div class="f"><label for="p">Phone</label><input id="p" name="phone" type="tel" autocomplete="tel" placeholder="+91" required></div>
-        <div class="f"><label for="c">City</label><input id="c" name="city" autocomplete="address-level2"></div>
-        <div class="f"><label for="m">Car</label><input id="m" name="car" placeholder="Make and model"></div>
+        <div class="f"><label for="n">Name</label><input id="n" name="name" autocomplete="name" aria-describedby="n-error" required><small class="invalid-feedback" id="n-error" data-error-for="name" role="alert"></small></div>
+        <div class="f"><label for="p">Phone</label><input id="p" name="phone" type="tel" autocomplete="tel" placeholder="+91" aria-describedby="p-error" required><small class="invalid-feedback" id="p-error" data-error-for="phone" role="alert"></small></div>
+        <div class="f"><label for="c">City</label><input id="c" name="city" autocomplete="address-level2" aria-describedby="c-error"><small class="invalid-feedback" id="c-error" data-error-for="city" role="alert"></small></div>
+        <div class="f"><label for="m">Car</label><input id="m" name="car" placeholder="Make and model" aria-describedby="m-error"><small class="invalid-feedback" id="m-error" data-error-for="car" role="alert"></small></div>
         <div class="f full"><label for="s">I'm interested in</label>
-          <select id="s" name="interest">@foreach($site['services'] as $svc)<option>{{ $svc['title'] }}</option>@endforeach<option>Franchise enquiry</option></select>
+          <select id="s" name="interest" aria-describedby="s-error">@foreach($site['services'] as $svc)<option>{{ $svc['title'] }}</option>@endforeach<option>Franchise enquiry</option></select><small class="invalid-feedback" id="s-error" data-error-for="interest" role="alert"></small>
         </div>
         <div class="ff"><button class="cta red" type="submit">Start Your Detail <i>→</i></button><p class="note" id="note" role="status"></p></div>
       </form>
@@ -187,4 +187,5 @@
       window.DD_FRAMES = @json(collect(range(1, $site['hero']['frames']))->map(fn ($i) => sprintf($site['hero']['frame_pattern'], $i))->values());
   </script>
   <script src="{{ asset('assets/js/modules/home.js') }}"></script>
+  <script src="{{ asset('assets/js/modules/enquiry.js') }}"></script>
 @endpush

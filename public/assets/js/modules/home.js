@@ -124,23 +124,6 @@
     b.addEventListener('mouseenter',()=>{if(matchMedia('(hover:hover)').matches)go()});
   });
 
-  /* ---------- form ---------- */
-  document.getElementById('form').addEventListener('submit',async e=>{
-    e.preventDefault();
-    const f=e.target,note=document.getElementById('note'),btn=f.querySelector('button[type=submit]');
-    const n=document.getElementById('n').value.trim(),p=document.getElementById('p').value.trim();
-    if(!n||!p){note.textContent='Add your name and phone number so the studio can call you.';return}
-    btn.disabled=true;note.textContent='Sending…';
-    try{
-      const r=await fetch(f.action,{method:'POST',headers:{'Accept':'application/json','X-CSRF-TOKEN':document.querySelector('meta[name=csrf-token]').content},body:new FormData(f)});
-      const d=await r.json().catch(()=>({}));
-      if(r.ok){note.textContent=d.message||'Thank you. Our team will call you shortly.';f.reset()}
-      else{note.textContent=(d.errors&&Object.values(d.errors)[0][0])||d.message||'Something went wrong. Please call us instead.'}
-    }catch(err){note.textContent='Could not send. Please check your connection or call us.'}
-    btn.disabled=false;
-  });
-
-
   /* ---------- smooth scroll + GSAP ---------- */
   if(reduce||!window.gsap||!window.ScrollTrigger)return;
   gsap.registerPlugin(ScrollTrigger);
