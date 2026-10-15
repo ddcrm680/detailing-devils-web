@@ -1,7 +1,7 @@
 <?php
 
-use App\Http\Controllers\HomeController;
 use App\Http\Controllers\EmailValidationController;
+use App\Http\Controllers\HomeController;
 use Illuminate\Support\Facades\Route;
 
 // Home page
@@ -13,16 +13,19 @@ Route::post('/email/validate', EmailValidationController::class)
     ->name('email.validate');
 
 // Franchise form routes
-require __DIR__ . '/forms.php';
+require __DIR__.'/forms.php';
 
 // Shared country, state and city lists
-require __DIR__ . '/locations.php';
+require __DIR__.'/locations.php';
 
 // OTP verification routes
-require __DIR__ . '/otp.php';
+require __DIR__.'/otp.php';
 
 // Enquiry + Admin  enquiry routes
-require __DIR__ . '/enquiry.php';
+require __DIR__.'/enquiry.php';
 
 // Website legal policies
-require __DIR__ . '/legal.php';
+require __DIR__.'/legal.php';
+
+// Studio locator
+require __DIR__.'/studios.php';

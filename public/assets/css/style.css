@@ -89,6 +89,7 @@ footer .about{color:var(--soft);max-width:34ch;font-size:15px;margin:16px 0 0}
 .legal-links a:hover,.legal-links a:focus-visible{color:var(--text)}
 .giant{font-family:var(--display);font-stretch:125%;font-weight:800;text-transform:uppercase;font-size:clamp(40px,10.4vw,200px);line-height:.8;white-space:nowrap;color:#141413;margin-top:40px;overflow:hidden;letter-spacing:-.02em}
 @media (max-width:760px){footer .row{grid-template-columns:1fr 1fr}}
+@media (max-width:350px){.menu nav a{font-size:32px;gap:12px}footer .row{grid-template-columns:1fr}}
 
 /* ---------- LEGAL POLICY PAGES ---------- */
 .legal-page{min-width:0}

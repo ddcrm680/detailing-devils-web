@@ -114,7 +114,7 @@
       <figure class="ph"><img src="img/recent-work.webp" alt="Satin blue Dodge Charger SRT outside a Detailing Devils studio" loading="lazy"></figure>
       <div class="ov"><span class="lbl">Portfolio</span><h3 class="disp">Recent Work</h3><p>Supercars, SUVs and daily drivers, corrected and protected in our studios.</p><span class="go">Explore work →</span></div>
     </a>
-    <a class="card" href="#contact">
+    <a class="card" href="{{ route('studios.index') }}">
       <figure class="ph"><img src="img/find-studio.webp" alt="Empty Detailing Devils studio with numbered bays at the entrance of a Detailing Devils studio" loading="lazy"></figure>
       <div class="ov"><span class="lbl">145+ locations</span><h3 class="disp">Find a Studio</h3><p>There's a Detailing Devils studio in most major Indian cities. Find the one nearest you.</p><span class="go">Find a studio →</span></div>
     </a>
