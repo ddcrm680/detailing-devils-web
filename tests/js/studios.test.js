@@ -16,7 +16,7 @@ function setup() {
     elements.set(id, value);
     return value;
   };
-  for (const id of ['studio-filters', 'studio-search', 'studio-state', 'studio-count', 'studio-empty', 'studio-pagination', 'studio-previous', 'studio-next', 'studio-page']) element(id);
+  for (const id of ['studio-filters', 'studio-search', 'studio-state', 'studio-count', 'studio-empty', 'studio-pagination', 'studio-previous', 'studio-next', 'studio-page', 'studio-popular', 'studio-presence-states', 'studio-view-all', 'studio-directory']) element(id);
   const cards = studios.map((studio) => ({
     hidden: false,
     dataset: { search: `${studio.name} ${studio.address} ${studio.state} ${studio.phones.join(' ')}`, state: studio.state },
@@ -55,4 +55,22 @@ test('search and state filtering use the complete dataset before pagination', ()
   get('studio-search').listeners.input();
   assert.equal(get('studio-empty').hidden, false);
   assert.equal(get('studio-results').hidden, true);
+});
+
+test('popular locations and presence states reuse the complete search and state filters', () => {
+  const { cards, get } = setup();
+  get('studio-popular').listeners.click({ target: { closest: () => ({ dataset: { studioSearch: 'Noida' } }) } });
+  assert.equal(get('studio-search').value, 'Noida');
+  assert.equal(get('studio-count').textContent, '7 locations found');
+  assert.equal(cards.filter((card) => !card.hidden).length, 7);
+
+  get('studio-presence-states').listeners.click({ target: { closest: () => ({ dataset: { studioState: 'Delhi' } }) } });
+  assert.equal(get('studio-search').value, '');
+  assert.equal(get('studio-state').value, 'Delhi');
+  assert.equal(get('studio-count').textContent, '10 locations found');
+
+  get('studio-view-all').listeners.click();
+  assert.equal(get('studio-state').value, '');
+  assert.equal(get('studio-count').textContent, '63 locations found');
+  assert.equal(cards.filter((card) => !card.hidden).length, 50);
 });

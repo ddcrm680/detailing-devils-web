@@ -12,8 +12,16 @@
     const previous = document.getElementById('studio-previous');
     const next = document.getElementById('studio-next');
     const pageLabel = document.getElementById('studio-page');
+    const popular = document.getElementById('studio-popular');
+    const presenceStates = document.getElementById('studio-presence-states');
+    const viewAll = document.getElementById('studio-view-all');
+    const directory = document.getElementById('studio-directory');
     const pageSize = 50;
     let page = 1;
+
+    function showDirectory() {
+        directory?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
+    }
 
     function render() {
         const term = search.value.trim().toLocaleLowerCase();
@@ -43,5 +51,30 @@
     state.addEventListener('change', () => { page = 1; render(); });
     previous.addEventListener('click', () => { page--; render(); });
     next.addEventListener('click', () => { page++; render(); });
+    popular?.addEventListener('click', (event) => {
+        const chip = event.target.closest('[data-studio-search]');
+        if (!chip) return;
+        search.value = chip.dataset.studioSearch;
+        state.value = '';
+        page = 1;
+        render();
+        showDirectory();
+    });
+    presenceStates?.addEventListener('click', (event) => {
+        const choice = event.target.closest('[data-studio-state]');
+        if (!choice) return;
+        search.value = '';
+        state.value = choice.dataset.studioState;
+        page = 1;
+        render();
+        showDirectory();
+    });
+    viewAll?.addEventListener('click', () => {
+        search.value = '';
+        state.value = '';
+        page = 1;
+        render();
+        showDirectory();
+    });
     render();
 })();
