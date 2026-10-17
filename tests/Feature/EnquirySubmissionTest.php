@@ -217,6 +217,7 @@ class EnquirySubmissionTest extends TestCase
         $this->get(route('home'))->assertOk()
             ->assertSee('name="_token"', false)
             ->assertSee('assets/js/modules/enquiry.js', false);
-        $this->assertNotNull(Route::getRoutes()->getByName('enquiry.index'));
+        $this->assertNull(Route::getRoutes()->getByName('enquiry.index'));
+        $this->get('/admin/enquiries')->assertNotFound();
     }
 }

@@ -8,25 +8,23 @@ This map describes the current Laravel checkout. The original `devils-new-web.zi
 - The homepage uses a shared website layout, shared Blade components, a homepage view, and CSS/JS files served from `public/assets/`.
 - GSAP 3.12.5, ScrollTrigger and Lenis 1.1.13 load from CDNs on the homepage. The scroll-driven canvas uses 240 JPEGs in `public/frames/`.
 - Vite/Tailwind are configured in `package.json`, `vite.config.js`, `resources/css/app.css` and `resources/js/app.js`; the current homepage does not load those Vite entrypoints.
-- The backend provides enquiry submission, database storage, an email attempt, a protected enquiry list, and a token-protected deployment route.
+- The backend provides disabled-by-default CRM enquiry submission, optional email notification, and a token-protected deployment route.
 
 ## Directory and file ownership
 
 | Location | Responsibility |
 | --- | --- |
 | `routes/web.php` | Home and shared email-validation routes; central entry point for the franchise, location, OTP, enquiry, legal, and studio route files |
-| `routes/forms.php`, `routes/locations.php`, `routes/otp.php`, `routes/enquiry.php`, `routes/legal.php` | Prime and FOFO form routes, shared location GET routes, shared OTP routes, existing enquiry/admin routes, and four named legal policy pages |
+| `routes/forms.php`, `routes/locations.php`, `routes/otp.php`, `routes/enquiry.php`, `routes/legal.php` | Prime and FOFO form routes, shared location GET routes, shared OTP routes, homepage enquiry route, and four named legal policy pages |
 | `routes/deploy.php`, `app/Http/Controllers/DeployController.php` | Deployment-related route and handler; do not invoke during routine testing |
 | `routes/studios.php`, `app/Http/Controllers/StudioController.php`, `resources/data/studios.json` | Public studio locator using the approved static studio list; no CRM query is made |
 | `app/Http/Controllers/HomeController.php` | Passes `config('site')` to the home view |
-| `app/Http/Controllers/EnquiryController.php` | Enquiry validation, persistence, mail attempt and admin listing |
+| `app/Http/Controllers/EnquiryController.php` | Disabled-by-default CRM enquiry validation, insert, and optional mail attempt |
 | `app/Http/Requests/Franchise/StorePrimeRequest.php` | Prime server-side validation, CRM column-length checks, and normalized phone numbers |
 | `app/Actions/Franchise/SaveFranchiseLeadAction.php` | Prime and FOFO CRM mappings plus a shared transactional save path; Prime requires OTP, while FOFO requires the submitted email's session-bound ZeroBounce proof |
 | `app/Services/Franchise/PhoneNumberNormalizer.php` | Shared libphonenumber validation, E.164 normalization, and visible-number consistency checks for franchise forms |
 | `app/Http/Requests/Franchise/SendOtpRequest.php`, `VerifyOtpRequest.php` | Shared OTP payload validation for the controller endpoints |
 | `app/Services/Franchise/OtpService.php`, `OtpChallenge.php`, `OtpDeliveryService.php`, `SmsAlertDelivery.php`, `app/Contracts/Franchise/SmsDelivery.php` | Cache-backed OTP core and cancellation; OTP delivery builds the message before passing it to the generic SMS Alert transport; live delivery is disabled by default |
-| `app/Http/Middleware/AdminBasicAuth.php` | Admin enquiry-list access |
-| `app/Models/Enquiry.php`, `database/migrations/` | Enquiry model and schema |
 | `config/site.php` | Brand, contacts (including legal-policy support email), hero settings, statistics, services and franchise steps |
 | `config/form_options.php` | Shared state options and Prime choice values, labels, and JavaScript-dependent IDs |
 | `resources/views/layouts/app.blade.php` | Shared HTML document, metadata, CSS/JS order, components and main content slot |
@@ -44,14 +42,13 @@ This map describes the current Laravel checkout. The original `devils-new-web.zi
 | `resources/views/components/footer.blade.php` | Shared contact details and footer navigation |
 | `resources/views/components/notification.blade.php` | Session error notification hook |
 | `resources/views/home.blade.php` | Homepage sections, enquiry form, page CSS/JS stacks and server-to-browser service/frame data |
-| `resources/views/admin/enquiries.blade.php` | Admin enquiry table; inspect its own layout before changing shared website assets |
 | `public/assets/css/style.css` | Shared design tokens, header, menu, footer and common elements |
 | `public/assets/css/home.css` | Homepage sections, responsive rules and page-specific reduced-motion styles |
 | `public/assets/css/prime.css`, `public/assets/js/modules/prime.js` | Prime wizard styling, client-side validation, OTP modal, and AJAX requests |
 | `public/assets/css/fofo.css`, `public/assets/js/modules/fofo.js` | FOFO page styling, conditional fields, manual location fallback, email blur check, client-side review and Axios submission |
 | `public/assets/js/common/location.js` | Reusable Axios-backed country, state and city dropdown initializer |
 | `public/assets/js/modules/navigation.js` | Shared menu open/close behavior and header scroll state |
-| `public/assets/js/modules/home.js` | Hero frames/canvas, service switching, enquiry-form browser handler, Lenis and GSAP animations |
+| `public/assets/js/modules/home.js`, `public/assets/js/modules/enquiry.js` | Homepage animation/service behavior and the separate CRM enquiry-form browser handler |
 | `public/assets/js/common/` | Shared DOM, Axios/CSRF, loader, notification, validation and response helpers |
 | `public/assets/vendor/` | Local Axios, SweetAlert2, Bootstrap, Bootstrap Icons and Tom Select distribution assets |
 | `public/img/`, `public/frames/` | Website imagery and the sequential hero frames |
@@ -89,8 +86,7 @@ The Prime button uses the named `prime.show` route, which renders the migrated f
 | `POST /email/validate` | `EmailValidationController::__invoke` | Throttled ZeroBounce deliverability check; returns boolean `success` plus `result` (`valid`, `invalid` or `unavailable`), without saving an application |
 | `POST /franchise/prime` | `PrimeController::store` | Returns HTTP 503 while `PRIME_SUBMISSION_ENABLED=false`; when enabled, validates and consumes Prime OTP proof and returns `success`/`created` after saving or detecting a duplicate |
 | `POST /otp/send`, `POST /otp/verify` | `OtpController::send`, `OtpController::verify` | Validated, purpose-bound OTP workflow; unavailable by default until provider and storage readiness are enabled |
-| `POST /enquiry` | `EnquiryController::store` | Validates, stores, attempts mail, returns JSON or redirect; IP throttle is 10/min |
-| `GET /admin/enquiries` | `EnquiryController::index` with `AdminBasicAuth` | Protected, paginated enquiry listing |
+| `POST /enquiry` | `EnquiryController::store` | Disabled by default; validates and inserts into legacy CRM `tbl_SaveContactForm7_8` through the default connection, optionally attempts mail, and returns JSON or redirect; IP throttle is 10/min |
 | `GET /deploy` | `DeployController::__invoke` | Token-protected deployment/migration action |
 | `GET /up` | Laravel health route | Framework health response |
 
@@ -98,7 +94,7 @@ After a ZeroBounce `valid` result, the email endpoint stores `email_validation.p
 
 The FOFO save entry point maps validated location IDs to CRM names and stores a conditional image filename through the `fofo_images` disk rooted at `public/uploads/images/`. Its record-type-scoped duplicate check compares four exact historical Indian phone representations (`XXXXXXXXXX`, `0XXXXXXXXXX`, `91XXXXXXXXXX`, `+91XXXXXXXXXX`); non-Indian phones retain exact normalized-digit matching. Newly created leads still store normalized digits without `+`. A newly created lead schedules separate FOFO team and applicant emails and, only if `FOFO_CALL_ENABLED=true`, one best-effort HTTPS GET to the legacy calling service using `cust_mob`; these callbacks run after the response and are not durably retried. `FOFO_CALL_URL` and `FOFO_FRANCHISE_TEAM_EMAIL` require deployment configuration. Production image-path persistence still needs confirmation before activation; the calling endpoint's legacy format supports eleven-digit Indian numbers prefixed with zero.
 
-The homepage form posts through the native `fetch` handler in `home.js` with the CSRF meta token from `layouts.app`. The server validates and stores through `EnquiryController` and `Enquiry`, attempts mail, then returns a response message. The shared Axios configuration also reads the CSRF meta token, but the homepage enquiry handler uses `fetch`.
+The homepage form posts through the shared Axios client in `enquiry.js`, which uses the CSRF meta token from `layouts.app` and shared validation/response helpers. `EnquiryController::store` inserts into the legacy CRM only when `ENQUIRY_SUBMISSION_ENABLED=true`. `ENQUIRY_EMAIL_ENABLED` independently controls the optional mail attempt. Both flags default to false. Existing local `enquiries` tables and data remain untouched; the obsolete migration file and former admin listing have been removed.
 
 ## Verification and cautions
 
@@ -106,5 +102,5 @@ The homepage form posts through the native `fetch` handler in `home.js` with the
 - Keep real enquiry data, `.env`, logs and credentials out of commits and documentation. Do not run database-writing tests, migrations or the deployment route without explicit authorization and an isolated target.
 - The Recent Work card leads to the contact section. The homepage Find a Studio card and shared Studios navigation links lead to the locator. The footer links to the four legal policy pages; Cookies links to the Cookies section of Privacy rather than a separate page.
 - The studio locator uses `resources/data/studios.json`, extracted from the owner-supplied HTML. Its private `tbl_studio` backups remain Git-ignored and are not used by the page.
-- The deployment endpoint and admin credential handling warrant separate security work. Neither is changed by the frontend layout refactor.
-- For shared-site changes, start with `layouts/app.blade.php`, the relevant component, `style.css` and `navigation.js`. For homepage changes, add `home.blade.php`, `home.css` and `home.js`. For enquiry changes, also inspect `routes/enquiry.php`, `EnquiryController`, the model and migrations.
+- The deployment endpoint warrants separate security work; this cleanup does not change it.
+- For shared-site changes, start with `layouts/app.blade.php`, the relevant component, `style.css` and `navigation.js`. For homepage changes, add `home.blade.php`, `home.css` and `home.js`. For enquiry changes, also inspect `routes/enquiry.php`, `EnquiryController` and `enquiry.js`.

@@ -23,11 +23,9 @@ Read `docs/DETAILING_DEVILS_REPO_MAP.md` before making substantial changes. It i
 | Brand text, contacts, hero settings, service details, franchise steps | `config/site.php` |
 | Images and branding | `public/img/` |
 | Hero animation | `public/frames/` (240 sequential JPEG frames in the initial snapshot) |
-| Home route, enquiry route, admin route | `routes/web.php` |
+| Home and enquiry routes | `routes/web.php`, `routes/enquiry.php` |
 | Homepage rendering | `app/Http/Controllers/HomeController.php` |
-| Enquiry validation, persistence, mail, admin list | `app/Http/Controllers/EnquiryController.php` |
-| Enquiry model and schema | `app/Models/Enquiry.php`, `database/migrations/` |
-| Enquiry admin template and authentication | `resources/views/admin/enquiries.blade.php`, `app/Http/Middleware/AdminBasicAuth.php` |
+| Enquiry validation, CRM persistence, optional mail | `app/Http/Controllers/EnquiryController.php` |
 | Deployment-related route and handler | `routes/deploy.php`, `app/Http/Controllers/DeployController.php` |
 | Build/dependencies/tests | `composer.json`, `package.json`, `tests/` |
 
@@ -66,7 +64,7 @@ npm install                # Only if dependencies are needed and installation is
 npm run build              # Frontend bundler check; not a substitute for checking inline JS
 ```
 
-For a modified PHP file: `php -l path/to/file.php`. Consider `vendor/bin/pint --test` for PHP formatting where installed. For JavaScript inside `home.blade.php`, validate the changed script in a suitable JS environment; verify behavior in a browser when possible. For interface changes, inspect desktop and mobile layouts, interactions, console errors, and frame loading. For enquiry changes, test valid/invalid input, CSRF, persistence, mail handling, throttling, and admin authorization as applicable.
+For a modified PHP file: `php -l path/to/file.php`. Consider `vendor/bin/pint --test` for PHP formatting where installed. For JavaScript inside `home.blade.php`, validate the changed script in a suitable JS environment; verify behavior in a browser when possible. For interface changes, inspect desktop and mobile layouts, interactions, console errors, and frame loading. For enquiry changes, test valid/invalid input, CSRF, CRM persistence, optional mail handling, and throttling with isolated storage.
 
 If `vendor/`, `node_modules/`, Composer, or a real browser are unavailable, state explicitly which checks could not run. **Do not claim a complete runtime test from static inspection alone.**
 

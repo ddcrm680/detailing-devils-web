@@ -2,8 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Enquiry;
-use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -85,12 +83,5 @@ class EnquiryController extends Controller
         return $request->expectsJson()
             ? response()->json(['success' => true, 'message' => $message])
             : redirect()->to(route('home').'#contact')->with('status', $message);
-    }
-
-    public function index(): View
-    {
-        return view('admin.enquiries', [
-            'enquiries' => Enquiry::latest()->paginate(50),
-        ]);
     }
 }

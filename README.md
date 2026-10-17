@@ -1,6 +1,6 @@
 # Detailing Devils website (Laravel)
 
-The complete Detailing Devils home page: scroll banner, all sections and animations, plus a working enquiry form that saves every enquiry and emails it to you.
+The Detailing Devils home page includes the scroll banner, sections, animations, and a CRM-backed enquiry form that is disabled by default.
 
 **Needs:** PHP 8.3 or newer and Composer (Laravel 13).
 
@@ -50,16 +50,11 @@ On a live server, run `php artisan config:clear` and `php artisan view:clear` af
 
 ## 3. Enquiry form
 
-- Every form submission is saved in the database.
-- See them all at **/admin/enquiries** (for example `https://yourdomain.com/admin/enquiries`).
-- The login is set in `.env`:
+- `POST /enquiry` is disabled by default with `ENQUIRY_SUBMISSION_ENABLED=false`.
+- When enabled, it stores enquiries in the existing CRM `tbl_SaveContactForm7_8` table through Laravel's default database connection. Historical local `enquiries` data in existing installations is preserved but no longer receives new submissions.
+- Optional notifications to `config('site.email')` require `ENQUIRY_EMAIL_ENABLED=true` and working mail settings. Email failure does not undo a saved enquiry.
 
-```
-ADMIN_USER=admin
-ADMIN_PASSWORD=change-this-password
-```
-
-**Email alerts:** every enquiry is emailed to the address in `config/site.php` (`email`). To make sending work, put your email account's SMTP details in `.env`. Your hosting provider gives you these.
+To configure optional SMTP delivery, use environment settings supplied by your mail provider:
 
 ```
 MAIL_MAILER=smtp
@@ -70,8 +65,6 @@ MAIL_USERNAME=info@detailingdevils.com
 MAIL_PASSWORD=your-email-password
 MAIL_FROM_ADDRESS="info@detailingdevils.com"
 ```
-
-Until you add these, enquiries are still saved and visible at /admin/enquiries.
 
 ---
 
