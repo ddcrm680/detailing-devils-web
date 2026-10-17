@@ -17,7 +17,7 @@ This map describes the current Laravel checkout. The original `devils-new-web.zi
 | `routes/web.php` | Home and shared email-validation routes; central entry point for the franchise, location, OTP, enquiry, legal, and studio route files |
 | `routes/forms.php`, `routes/locations.php`, `routes/otp.php`, `routes/enquiry.php`, `routes/legal.php` | Prime and FOFO form routes, shared location GET routes, shared OTP routes, homepage enquiry route, and four named legal policy pages |
 | `routes/deploy.php`, `app/Http/Controllers/DeployController.php` | Deployment-related route and handler; do not invoke during routine testing |
-| `routes/studios.php`, `app/Http/Controllers/StudioController.php`, `resources/data/studios.json` | Public studio locator using the approved static studio list; no CRM query is made |
+| `routes/studios.php`, `app/Http/Controllers/StudioController.php`, `resources/data/studios.json` | Public studio locator using the approved static studio list; no CRM query is made; also provides the presentation-only Studio Tour route |
 | `app/Http/Controllers/HomeController.php` | Passes `config('site')` to the home view |
 | `app/Http/Controllers/EnquiryController.php` | Disabled-by-default CRM enquiry validation, insert, and optional mail attempt |
 | `app/Http/Requests/Franchise/StorePrimeRequest.php` | Prime server-side validation, CRM column-length checks, and normalized phone numbers |
@@ -30,6 +30,7 @@ This map describes the current Laravel checkout. The original `devils-new-web.zi
 | `resources/views/layouts/app.blade.php` | Shared HTML document, metadata, CSS/JS order, components and main content slot |
 | `resources/views/legal/` | Four source-controlled policy pages using the shared website layout |
 | `resources/views/studios/index.blade.php`, `public/assets/css/studios.css`, `public/assets/js/modules/studios.js` | Shared-layout studio locator with Blade-rendered records, browser search/state filtering, 50-per-page pagination, phone and Google Maps links |
+| `resources/views/studios/tour.blade.php`, `public/assets/css/studio-tour.css`, `public/assets/js/modules/studio-tour.js`, `public/frames/studio-tour/` | Shared-layout Studio Tour with scroll-driven AVIF frames and links to the existing Prime and FOFO applications |
 | `resources/views/layouts/prime.blade.php`, `resources/views/forms/prime.blade.php` | Independent Prime layout and five-step application view |
 | `app/Http/Controllers/Franchise/FofoController.php`, `resources/views/forms/fofo.blade.php` | FOFO page and disabled-by-default submission; new leads schedule team/applicant emails and an optional calling callback |
 | `app/Http/Controllers/LocationController.php` | Shared read-only CRM country, state and city queries |
@@ -79,6 +80,7 @@ The Prime button uses the named `prime.show` route, which renders the migrated f
 | `GET /` | `HomeController::__invoke` | Renders the homepage with site configuration |
 | `GET /terms-of-use`, `/privacy-policy`, `/refund-policy`, `/cancellation-policy` | Named `Route::view` routes | Render the four legal policies in the shared website layout |
 | `GET /locate-a-store` | `StudioController::index` | Loads the source-controlled studio list; Blade renders every entry and vanilla JavaScript filters and paginates it |
+| `GET /studio-tour` | Named `Route::view` | Renders the cinematic Studio Tour without a database query or submission endpoint |
 | `GET /franchise/prime-form` | `PrimeController::create` | Renders the independent Prime application view |
 | `GET /franchise/fofo-form` | `FofoController::create` | Renders the FOFO form in the shared website layout; submit button is disabled by default |
 | `POST /franchise/fofo` | `FofoController::store` | Throttled and disabled by default; validates the form and email proof, saves a FOFO lead, returns `success`/`created`, and schedules follow-up only for a new lead |
