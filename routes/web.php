@@ -21,7 +21,7 @@ require __DIR__.'/locations.php';
 // OTP verification routes
 require __DIR__.'/otp.php';
 
-// Enquiry + Admin  enquiry routes
+// Homepage enquiry route
 require __DIR__.'/enquiry.php';
 
 // Website legal policies

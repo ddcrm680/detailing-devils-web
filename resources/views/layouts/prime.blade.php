@@ -102,7 +102,7 @@
     <script src="{{ asset('assets/js/common/axios.js') }}"></script>
     <script src="{{ asset('assets/js/modules/navigation.js') }}"></script>
 
-    {{-- forms/prime.blade.php will push prime.js here once migrated. --}}
+    {{-- Prime form JavaScript is pushed by forms/prime.blade.php. --}}
     @stack('js')
 </body>
 </html>
