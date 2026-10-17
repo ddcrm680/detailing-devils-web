@@ -42,17 +42,22 @@ img{display:block;max-width:100%}
 .hdr .left{display:flex;gap:18px}
 .hdr .left a,.hdr .ph-no{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:rgba(237,234,228,.7);transition:color .3s}
 .hdr .left a:hover{color:var(--text)}
+.hdr .left .header-cta{display:inline-flex;align-items:center;gap:10px;background:var(--red);border:1px solid var(--red);color:#fff;font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;padding:10px 16px;white-space:nowrap;transition:background .3s,border-color .3s}
+.hdr .left .header-cta i{font-style:normal;transition:transform .4s var(--ease)}
+.hdr .left .header-cta:hover{background:#b81b23;border-color:#b81b23;color:#fff}
+.hdr .left .header-cta:hover i{transform:translateX(4px)}
 .brand{display:flex;align-items:center;gap:10px;font-family:var(--display);font-stretch:125%;font-weight:800;font-size:15px;letter-spacing:.18em;text-transform:uppercase}
 .brand svg{width:22px;height:22px}
 .brand .logo{height:30px;width:auto;display:block}
 footer .brand .logo{height:40px}
 .hdr .right{display:flex;justify-content:flex-end;align-items:center;gap:22px}
-.burger{all:unset;cursor:pointer;display:flex;align-items:center;gap:12px;font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase}
+.burger{all:unset;cursor:pointer;display:flex;align-items:center;gap:12px;font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--text)}
 .burger span{display:grid;gap:5px}
 .burger span b{display:block;width:24px;height:1px;background:var(--text);transition:transform .5s var(--ease)}
 .menu-open .burger span b:first-child{transform:translateY(3px) rotate(45deg)}
 .menu-open .burger span b:last-child{transform:translateY(-3px) rotate(-45deg)}
-@media (max-width:760px){.hdr .left,.hdr .ph-no{display:none}.hdr .wrap{grid-template-columns:auto 1fr}}
+@media (max-width:760px){.hdr .ph-no{display:none}.hdr .wrap{grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);height:68px}.hdr .brand .logo{height:22px}.hdr .left .header-cta{font-size:10px;padding:8px 11px;letter-spacing:.1em}.hdr .left .header-cta-prefix{display:none}.hdr .right{gap:0}}
+@media (max-width:350px){.hdr .brand .logo{height:20px}.hdr .left .header-cta{font-size:9px;padding-inline:6px;gap:6px}}
 
 .menu{position:fixed;inset:0;z-index:40;background:var(--bg);clip-path:inset(0 0 100% 0);transition:clip-path .9s var(--ease);display:grid;grid-template-columns:1.3fr 1fr;gap:var(--g);padding:110px var(--g) 40px}
 .menu-open .menu{clip-path:inset(0 0 0 0)}
@@ -60,13 +65,13 @@ footer .brand .logo{height:40px}
 .menu nav a{font-family:var(--display);font-stretch:125%;font-weight:800;text-transform:uppercase;font-size:clamp(40px,7vw,100px);line-height:1.02;display:flex;align-items:baseline;gap:18px;color:#3a3936;transition:color .35s;overflow:hidden}
 .menu nav a span{display:inline-block;transform:translateY(105%);transition:transform .9s var(--ease)}
 .menu-open .menu nav a span{transform:none}
-.menu nav a:nth-child(2) span{transition-delay:.05s}.menu nav a:nth-child(3) span{transition-delay:.1s}.menu nav a:nth-child(4) span{transition-delay:.15s}.menu nav a:nth-child(5) span{transition-delay:.2s}.menu nav a:nth-child(6) span{transition-delay:.25s}
+.menu nav a:nth-child(2) span{transition-delay:.05s}.menu nav a:nth-child(3) span{transition-delay:.1s}.menu nav a:nth-child(4) span{transition-delay:.15s}.menu nav a:nth-child(5) span{transition-delay:.2s}.menu nav a:nth-child(6) span{transition-delay:.25s}.menu nav a:nth-child(7) span{transition-delay:.3s}
 .menu nav a:hover{color:var(--text)}
 .menu nav a small{font-family:var(--mono);font-size:12px;font-weight:400;letter-spacing:.12em;color:var(--mute)}
 .menu .ph{height:100%}
 .menu .ph img{transform:scale(1.2);transition:transform 1.4s var(--ease)}
 .menu-open .menu .ph img{transform:scale(1)}
-@media (max-width:860px){.menu{grid-template-columns:1fr}.menu .ph{display:none}}
+@media (max-width:860px){.menu{grid-template-columns:1fr}.menu .ph{display:none}.menu nav a{color:var(--soft)}}
 
 /* ---------- SHARED CONTACT & ACCENTS ---------- */
 .contact{font-style:normal;display:grid;gap:6px;margin-top:18px;color:var(--soft);font-size:15px}

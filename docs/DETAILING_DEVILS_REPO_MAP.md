@@ -31,14 +31,14 @@ This map describes the current Laravel checkout. The original `devils-new-web.zi
 | `resources/views/legal/` | Four source-controlled policy pages using the shared website layout |
 | `resources/views/studios/index.blade.php`, `public/assets/css/studios.css`, `public/assets/js/modules/studios.js` | Shared-layout studio locator with Blade-rendered records, browser search/state filtering, 50-per-page pagination, phone and Google Maps links |
 | `resources/views/studios/tour.blade.php`, `public/assets/css/studio-tour.css`, `public/assets/js/modules/studio-tour.js`, `public/frames/studio-tour/` | Shared-layout Studio Tour with scroll-driven AVIF frames and links to the existing Prime and FOFO applications |
-| `resources/views/layouts/prime.blade.php`, `resources/views/forms/prime.blade.php` | Independent Prime layout and five-step application view |
+| `resources/views/layouts/prime.blade.php`, `resources/views/forms/prime.blade.php` | Prime's independent five-step application layout and view; the layout reuses the shared website header and menu |
 | `app/Http/Controllers/Franchise/FofoController.php`, `resources/views/forms/fofo.blade.php` | FOFO page and disabled-by-default submission; new leads schedule team/applicant emails and an optional calling callback |
 | `app/Http/Controllers/LocationController.php` | Shared read-only CRM country, state and city queries |
 | `app/Http/Controllers/EmailValidationController.php` | Shared ZeroBounce email-deliverability endpoint; API key stays in `config/services.php` |
 | `resources/views/emails/franchise/prime-team.blade.php`, `prime-applicant.blade.php`, `fofo-team.blade.php`, `fofo-applicant.blade.php` | Form-specific team notifications and applicant acknowledgements |
 | `config/mail.php` | Existing Laravel mail transport/sender settings and configurable Prime and FOFO team recipients |
 | `app/Http/Controllers/Franchise/` | Prime rendering/submission and shared OTP endpoints; OTP controller requires explicit provider and storage-readiness configuration |
-| `resources/views/components/header.blade.php` | Shared logo, social links, phone and menu button |
+| `resources/views/components/header.blade.php` | Shared logo, contextual Studio Tour/Apply Now CTA, phone and menu button |
 | `resources/views/components/navbar.blade.php` | Full-screen section menu; links return to homepage anchors from other pages |
 | `resources/views/components/footer.blade.php` | Shared contact details and footer navigation |
 | `resources/views/components/notification.blade.php` | Session error notification hook |

@@ -12,10 +12,11 @@
     <link rel="preconnect" href="https://cdn.jsdelivr.net">
     <link rel="preconnect" href="https://code.jquery.com">
 
-    {{-- Prime is independent of the main website layout and CSS. --}}
+    {{-- Prime keeps its own form layout while reusing the website header and menu. --}}
     <link rel="stylesheet" href="{{ asset('assets/vendor/bootstrap.min.css') }}">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intl-tel-input@29.1.2/dist/css/intlTelInput.css">
+    <link rel="stylesheet" href="{{ asset('assets/css/style.css') }}">
     <link rel="stylesheet" href="{{ asset('assets/css/prime.css') }}">
     @stack('css')
 
@@ -35,7 +36,7 @@
     </script>
     @endproduction
 </head>
-<body>
+<body class="prime-page">
     @production
     <noscript>
         <img height="1" width="1" style="display:none"
@@ -44,21 +45,8 @@
     </noscript>
     @endproduction
 
-    {{-- Original Prime header: brand and support phone. --}}
-    <header class="site-header sticky-top">
-        <nav class="navbar navbar-expand-lg" aria-label="Primary navigation">
-            <div class="container">
-                <a class="navbar-brand d-flex align-items-center me-0" href="{{ url('/') }}"
-                   aria-label="Back to Detailing Devils homepage">
-                    <img src="{{ asset('img/dd-logo-prime.webp') }}" alt="Detailing Devils" style="height:45px;width:auto">
-                </a>
-                <a href="tel:9555695695" class="header-help d-md-flex align-items-center gap-2">
-                    <img src="{{ asset('img/phone-icon.webp') }}" alt="" aria-hidden="true">
-                    9555695695
-                </a>
-            </div>
-        </nav>
-    </header>
+    <x-header />
+    <x-navbar />
 
     <main>
         @yield('content')
@@ -112,6 +100,7 @@
     <script src="https://cdn.jsdelivr.net/npm/intl-tel-input@29.1.2/dist/js/intlTelInput.min.js"></script>
     <script src="{{ asset('assets/vendor/axios.min.js') }}"></script>
     <script src="{{ asset('assets/js/common/axios.js') }}"></script>
+    <script src="{{ asset('assets/js/modules/navigation.js') }}"></script>
 
     {{-- forms/prime.blade.php will push prime.js here once migrated. --}}
     @stack('js')

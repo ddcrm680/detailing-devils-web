@@ -136,6 +136,7 @@
         <div class="fr-ctas">
           <a class="cta" href="{{ route('prime.show') }}">Apply for Prime Franchise<i>↗</i></a>
           <a class="cta" href="{{ route('fofo.show') }}">Apply for FOFO Franchise<i>↗</i></a>
+          <a class="cta" href="{{ route('studios.tour') }}">Explore the Studio Tour<i>↗</i></a>
         </div>
       </div>
       <ol>
