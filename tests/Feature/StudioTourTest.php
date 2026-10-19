@@ -57,7 +57,7 @@ class StudioTourTest extends TestCase
             $menuLinks = $xpath->query('//div[@id="menu"]/nav/a');
             $this->assertSame(7, $menuLinks->length);
             $this->assertSame('https://www.devilscrm.detailingdevils.com/check-warranty', $menuLinks->item(5)->getAttribute('href'));
-            $this->assertSame('06Check Warranty', trim($menuLinks->item(5)->textContent));
+            $this->assertSame('06Warranty Check', trim($menuLinks->item(5)->textContent));
             $this->assertSame(0, $xpath->query('//div[@id="menu"]//a[@href="'.route('studios.tour').'"]')->length);
         }
 
@@ -69,7 +69,7 @@ class StudioTourTest extends TestCase
             $this->assertSame($service['title'], $serviceLinks->item($index)->textContent);
             $this->assertSame('#services', $serviceLinks->item($index)->getAttribute('href'));
         }
-        $this->assertSame('Check Warranty', $serviceLinks->item(4)->textContent);
+        $this->assertSame('Warranty Check', $serviceLinks->item(4)->textContent);
         $this->assertSame('https://www.devilscrm.detailingdevils.com/check-warranty', $serviceLinks->item(4)->getAttribute('href'));
         foreach (config('site.social') as $url) {
             $this->assertSame(1, $home->query('//footer//a[@href="'.$url.'"]')->length);
