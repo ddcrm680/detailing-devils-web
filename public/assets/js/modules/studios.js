@@ -9,8 +9,6 @@
     const count = document.getElementById('studio-count');
     const empty = document.getElementById('studio-empty');
     const popular = document.getElementById('studio-popular');
-    const presenceStates = document.getElementById('studio-presence-states');
-    const viewAll = document.getElementById('studio-view-all');
     const directory = document.getElementById('studio-directory');
 
     function showDirectory() {
@@ -41,20 +39,6 @@
         const chip = event.target.closest('[data-studio-search]');
         if (!chip) return;
         search.value = chip.dataset.studioSearch;
-        state.value = '';
-        render();
-        showDirectory();
-    });
-    presenceStates?.addEventListener('click', (event) => {
-        const choice = event.target.closest('[data-studio-state]');
-        if (!choice) return;
-        search.value = '';
-        state.value = choice.dataset.studioState;
-        render();
-        showDirectory();
-    });
-    viewAll?.addEventListener('click', () => {
-        search.value = '';
         state.value = '';
         render();
         showDirectory();

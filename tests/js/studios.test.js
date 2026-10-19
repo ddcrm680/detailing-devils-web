@@ -16,7 +16,7 @@ function setup() {
     elements.set(id, value);
     return value;
   };
-  for (const id of ['studio-filters', 'studio-search', 'studio-state', 'studio-count', 'studio-empty', 'studio-popular', 'studio-presence-states', 'studio-view-all', 'studio-directory']) element(id);
+  for (const id of ['studio-filters', 'studio-search', 'studio-state', 'studio-count', 'studio-empty', 'studio-popular', 'studio-directory']) element(id);
   const cards = studios.map((studio) => ({
     hidden: false,
     dataset: { search: `${studio.name} ${studio.address} ${studio.state} ${studio.phones.join(' ')}`, state: studio.state },
@@ -55,20 +55,26 @@ test('search and state filtering show every matching record', () => {
   assert.equal(get('studio-results').hidden, true);
 });
 
-test('popular locations and presence states reuse the complete search and state filters', () => {
+test('popular locations and the state dropdown show all matching studios', () => {
   const { cards, get } = setup();
+  get('studio-state').value = 'Delhi';
+  get('studio-state').listeners.change();
+  assert.equal(cards.filter((card) => !card.hidden).length, 10);
+
   get('studio-popular').listeners.click({ target: { closest: () => ({ dataset: { studioSearch: 'Noida' } }) } });
   assert.equal(get('studio-search').value, 'Noida');
+  assert.equal(get('studio-state').value, '');
   assert.equal(get('studio-count').textContent, '7 locations found');
   assert.equal(cards.filter((card) => !card.hidden).length, 7);
 
-  get('studio-presence-states').listeners.click({ target: { closest: () => ({ dataset: { studioState: 'Delhi' } }) } });
-  assert.equal(get('studio-search').value, '');
-  assert.equal(get('studio-state').value, 'Delhi');
+  get('studio-search').value = '';
+  get('studio-state').value = 'Delhi';
+  get('studio-state').listeners.change();
   assert.equal(get('studio-count').textContent, '10 locations found');
   assert.equal(cards.filter((card) => !card.hidden).length, 10);
 
-  get('studio-view-all').listeners.click();
+  get('studio-state').value = '';
+  get('studio-state').listeners.change();
   assert.equal(get('studio-state').value, '');
   assert.equal(get('studio-count').textContent, '63 locations found');
   assert.equal(cards.filter((card) => !card.hidden).length, 63);

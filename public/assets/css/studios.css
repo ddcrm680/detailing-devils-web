@@ -22,7 +22,7 @@
 .studio-search-button,.studio-action{display:inline-flex;align-items:center;justify-content:center;gap:12px;min-height:51px;border:1px solid var(--red);border-radius:5px;background:var(--red);color:#fff;font:500 11px var(--mono);letter-spacing:.09em;text-transform:uppercase;text-decoration:none;cursor:pointer;white-space:nowrap;transition:background .2s,border-color .2s,transform .2s}
 .studio-search-button{padding:0 22px}
 .studio-search-button:hover,.studio-action--red:hover{background:#b71924;border-color:#b71924;color:#fff}
-.studio-search-button:focus-visible,.studio-action:focus-visible,.studio-chip:focus-visible,.studio-presence button:focus-visible{outline:2px solid #fff;outline-offset:3px}
+.studio-search-button:focus-visible,.studio-action:focus-visible,.studio-chip:focus-visible{outline:2px solid #fff;outline-offset:3px}
 .studio-popular{display:flex;align-items:center;gap:18px;margin:20px 0 30px}
 .studio-popular__label{display:inline-flex;align-items:center;gap:9px;flex:none;color:#eee8e5;font:500 11px var(--mono);letter-spacing:.07em;text-transform:uppercase}
 .studio-popular__label i{font-size:18px;color:#ed333d}
@@ -30,7 +30,7 @@
 .studio-chip{min-height:34px;padding:5px 13px;border:1px solid #343132;border-radius:999px;background:#161516;color:#eee8e5;font-family:var(--body);font-size:13px;cursor:pointer;transition:border-color .2s,background .2s}
 .studio-chip span{color:#bcb5b3}
 .studio-chip:hover{border-color:#e63741;background:#251416}
-.studio-directory{display:grid;grid-template-columns:minmax(0,1.85fr) minmax(270px,.85fr);align-items:start;gap:28px;padding-top:30px;border-top:1px solid #343031}
+.studio-directory{padding-top:30px;border-top:1px solid #343031}
 .studio-directory__main{min-width:0}
 .studio-directory__heading{display:flex;align-items:end;justify-content:space-between;gap:16px;margin-bottom:16px}
 .studio-directory__heading .lbl{color:#e34b53}
@@ -57,25 +57,8 @@
 .studio-empty{padding:clamp(34px,5vw,60px);border:1px solid #303030;border-radius:7px;text-align:center;background:#131111}
 .studio-empty h3{font-family:var(--display);font-size:clamp(22px,3vw,32px);line-height:1.2;margin:9px auto;max-width:28ch}
 .studio-empty p{color:var(--soft);margin:9px 0}
-.studio-presence{min-width:0;padding:23px;border:1px solid #343031;border-radius:9px;background:linear-gradient(150deg,#191617,#0c0c0c 65%);box-shadow:0 15px 40px rgba(0,0,0,.18)}
-.studio-presence__heading{display:flex;align-items:center;gap:13px}
-.studio-presence__heading>i{color:#ef3540;font-size:27px}
-.studio-presence__heading .lbl{color:#bdb3b1;font-size:10px}
-.studio-presence__heading h2{margin:2px 0 0;color:#fff;font:800 clamp(21px,2vw,27px)/1 var(--display);letter-spacing:-.02em;text-transform:uppercase}
-.studio-presence__art{position:relative;display:grid;place-items:center;height:185px;overflow:hidden;margin:14px 0 18px;border-block:1px solid #282525;background:radial-gradient(circle at 51% 50%,rgba(176,27,39,.17),transparent 52%),repeating-radial-gradient(circle at 50% 50%,transparent 0 32px,rgba(255,255,255,.045) 33px 34px,transparent 35px 65px)}
-.studio-presence__art::before,.studio-presence__art::after{content:"";position:absolute;top:50%;left:50%;width:78px;height:78px;border:1px solid rgba(231,54,65,.4);border-radius:50%;box-shadow:0 0 24px rgba(215,35,44,.12);pointer-events:none;opacity:0;animation:studio-presence-pulse 4s ease-out infinite}
-.studio-presence__art::after{animation-delay:-2s}
-.studio-presence__art span{position:relative;z-index:1;font:800 clamp(47px,6vw,78px)/1 var(--display);letter-spacing:.18em;color:rgba(225,214,213,.15);text-transform:uppercase;-webkit-text-stroke:1px rgba(225,214,213,.28)}
-@keyframes studio-presence-pulse{0%{opacity:0;transform:translate(-50%,-50%) scale(.55)}12%{opacity:.48}100%{opacity:0;transform:translate(-50%,-50%) scale(3.3)}}
-@media(prefers-reduced-motion:reduce){.studio-presence__art::before{animation:none;opacity:.22;transform:translate(-50%,-50%) scale(1.35)}.studio-presence__art::after{animation:none;opacity:0}}
-.studio-presence__list-heading{display:flex;justify-content:space-between;gap:10px;margin-bottom:10px;color:#e9e3e0;font:500 10px var(--mono);letter-spacing:.1em;text-transform:uppercase}
-.studio-presence__list-heading button{padding:0;border:0;background:none;color:#ef3540;font:inherit;text-transform:uppercase;cursor:pointer}
-.studio-presence__states{max-height:440px;overflow:auto;scrollbar-color:#5c3437 transparent;scrollbar-width:thin}
-.studio-presence__states button{display:flex;justify-content:space-between;gap:12px;width:100%;padding:8px 0;border:0;border-bottom:1px solid #2e2a2a;background:none;color:#d9d3d0;text-align:left;font:400 14px var(--body);cursor:pointer}
-.studio-presence__states button:hover{color:#ff646d}
-.studio-presence__states button span:last-child{font-family:var(--mono)}
-@media(max-width:1180px){.studio-card{grid-template-columns:34px minmax(0,1fr)}.studio-card__actions{grid-column:2;justify-content:flex-start}}
-@media(max-width:900px){.studio-hero{min-height:410px}.studio-filters{grid-template-columns:minmax(0,1fr) minmax(180px,.75fr)}.studio-search-button{grid-column:1/-1}.studio-directory{grid-template-columns:1fr}.studio-presence__art{height:130px}.studio-presence__states{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 20px;max-height:none}.studio-presence__states button{min-width:0}}
+@media(max-width:700px){.studio-card{grid-template-columns:34px minmax(0,1fr)}.studio-card__actions{grid-column:2;justify-content:flex-start}}
+@media(max-width:900px){.studio-hero{min-height:410px}.studio-filters{grid-template-columns:minmax(0,1fr) minmax(180px,.75fr)}.studio-search-button{grid-column:1/-1}}
 @media(max-width:600px){
   .studio-hero{min-height:390px;align-items:flex-start;padding-top:132px;padding-bottom:92px;background-image:linear-gradient(90deg,rgba(4,4,5,.94),rgba(4,4,5,.63)),linear-gradient(0deg,#080808,transparent 48%),url('../../img/studio-locator.png');background-position:center,center,62% center}
   .studio-hero h1{font-size:clamp(43px,11vw,65px);margin:10px 0 12px}
@@ -93,7 +76,5 @@
   .studio-card{gap:8px;padding:17px 15px}
   .studio-card__actions{margin-top:7px}
   .studio-action{flex:1;min-height:44px}
-  .studio-presence{padding:20px}
-  .studio-presence__states{grid-template-columns:1fr}
 }
 @media(max-width:380px){.studio-card{grid-template-columns:1fr}.studio-card__index{grid-column:1}.studio-card__actions{grid-column:1}}

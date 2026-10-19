@@ -26,11 +26,13 @@ class StudioLocatorTest extends TestCase
 
         $this->assertSame(63, substr_count($page->getContent(), 'class="studio-card"'));
         $this->assertSame(63, substr_count($page->getContent(), 'data-state='));
-        $this->assertSame(16, substr_count($page->getContent(), 'data-studio-state='));
+        $this->assertSame(17, substr_count($page->getContent(), '<option value='));
         $this->assertStringNotContainsString('studio-stats', $page->getContent());
-        $page->assertDontSee('studio-pagination')->assertDontSee('Page 1 of 2')->assertSee('Detailing Devils Head Office');
+        $page->assertDontSee('studio-pagination')->assertDontSee('Page 1 of 2')
+            ->assertDontSee('studio-presence')->assertDontSee('Studios by state')
+            ->assertSee('id="studio-state"', false)->assertSee('Detailing Devils Head Office');
         $page->assertSee('Noida <span>(7)</span>', false)
-            ->assertSee('data-studio-state="Uttar Pradesh"', false);
+            ->assertSee('<option value="Uttar Pradesh">Uttar Pradesh</option>', false);
     }
 
     public function test_locator_preserves_multiple_contacts_states_and_map_search_links(): void

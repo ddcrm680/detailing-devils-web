@@ -7,13 +7,8 @@
     <link rel="stylesheet" href="{{ asset('assets/css/studios.css') }}">
 @endpush
 
-@push('js')
-    <script src="{{ asset('assets/js/modules/studios.js') }}" defer></script>
-@endpush
-
 @section('content')
 @php
-    $stateCounts = collect($studios)->countBy('state')->sortDesc();
     $popularLocations = collect(['Delhi', 'Noida', 'Gurugram', 'Jaipur', 'Mumbai', 'Dehradun'])
         ->mapWithKeys(fn ($place) => [$place => collect($studios)->filter(
             fn ($studio) => stripos($studio['name'].' '.$studio['address'].' '.$studio['state'].' '.implode(' ', $studio['phones']), $place) !== false
@@ -108,21 +103,13 @@
 
                 </div>
 
-                <aside class="studio-presence" aria-labelledby="studio-presence-title">
-                    <div class="studio-presence__heading">
-                        <i class="bi bi-geo-alt" aria-hidden="true"></i>
-                        <div><span class="lbl">Our presence</span><h2 id="studio-presence-title">Across India</h2></div>
-                    </div>
-                    <div class="studio-presence__art" aria-hidden="true"><span>India</span></div>
-                    <div class="studio-presence__list-heading"><span>Studios by state</span><button type="button" id="studio-view-all">View all</button></div>
-                    <div class="studio-presence__states" id="studio-presence-states">
-                        @foreach ($stateCounts as $stateName => $stateCount)
-                            <button type="button" data-studio-state="{{ $stateName }}"><span>{{ $stateName }}</span><span>{{ $stateCount }}</span></button>
-                        @endforeach
-                    </div>
-                </aside>
             </div>
         </div>
     </section>
 </div>
 @endsection
+
+
+@push('js')
+    <script src="{{ asset('assets/js/modules/studios.js') }}" defer></script>
+@endpush
