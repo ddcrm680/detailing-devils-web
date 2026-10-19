@@ -16,7 +16,7 @@ function setup() {
     elements.set(id, value);
     return value;
   };
-  for (const id of ['studio-filters', 'studio-search', 'studio-state', 'studio-count', 'studio-empty', 'studio-pagination', 'studio-previous', 'studio-next', 'studio-page', 'studio-popular', 'studio-presence-states', 'studio-view-all', 'studio-directory']) element(id);
+  for (const id of ['studio-filters', 'studio-search', 'studio-state', 'studio-count', 'studio-empty', 'studio-popular', 'studio-presence-states', 'studio-view-all', 'studio-directory']) element(id);
   const cards = studios.map((studio) => ({
     hidden: false,
     dataset: { search: `${studio.name} ${studio.address} ${studio.state} ${studio.phones.join(' ')}`, state: studio.state },
@@ -28,24 +28,21 @@ function setup() {
   return { cards, get: (id) => elements.get(id) };
 }
 
-test('paginates all 63 approved records at 50 per page', () => {
+test('shows all 63 approved records by default', () => {
   const { cards, get } = setup();
-  assert.equal(cards.filter((card) => !card.hidden).length, 50);
+  assert.equal(cards.filter((card) => !card.hidden).length, 63);
   assert.equal(get('studio-count').textContent, '63 locations found');
-  assert.equal(get('studio-page').textContent, 'Page 1 of 2');
-  get('studio-next').listeners.click();
-  assert.equal(cards.filter((card) => !card.hidden).length, 13);
-  assert.equal(get('studio-page').textContent, 'Page 2 of 2');
-  assert.equal(get('studio-next').disabled, true);
 });
 
-test('search and state filtering use the complete dataset before pagination', () => {
+test('search and state filtering show every matching record', () => {
   const { cards, get } = setup();
-  get('studio-next').listeners.click();
+  get('studio-search').value = 'Detailing Devils';
+  get('studio-search').listeners.input();
+  assert.equal(cards.filter((card) => !card.hidden).length, 63);
+  assert.equal(get('studio-count').textContent, '63 locations found');
   get('studio-search').value = 'Malviya Nagar';
   get('studio-search').listeners.input();
   assert.equal(get('studio-count').textContent, '2 locations found');
-  assert.equal(get('studio-pagination').hidden, true);
   assert.equal(cards.filter((card) => !card.hidden).length, 2);
   get('studio-state').value = 'Delhi';
   get('studio-state').listeners.change();
@@ -53,6 +50,7 @@ test('search and state filtering use the complete dataset before pagination', ()
   assert.equal(cards.filter((card) => !card.hidden).length, 1);
   get('studio-search').value = 'not a studio';
   get('studio-search').listeners.input();
+  assert.equal(get('studio-count').textContent, '0 locations found');
   assert.equal(get('studio-empty').hidden, false);
   assert.equal(get('studio-results').hidden, true);
 });
@@ -68,9 +66,10 @@ test('popular locations and presence states reuse the complete search and state 
   assert.equal(get('studio-search').value, '');
   assert.equal(get('studio-state').value, 'Delhi');
   assert.equal(get('studio-count').textContent, '10 locations found');
+  assert.equal(cards.filter((card) => !card.hidden).length, 10);
 
   get('studio-view-all').listeners.click();
   assert.equal(get('studio-state').value, '');
   assert.equal(get('studio-count').textContent, '63 locations found');
-  assert.equal(cards.filter((card) => !card.hidden).length, 50);
+  assert.equal(cards.filter((card) => !card.hidden).length, 63);
 });

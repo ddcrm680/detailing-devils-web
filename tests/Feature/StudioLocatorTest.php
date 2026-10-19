@@ -28,7 +28,7 @@ class StudioLocatorTest extends TestCase
         $this->assertSame(63, substr_count($page->getContent(), 'data-state='));
         $this->assertSame(16, substr_count($page->getContent(), 'data-studio-state='));
         $this->assertStringNotContainsString('studio-stats', $page->getContent());
-        $page->assertSee('Page 1 of 2')->assertSee('Detailing Devils Head Office');
+        $page->assertDontSee('studio-pagination')->assertDontSee('Page 1 of 2')->assertSee('Detailing Devils Head Office');
         $page->assertSee('Noida <span>(7)</span>', false)
             ->assertSee('data-studio-state="Uttar Pradesh"', false);
     }

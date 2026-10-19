@@ -106,11 +106,6 @@
                         @endforeach
                     </div>
 
-                    <nav class="studio-pagination" id="studio-pagination" aria-label="Studio result pages" hidden>
-                        <button type="button" id="studio-previous" disabled>Previous</button>
-                        <span id="studio-page">Page 1 of {{ (int) ceil(count($studios) / 50) }}</span>
-                        <button type="button" id="studio-next">Next</button>
-                    </nav>
                 </div>
 
                 <aside class="studio-presence" aria-labelledby="studio-presence-title">
