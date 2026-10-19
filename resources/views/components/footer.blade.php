@@ -12,7 +12,7 @@
           <span>{{ $site['address'] }}</span>
         </address>
       </div>
-      <div><h4>Services</h4><ul>@foreach(array_slice($site['services'], 0, 4) as $svc)<li><a href="{{ request()->is('/') ? '#services' : url('/') . '#services' }}">{{ $svc['title'] }}</a></li>@endforeach</ul></div>
+      <div><h4>Services</h4><ul>@foreach(array_slice($site['services'], 0, 4) as $svc)<li><a href="{{ request()->is('/') ? '#services' : url('/') . '#services' }}">{{ $svc['title'] }}</a></li>@endforeach<li><a href="https://www.devilscrm.detailingdevils.com/check-warranty">Check Warranty</a></li></ul></div>
       <div><h4>Company</h4><ul><li><a href="{{ request()->is('/') ? '#approach' : url('/') . '#approach' }}">Approach</a></li><li><a href="{{ request()->is('/') ? '#work' : url('/') . '#work' }}">Our Work</a></li><li><a href="{{ request()->is('/') ? '#franchise' : url('/') . '#franchise' }}">Franchise</a></li><li><a href="{{ route('studios.index') }}">Studios</a></li></ul></div>
       <div><h4>Follow</h4><ul>@foreach($site['social'] as $name => $url)<li><a href="{{ $url }}" target="_blank" rel="noopener">{{ $name }}</a></li>@endforeach<li><a href="{{ request()->is('/') ? '#contact' : url('/') . '#contact' }}">Contact</a></li></ul></div>
     </div>

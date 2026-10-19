@@ -39,7 +39,7 @@ class StudioTourTest extends TestCase
         $this->assertFileExists(public_path('frames/studio-tour/330.avif'));
     }
 
-    public function test_shared_header_and_menu_link_to_the_tour_on_normal_pages(): void
+    public function test_shared_header_keeps_tour_cta_and_menu_links_to_check_warranty_on_normal_pages(): void
     {
         config()->set('database.default', 'unconfigured');
 
@@ -53,11 +53,23 @@ class StudioTourTest extends TestCase
             $this->assertSame(1, $xpath->query('//header[@id="hdr"]//a[contains(@class, "brand")]')->length);
             $this->assertSame(1, $xpath->query('//header[@id="hdr"]//a[contains(@class, "ph-no")]')->length);
             $this->assertSame(1, $xpath->query('//header[@id="hdr"]//button[@id="burger"]')->length);
-            $this->assertSame(1, $xpath->query('//div[@id="menu"]//a[@href="'.route('studios.tour').'"]')->length);
+            $menuLinks = $xpath->query('//div[@id="menu"]/nav/a');
+            $this->assertSame(7, $menuLinks->length);
+            $this->assertSame('https://www.devilscrm.detailingdevils.com/check-warranty', $menuLinks->item(5)->getAttribute('href'));
+            $this->assertSame('06Check Warranty', trim($menuLinks->item(5)->textContent));
+            $this->assertSame(0, $xpath->query('//div[@id="menu"]//a[@href="'.route('studios.tour').'"]')->length);
         }
 
         $home = $this->xpath($this->get('/')->assertOk()->getContent());
         $this->assertSame(1, $home->query('//section[@id="franchise"]//a[@href="'.route('studios.tour').'"]')->length);
+        $serviceLinks = $home->query('//footer//div[h4="Services"]/ul/li/a');
+        $this->assertSame(5, $serviceLinks->length);
+        foreach (array_slice(config('site.services'), 0, 4) as $index => $service) {
+            $this->assertSame($service['title'], $serviceLinks->item($index)->textContent);
+            $this->assertSame('#services', $serviceLinks->item($index)->getAttribute('href'));
+        }
+        $this->assertSame('Check Warranty', $serviceLinks->item(4)->textContent);
+        $this->assertSame('https://www.devilscrm.detailingdevils.com/check-warranty', $serviceLinks->item(4)->getAttribute('href'));
         foreach (config('site.social') as $url) {
             $this->assertSame(1, $home->query('//footer//a[@href="'.$url.'"]')->length);
         }
