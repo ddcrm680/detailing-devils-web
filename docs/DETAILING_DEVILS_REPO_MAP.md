@@ -14,6 +14,7 @@ This map describes the current Laravel checkout. The original `devils-new-web.zi
 
 | Location | Responsibility |
 | --- | --- |
+| `Anybuild` | Wasmer build definition using Anybuild 0.33.0 Laravel defaults; a `build_post` step removes staged `node_modules` after Vite and before artifact export. Local npm scripts, PHP dependencies and production assets are unchanged. |
 | `routes/web.php` | Home and shared email-validation routes; central entry point for the franchise, location, OTP, enquiry, legal, and studio route files |
 | `routes/forms.php`, `routes/locations.php`, `routes/otp.php`, `routes/enquiry.php`, `routes/legal.php` | Prime and FOFO form routes, shared location GET routes, shared OTP routes, homepage enquiry route, and four named legal policy pages |
 | `routes/deploy.php`, `app/Http/Controllers/DeployController.php` | Deployment-related route and handler; do not invoke during routine testing |
