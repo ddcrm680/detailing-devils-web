@@ -53,6 +53,7 @@ class StudioTourTest extends TestCase
             $this->assertSame(1, $xpath->query('//header[@id="hdr"]//a[contains(@class, "brand")]')->length);
             $this->assertSame(1, $xpath->query('//header[@id="hdr"]//a[contains(@class, "ph-no")]')->length);
             $this->assertSame(1, $xpath->query('//header[@id="hdr"]//button[@id="burger"]')->length);
+            $this->assertSame(1, $xpath->query('//div[@id="menu"][@inert][@data-lenis-prevent]')->length);
             $menuLinks = $xpath->query('//div[@id="menu"]/nav/a');
             $this->assertSame(7, $menuLinks->length);
             $this->assertSame('https://www.devilscrm.detailingdevils.com/check-warranty', $menuLinks->item(5)->getAttribute('href'));

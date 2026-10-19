@@ -1,4 +1,4 @@
-<div class="menu" id="menu" aria-hidden="true">
+<div class="menu" id="menu" aria-hidden="true" inert data-lenis-prevent>
   <nav aria-label="Main">
     <a href="{{ request()->is('/') ? '#approach' : url('/') . '#approach' }}"><small>01</small><span>Approach</span></a>
     <a href="{{ request()->is('/') ? '#services' : url('/') . '#services' }}"><small>02</small><span>Services</span></a>
