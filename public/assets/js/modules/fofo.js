@@ -38,6 +38,14 @@
   const submitButton = form.querySelector('#fofo-submit');
   const submissionEnabled = !submitButton.disabled;
 
+  if (phoneIti) {
+    // The library caches the inline dropdown width at initialization.
+    window.addEventListener('resize', () => {
+      const dropdown = phoneInput.closest('.iti--inline-country-selector')?.querySelector('.iti__country-selector');
+      if (dropdown) dropdown.style.width = `${phoneInput.offsetWidth}px`;
+    });
+  }
+
   function rememberPhoneCountry() {
     // Keep the dial code paired with browser-restored national input on Back.
     window.history.replaceState({

@@ -21,7 +21,7 @@ function element(name = '', type = 'text') {
   };
 }
 
-function setup(post, { submissionEnabled = false, phoneValue = '', phoneInit = Promise.resolve(), phoneLibrary = true, historyState = null } = {}) {
+function setup(post, { submissionEnabled = false, phoneValue = '', phoneInit = Promise.resolve(), phoneLibrary = true, historyState = null, fullscreenPhone = false } = {}) {
   const email = element('email', 'email');
   email.required = true;
   const feedback = { textContent: '', dataset: {} };
@@ -29,6 +29,10 @@ function setup(post, { submissionEnabled = false, phoneValue = '', phoneInit = P
   const lname = element('lname');
   const phone = element('phone', 'tel');
   phone.value = phoneValue;
+  const phoneDropdown = { style: { width: '522px' } };
+  phone.closest = (selector) => !fullscreenPhone && selector === '.iti--inline-country-selector'
+    ? { querySelector: (selector) => selector === '.iti__country-selector' ? phoneDropdown : null }
+    : null;
   const phoneIti = { promise: phoneInit, isValidNumber: () => phone.value !== '123', getNumber: () => '+919876543210', getSelectedCountry: () => ({ iso2: 'in' }) };
   let phoneOptions;
   const website = element('website', 'url');
@@ -65,6 +69,8 @@ function setup(post, { submissionEnabled = false, phoneValue = '', phoneInit = P
   };
   const window = {
     $: () => form,
+    listeners: {},
+    addEventListener(event, callback) { this.listeners[event] = callback; },
     history: { state: historyState, replaceState(state) { this.state = state; } },
     intlTelInput: phoneLibrary ? (input, options) => {
       assert.equal(input, phone);
@@ -96,7 +102,8 @@ function setup(post, { submissionEnabled = false, phoneValue = '', phoneInit = P
   const focusout = (target) => form.listeners.focusout({ target });
   const change = (target) => form.listeners.change({ target });
   const submit = () => form.listeners.submit({ preventDefault() {} });
-  return { email, feedback, status, review, submitButton, calls, notifications, blur, input, reviewFields, submit, focusout, change, controls, errors, imageChecks, phoneIti, phoneOptions, fields, history: window.history };
+  const resizePhone = (width) => { phone.offsetWidth = width; window.listeners.resize?.(); };
+  return { email, feedback, status, review, submitButton, calls, notifications, blur, input, reviewFields, submit, focusout, change, controls, errors, imageChecks, phoneIti, phoneOptions, fields, history: window.history, phoneDropdown, resizePhone };
 }
 
 test('validates on blur once and displays a valid result', async () => {
@@ -359,6 +366,26 @@ test('phone country survives browser history restoration without storing the num
   view.controls.phone.listeners.countrychange();
   assert.deepEqual({ ...view.history.state }, { fofoPhoneCountry: 'gb', existing: 'preserved' });
   assert.equal(view.controls.phone.value, '07123456789');
+});
+
+test('FOFO inline phone dropdown follows input width after repeated resizes without changing the phone or country', async () => {
+  const view = setup(async () => ({}), { phoneValue: '07123456789' });
+  view.phoneIti.getSelectedCountry = () => ({ iso2: 'gb' });
+  await tick();
+  for (const width of [342, 273, 343, 522]) {
+    view.resizePhone(width);
+    assert.equal(view.phoneDropdown.style.width, `${width}px`);
+    assert.equal(view.controls.phone.value, '07123456789');
+    assert.equal(view.history.state.fofoPhoneCountry, 'gb');
+  }
+});
+
+test('FOFO resize handler leaves the mobile fullscreen country selector under library control', () => {
+  const view = setup(async () => ({}), { fullscreenPhone: true });
+  view.resizePhone(273);
+  assert.equal(view.phoneDropdown.style.width, '522px');
+  const unavailable = setup(async () => ({}), { phoneLibrary: false });
+  assert.doesNotThrow(() => unavailable.resizePhone(273));
 });
 
 test('phone loading, failed assets and invalid numbers block submission with inline feedback', async () => {
