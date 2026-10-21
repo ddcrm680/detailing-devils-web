@@ -77,7 +77,9 @@ class StoreFofoRequestTest extends TestCase
     {
         $this->get(route('fofo.show'))
             ->assertOk()
-            ->assertSee('name="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="+91 98765 43210" maxlength="32"', false)
+            ->assertSee('name="phone" type="tel" inputmode="tel" autocomplete="tel" maxlength="32"', false)
+            ->assertSee('intl-tel-input@29.1.2/dist/js/intlTelInput.min.js', false)
+            ->assertDontSee('India (+91) is selected by default. Choose your country and enter your mobile number.')
             ->assertSee('id="newbussiness" name="newbussiness" rows="3" maxlength="255"', false)
             ->assertSee('id="type_of_bussiness" name="type_of_bussiness" maxlength="255"', false)
             ->assertSee('id="product_service" name="product_service" maxlength="255"', false)

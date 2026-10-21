@@ -12,6 +12,24 @@
   const status = form.querySelector('#fofo-form-status');
   const emailInput = form.querySelector('#email');
   const emailFeedback = form.querySelector('[data-error-for="email"]');
+  const phoneInput = form.querySelector('#phone');
+  const phoneIti = window.intlTelInput?.(phoneInput, {
+    initialCountry: window.history.state?.fofoPhoneCountry || 'in',
+    separateDialCode: true,
+    strictMode: true,
+    numberDisplayFormat: 'NATIONAL',
+    allowedNumberTypes: ['MOBILE', 'FIXED_LINE_OR_MOBILE'],
+    containerClass: 'fofo-phone',
+    loadUtils: () => import('https://cdn.jsdelivr.net/npm/intl-tel-input@29.1.2/dist/js/utils.js'),
+  });
+  let phoneReady = false;
+  let phoneUnavailable = !phoneIti;
+  phoneIti?.promise.then(() => {
+    phoneReady = true;
+    rememberPhoneCountry();
+  }).catch(() => {
+    phoneUnavailable = true;
+  });
   let emailRequestVersion = 0;
   let emailCheckStatus = '';
   let emailCheckedValue = '';
@@ -19,6 +37,14 @@
   let submitted = false;
   const submitButton = form.querySelector('#fofo-submit');
   const submissionEnabled = !submitButton.disabled;
+
+  function rememberPhoneCountry() {
+    // Keep the dial code paired with browser-restored national input on Back.
+    window.history.replaceState({
+      ...window.history.state,
+      fofoPhoneCountry: phoneIti.getSelectedCountry().iso2,
+    }, '');
+  }
 
   function setError(input, message = '') {
     const inputs = input.type === 'radio'
@@ -122,7 +148,7 @@
   dob.max = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 
   async function validateField(input) {
-    if (input.disabled || input.name === '_token') return true;
+    if (input.disabled || !input.name || input.name === '_token') return true;
 
     let message = '';
     const value = input.value.trim();
@@ -159,10 +185,9 @@
     } else if (value && input.type === 'date' && (!input.validity.valid || value > dob.max)) {
       message = 'Enter a valid date of birth in the past.';
     } else if (value && input.name === 'phone') {
-      const digits = value.replace(/\D/g, '');
-      if (!/^\+[0-9\s().-]+$/.test(value) || digits.length < 7 || digits.length > 15) {
-        message = 'Enter a mobile number with country code, starting with +.';
-      }
+      if (phoneUnavailable) message = 'Phone verification could not load. Please reload this page.';
+      else if (!phoneReady) message = 'Phone verification is loading. Please try again in a moment.';
+      else if (!phoneIti.isValidNumber()) message = 'Enter a valid mobile number for the selected country.';
     }
 
     setError(input, message);
@@ -298,7 +323,10 @@
 
       submitButton.disabled = true;
       status.textContent = 'Submitting your application…';
-      const response = await axios.post(form.dataset.submitUrl, new FormData(form), {
+      const application = new FormData(form);
+      // Keep the visible national number; send the same E.164 format used by Prime.
+      application.set('phone', phoneIti.getNumber());
+      const response = await axios.post(form.dataset.submitUrl, application, {
         skipGlobalErrorHandler: true,
       });
 
@@ -354,6 +382,10 @@
     emailCheckedValue = '';
     setError(emailInput);
     delete emailFeedback.dataset.emailStatus;
+  });
+  phoneInput.addEventListener('countrychange', () => {
+    rememberPhoneCountry();
+    if (phoneReady && phoneInput.value.trim()) void validateField(phoneInput);
   });
   form.addEventListener('change', (event) => {
     if (event.target.matches('input[type="radio"], input[type="file"]')) void validateField(event.target);

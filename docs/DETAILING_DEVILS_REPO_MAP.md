@@ -47,7 +47,7 @@ This map describes the current Laravel checkout. The original `devils-new-web.zi
 | `public/assets/css/style.css` | Shared design tokens, header, menu, footer and common elements |
 | `public/assets/css/home.css` | Homepage sections, responsive rules and page-specific reduced-motion styles |
 | `public/assets/css/prime.css`, `public/assets/js/modules/prime.js` | Prime wizard styling, client-side validation, OTP modal, and AJAX requests |
-| `public/assets/css/fofo.css`, `public/assets/js/modules/fofo.js` | FOFO page styling, conditional fields, manual location fallback, email blur check, client-side review and Axios submission |
+| `public/assets/css/fofo.css`, `public/assets/js/modules/fofo.js` | FOFO page styling, conditional fields, manual location fallback, email blur check, client-side review and Axios submission; reuses Prime's pinned intl-tel-input for a separate phone dial code (India by default), submits `phone` as E.164, and retains only the phone country in the current history entry for restored national input |
 | `public/assets/js/common/location.js` | Reusable Axios-backed country, state and city dropdown initializer |
 | `public/assets/js/modules/navigation.js` | Shared menu open/close behavior and header scroll state |
 | `public/assets/js/modules/home.js`, `public/assets/js/modules/enquiry.js` | Homepage animation/service behavior and the separate CRM enquiry-form browser handler |

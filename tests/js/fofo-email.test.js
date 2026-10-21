@@ -21,13 +21,16 @@ function element(name = '', type = 'text') {
   };
 }
 
-function setup(post, { submissionEnabled = false } = {}) {
+function setup(post, { submissionEnabled = false, phoneValue = '', phoneInit = Promise.resolve(), phoneLibrary = true, historyState = null } = {}) {
   const email = element('email', 'email');
   email.required = true;
   const feedback = { textContent: '', dataset: {} };
   const name = element('name');
   const lname = element('lname');
   const phone = element('phone', 'tel');
+  phone.value = phoneValue;
+  const phoneIti = { promise: phoneInit, isValidNumber: () => phone.value !== '123', getNumber: () => '+919876543210', getSelectedCountry: () => ({ iso2: 'in' }) };
+  let phoneOptions;
   const website = element('website', 'url');
   const reason = element('newbussiness', 'textarea');
   const image = element('locationimage', 'file');
@@ -62,6 +65,12 @@ function setup(post, { submissionEnabled = false } = {}) {
   };
   const window = {
     $: () => form,
+    history: { state: historyState, replaceState(state) { this.state = state; } },
+    intlTelInput: phoneLibrary ? (input, options) => {
+      assert.equal(input, phone);
+      phoneOptions = options;
+      return phoneIti;
+    } : undefined,
     initLocationDropdowns() {},
     validateImage: async (_file, options) => { imageChecks.push(options); return { valid: true }; },
     showValidationErrors(_form, messages) {
@@ -75,7 +84,11 @@ function setup(post, { submissionEnabled = false } = {}) {
   vm.runInNewContext(source, { window, axios: { post(url, payload, options) {
     calls.push({ url, payload, options });
     return post(url, payload);
-  } }, Date, FormData: class { constructor(target) { this.form = target; } } });
+  } }, Date, FormData: class {
+    constructor(target) { this.form = target; this.values = new Map(); }
+    set(name, value) { this.values.set(name, value); }
+    get(name) { return this.values.get(name); }
+  } });
 
   const blur = () => form.listeners.focusout({ target: email });
   const input = (value) => { email.value = value; email.listeners.input(); };
@@ -83,7 +96,7 @@ function setup(post, { submissionEnabled = false } = {}) {
   const focusout = (target) => form.listeners.focusout({ target });
   const change = (target) => form.listeners.change({ target });
   const submit = () => form.listeners.submit({ preventDefault() {} });
-  return { email, feedback, status, review, submitButton, calls, notifications, blur, input, reviewFields, submit, focusout, change, controls, errors, imageChecks };
+  return { email, feedback, status, review, submitButton, calls, notifications, blur, input, reviewFields, submit, focusout, change, controls, errors, imageChecks, phoneIti, phoneOptions, fields, history: window.history };
 }
 
 test('validates on blur once and displays a valid result', async () => {
@@ -220,10 +233,10 @@ test('review shows inline CRM length, name, phone and website errors', async () 
   await tick();
   assert.match(view.errors.lname.textContent, /100 characters/);
 
-  phone.value = '919876543210';
+  phone.value = '123';
   view.focusout(phone);
   await tick();
-  assert.match(view.errors.phone.textContent, /starting with \+/);
+  assert.match(view.errors.phone.textContent, /valid mobile number for the selected country/);
 
   website.value = 'ftp://example.com';
   view.focusout(website);
@@ -301,4 +314,81 @@ test('failed submission shows server field errors and restores the submit button
   assert.equal(view.submitButton.disabled, false);
   assert.equal(view.errors.email.textContent, 'Validate your email again.');
   assert.equal(view.notifications.length, 0);
+});
+
+test('FOFO initializes Prime-style separate dial codes without replacing restored phone or location values', async () => {
+  const view = setup(async () => ({}), { phoneValue: '+447123456789' });
+  await tick();
+  assert.equal(view.phoneOptions.initialCountry, 'in');
+  assert.equal(view.phoneOptions.separateDialCode, true);
+  assert.equal(view.phoneOptions.strictMode, true);
+  assert.equal(view.phoneOptions.numberDisplayFormat, 'NATIONAL');
+  assert.deepEqual([...view.phoneOptions.allowedNumberTypes], ['MOBILE', 'FIXED_LINE_OR_MOBILE']);
+  assert.equal(view.controls.phone.value, '+447123456789');
+  view.fields.get('#country').value = 'location-country';
+  view.controls.phone.listeners.countrychange();
+  await tick();
+  assert.equal(view.fields.get('#country').value, 'location-country');
+});
+
+test('FOFO submits the library E.164 value once and retains the national number after server validation', async () => {
+  for (const [national, international] of [['98765 43210', '+919876543210'], ['07123 456789', '+447123456789']]) {
+    const view = setup((url) => url === '/email/validate'
+      ? Promise.resolve({ data: { success: true, result: 'valid' } })
+      : Promise.reject({ response: { status: 422, data: { errors: { phone: ['Please check this number.'] } } } }),
+    { submissionEnabled: true, phoneValue: national });
+    view.phoneIti.getNumber = () => international;
+    view.input('person@example.com');
+    view.blur();
+    await tick();
+    view.submit();
+    await tick();
+    const submission = view.calls.find((call) => call.url === '/franchise/fofo');
+    assert.equal(submission.payload.get('phone'), international);
+    assert.equal(view.controls.phone.value, national);
+    assert.equal(view.errors.phone.textContent, 'Please check this number.');
+    assert.equal(view.submitButton.disabled, false);
+  }
+});
+
+test('phone country survives browser history restoration without storing the number or replacing other history state', async () => {
+  const view = setup(async () => ({}), { phoneValue: '07123456789', historyState: { fofoPhoneCountry: 'gb', existing: 'preserved' } });
+  assert.equal(view.phoneOptions.initialCountry, 'gb');
+  view.phoneIti.getSelectedCountry = () => ({ iso2: 'gb' });
+  await tick();
+  view.controls.phone.listeners.countrychange();
+  assert.deepEqual({ ...view.history.state }, { fofoPhoneCountry: 'gb', existing: 'preserved' });
+  assert.equal(view.controls.phone.value, '07123456789');
+});
+
+test('phone loading, failed assets and invalid numbers block submission with inline feedback', async () => {
+  let finishLoading;
+  const loading = new Promise((resolve) => { finishLoading = resolve; });
+  const view = setup(async () => ({}), { phoneValue: '9876543210', phoneInit: loading });
+  view.focusout(view.controls.phone);
+  await tick();
+  assert.match(view.errors.phone.textContent, /loading/);
+  finishLoading();
+  await tick();
+  view.focusout(view.controls.phone);
+  await tick();
+  assert.equal(view.errors.phone.textContent, '');
+
+  for (const options of [() => ({ phoneLibrary: false }), () => ({ phoneInit: Promise.reject(new Error('offline')) })]) {
+    const failed = setup(async () => ({}), { submissionEnabled: true, phoneValue: '9876543210', ...options() });
+    await tick();
+    failed.submit();
+    await tick();
+    assert.match(failed.errors.phone.textContent, /could not load/);
+    assert.equal(failed.calls.length, 0);
+  }
+  view.controls.phone.value = '123';
+  view.controls.phone.listeners.countrychange();
+  await tick();
+  assert.match(view.errors.phone.textContent, /valid mobile number/);
+  view.controls.phone.required = true;
+  view.controls.phone.value = '';
+  view.focusout(view.controls.phone);
+  await tick();
+  assert.equal(view.errors.phone.textContent, 'This field is required.');
 });

@@ -20,7 +20,7 @@ function element(name = '') {
 function setup({ restored = {}, get } = {}) {
   const calls = [];
   const fields = new Map();
-  for (const name of ['country', 'state', 'city', 'dob', 'email', 'bussinessowner', 'experienceautomotive', 'existingautomotive', 'spacearound', 'fofo-submit', 'fofo-review', 'fofo-form-status', 'fofo-location-manual', 'fofo-location-selects', 'fofo-business-details', 'fofo-experience-details', 'fofo-facility-details', 'fofo-property-details']) {
+  for (const name of ['country', 'state', 'city', 'dob', 'email', 'phone', 'bussinessowner', 'experienceautomotive', 'existingautomotive', 'spacearound', 'fofo-submit', 'fofo-review', 'fofo-form-status', 'fofo-location-manual', 'fofo-location-selects', 'fofo-business-details', 'fofo-experience-details', 'fofo-facility-details', 'fofo-property-details']) {
     fields.set(`#${name}`, element(name));
   }
   for (const name of ['country', 'state', 'city', 'email']) {
@@ -44,6 +44,7 @@ function setup({ restored = {}, get } = {}) {
   };
   const window = {
     $: () => form,
+    history: { state: null },
     showValidationErrors(_form, errors) {
       Object.entries(errors).forEach(([name, messages]) => {
         fields.get(`[data-error-for="${name}"]`).textContent = messages[0];
