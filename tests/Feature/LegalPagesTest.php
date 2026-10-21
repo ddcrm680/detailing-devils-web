@@ -102,6 +102,67 @@ class LegalPagesTest extends TestCase
         }
     }
 
+    public function test_warranty_terms_are_public_use_the_shared_layout_and_preserve_terms_with_current_contacts(): void
+    {
+        $this->assertSame(url('/warranty-terms-condition'), route('legal.warranty-terms'));
+
+        $response = $this->get(route('legal.warranty-terms'))->assertOk();
+        $xpath = $this->xpath($response->getContent());
+
+        $this->assertSame('Warranty Terms & Conditions', trim($xpath->query('//main//h1')->item(0)->textContent));
+        $this->assertSame(1, $xpath->query('//header[contains(concat(" ", normalize-space(@class), " "), " hdr ")]')->length);
+        $this->assertSame(1, $xpath->query('//footer')->length);
+        $this->assertSame(21, $xpath->query('//main//article//li')->length);
+
+        $headings = $xpath->query('//main//article/h2');
+        $this->assertSame(7, $headings->length);
+        foreach ([
+            '1. Armor Reload, Armor Pro, Armor Absolute & Armor Graphene',
+            '2. Paint Protection Film (PPF)',
+            '3. Warranty will be considered void if:',
+            '4. To uphold the authenticity of the warranty, follow the instructions and consult an authorized Detailing Devils studio.',
+            '5. Detailing Devils warranty is non-transferable and applicable only after you complete all the registration formalities.',
+            '6. In case of any coating or film damage during the warranty period, follow the given procedure:',
+            'Address:',
+        ] as $index => $heading) {
+            $this->assertSame($heading, trim($headings->item($index)->textContent));
+        }
+
+        $response->assertSeeText('1, 3 and, 5 years for Armor Reload, Armor Pro, and Armor Absolute respectively and 6 years for Armor Graphene.')
+            ->assertSeeText('2 year warranty for self healing and 7 year warranty for shine, pealing and cracks')
+            ->assertSeeText('washing of a vehicle will be chargeable worth Rs 500/-')
+            ->assertSeeText('before 30 days or after 30 days from the year completion date')
+            ->assertSeeText('If the claim is not made within 30 days of observing the problem')
+            ->assertSeeText('Detailing Devils gives no warranty and accepts no responsibility or liability if your warranty is not registered online.')
+            ->assertSeeText('1st complimentary ceramic wash can be availed within a period of 10 days from the date of treatment. No requests will be entertained afterwards.')
+            ->assertSeeText(config('site.address'))
+            ->assertDontSeeText('D-50, Sector 2, Noida,')
+            ->assertDontSeeText('Check your warranty from below mentioned link:');
+
+        foreach ([
+            'https://www.devilscrm.detailingdevils.com/check-warranty?access=true' => 'Warranty Check',
+            'tel:'.config('site.phone_link') => config('site.phone'),
+            'mailto:'.config('site.email') => config('site.email'),
+        ] as $url => $label) {
+            $links = $xpath->query('//main//article//a[@href="'.$url.'"]');
+            $this->assertSame(1, $links->length);
+            $this->assertSame($label, trim($links->item(0)->textContent));
+        }
+
+        $this->assertSame(3, $xpath->query('//main//article//a')->length);
+    }
+
+    public function test_warranty_terms_remain_unlisted_on_the_homepage_and_shared_navigation(): void
+    {
+        foreach (['/', route('legal.warranty-terms')] as $url) {
+            $xpath = $this->xpath($this->get($url)->assertOk()->getContent());
+
+            $this->assertSame(0, $xpath->query('//a[contains(@href, "/warranty-terms-condition")]')->length);
+            $this->assertSame(1, $xpath->query('//nav[@aria-label="Main"]//a[@href="https://www.devilscrm.detailingdevils.com/check-warranty"]')->length);
+            $this->assertSame(1, $xpath->query('//footer//a[@href="https://www.devilscrm.detailingdevils.com/check-warranty"]')->length);
+        }
+    }
+
     private function xpath(string $html): DOMXPath
     {
         $document = new DOMDocument;

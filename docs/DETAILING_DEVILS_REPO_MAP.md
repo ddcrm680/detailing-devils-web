@@ -16,7 +16,7 @@ This map describes the current Laravel checkout. The original `devils-new-web.zi
 | --- | --- |
 | `Anybuild` | Wasmer build definition using Anybuild 0.33.0 Laravel defaults; a `build_post` step removes staged `node_modules` after Vite and before artifact export. Local npm scripts, PHP dependencies and production assets are unchanged. |
 | `routes/web.php` | Home and shared email-validation routes; central entry point for the franchise, location, OTP, enquiry, legal, and studio route files |
-| `routes/forms.php`, `routes/locations.php`, `routes/otp.php`, `routes/enquiry.php`, `routes/legal.php` | Prime and FOFO form routes, shared location GET routes, shared OTP routes, homepage enquiry route, and four named legal policy pages |
+| `routes/forms.php`, `routes/locations.php`, `routes/otp.php`, `routes/enquiry.php`, `routes/legal.php` | Prime and FOFO form routes, shared location GET routes, shared OTP routes, homepage enquiry route, four named legal policy pages and the unlisted warranty terms page |
 | `routes/deploy.php`, `app/Http/Controllers/DeployController.php` | Deployment-related route and handler; do not invoke during routine testing |
 | `routes/studios.php`, `app/Http/Controllers/StudioController.php`, `resources/data/studios.json` | Public studio locator using the approved static studio list; no CRM query is made; also provides the presentation-only Studio Tour route |
 | `app/Http/Controllers/HomeController.php` | Passes `config('site')` to the home view |
@@ -29,7 +29,7 @@ This map describes the current Laravel checkout. The original `devils-new-web.zi
 | `config/site.php` | Brand, contacts (including legal-policy support email), hero settings, statistics, services and franchise steps |
 | `config/form_options.php` | Shared state options and Prime choice values, labels, and JavaScript-dependent IDs |
 | `resources/views/layouts/app.blade.php` | Shared HTML document, metadata, CSS/JS order, components and main content slot |
-| `resources/views/legal/` | Four source-controlled policy pages using the shared website layout |
+| `resources/views/legal/` | Four policy pages and the unlisted warranty terms page using the shared website layout and existing legal-page CSS |
 | `resources/views/studios/index.blade.php`, `public/assets/css/studios.css`, `public/assets/js/modules/studios.js` | Shared-layout, full-width studio directory with Blade-rendered records, browser search/state and popular-location filtering, phone and Google Maps links |
 | `resources/views/studios/tour.blade.php`, `public/assets/css/studio-tour.css`, `public/assets/js/modules/studio-tour.js`, `public/frames/studio-tour/` | Shared-layout Studio Tour with scroll-driven AVIF frames and links to the existing Prime and FOFO applications |
 | `resources/views/layouts/prime.blade.php`, `resources/views/forms/prime.blade.php` | Prime's independent five-step application layout and view; the layout reuses the shared website header and menu |
@@ -80,6 +80,7 @@ The Prime button uses the named `prime.show` route, which renders the migrated f
 | --- | --- | --- |
 | `GET /` | `HomeController::__invoke` | Renders the homepage with site configuration |
 | `GET /terms-of-use`, `/privacy-policy`, `/refund-policy`, `/cancellation-policy` | Named `Route::view` routes | Render the four legal policies in the shared website layout |
+| `GET /warranty-terms-condition` | `legal.warranty-terms` (`Route::view`) | Unlisted warranty terms from `docs/warranty-terms.php`; shared legal-page layout/styles, no navigation links; Warranty Check uses the existing external CRM destination |
 | `GET /locate-a-store` | `StudioController::index` | Loads the source-controlled studio list; Blade renders every entry and vanilla JavaScript filters all 63 records |
 | `GET /studio-tour` | Named `Route::view` | Renders the cinematic Studio Tour without a database query or submission endpoint |
 | `GET /detailing-devils-prime-form` | `PrimeController::create` (`prime.show`) | Renders the independent Prime application view |
