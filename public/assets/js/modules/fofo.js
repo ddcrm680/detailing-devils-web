@@ -5,6 +5,8 @@
   const country = form.querySelector('#country');
   const state = form.querySelector('#state');
   const city = form.querySelector('#city');
+  const initialLocation = { country: country.value, state: state.value, city: city.value };
+  const pendingLocation = { ...initialLocation };
   const manualLocation = form.querySelector('#fofo-location-manual');
   const selectedLocation = form.querySelector('#fofo-location-selects');
   const status = form.querySelector('#fofo-form-status');
@@ -56,6 +58,10 @@
       cities: form.dataset.citiesUrl,
     },
     onCountryChange(value) {
+      if (value !== initialLocation.country) {
+        pendingLocation.state = '';
+        pendingLocation.city = '';
+      }
       const manual = value === 'other';
       selectedLocation.hidden = manual;
       toggleFields(manualLocation, manual);
@@ -64,6 +70,22 @@
       if (select === country && ['ready', 'empty', 'error'].includes(locationStatus)) {
         country.add(new Option('Other country (enter manually)', 'other'));
         country.disabled = false;
+      }
+
+      if (select === state && locationStatus === 'selected' && state.value !== initialLocation.state) {
+        pendingLocation.city = '';
+      }
+
+      if (locationStatus === 'ready' || (select === country && ['empty', 'error'].includes(locationStatus))) {
+        // Restore existing values before applying FOFO's first-load country default.
+        const value = select.value || pendingLocation[select.name] || (select === country
+          ? [...country.options].find((option) => option.text.trim().toLowerCase() === 'india')?.value
+          : '');
+        delete pendingLocation[select.name];
+        if (value && [...select.options].some((option) => option.value === value)) {
+          select.value = value;
+          select.dispatchEvent(new Event('change'));
+        }
       }
 
       if (locationStatus === 'error') {
