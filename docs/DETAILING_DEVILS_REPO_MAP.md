@@ -99,6 +99,8 @@ The FOFO save entry point maps validated location IDs to CRM names and stores a 
 
 The homepage form posts through the shared Axios client in `enquiry.js`, which uses the CSRF meta token from `layouts.app` and shared validation/response helpers. `EnquiryController::store` inserts into the legacy CRM only when `ENQUIRY_SUBMISSION_ENABLED=true`. `ENQUIRY_EMAIL_ENABLED` independently controls the optional mail attempt. Both flags default to false. Existing local `enquiries` tables and data remain untouched; the obsolete migration file and former admin listing have been removed.
 
+The homepage enquiry phone field reuses Prime/FOFO's pinned `intl-tel-input@29.1.2`, defaults to India, and sends E.164 through the existing `phone` field; the unchanged controller stores it verbatim in `your_phone` (20-character limit). Only the selected country is retained in the current history entry for restored national input. The page-scoped country selector mounts under `body` to escape contact-section clipping, opts out of Lenis interception, and refreshes its inline width on opening and resizing.
+
 ## Verification and cautions
 
 - The shared-layout refactor was reviewed against the previous committed homepage. Local Chromium viewport checks at 1440, 768, 390 and 320 pixels confirmed section rendering, menu navigation, hero progression, service switching and no observed console/network errors. Those checks did not submit an enquiry or test a physical phone.

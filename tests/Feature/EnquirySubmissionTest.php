@@ -136,6 +136,17 @@ class EnquirySubmissionTest extends TestCase
         $this->assertNull($row->TypeMessage);
     }
 
+    public function test_international_e164_phone_is_saved_unchanged(): void
+    {
+        config()->set('services.enquiry.submission_enabled', true);
+
+        $this->postJson(route('enquiry.store'), $this->payload(['phone' => '+447123456789']))
+            ->assertOk()->assertJsonPath('success', true);
+
+        $this->assertSame('+447123456789', DB::table('tbl_SaveContactForm7_8')->value('your_phone'));
+        Mail::assertNothingSent();
+    }
+
     public function test_values_at_crm_column_limits_are_accepted_without_truncation(): void
     {
         config()->set('services.enquiry.submission_enabled', true);
@@ -216,6 +227,9 @@ class EnquirySubmissionTest extends TestCase
         $this->assertContains('web', Route::getRoutes()->getByName('enquiry.store')->gatherMiddleware());
         $this->get(route('home'))->assertOk()
             ->assertSee('name="_token"', false)
+            ->assertSee('intl-tel-input@29.1.2/dist/css/intlTelInput.css', false)
+            ->assertSee('intl-tel-input@29.1.2/dist/js/intlTelInput.min.js', false)
+            ->assertSee('id="p" name="phone" type="tel" inputmode="tel" autocomplete="tel"', false)
             ->assertSee('assets/js/modules/enquiry.js', false);
         $this->assertNull(Route::getRoutes()->getByName('enquiry.index'));
         $this->get('/admin/enquiries')->assertNotFound();

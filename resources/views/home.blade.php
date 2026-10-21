@@ -1,6 +1,7 @@
 @extends('layouts.app')
 
 @push('css')
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intl-tel-input@29.1.2/dist/css/intlTelInput.css">
     <link rel="stylesheet" href="{{ asset('assets/css/home.css') }}">
 @endpush
 
@@ -163,7 +164,7 @@
       <form id="form" method="POST" action="{{ route('enquiry.store') }}" novalidate>
         @csrf
         <div class="f"><label for="n">Name</label><input id="n" name="name" autocomplete="name" aria-describedby="n-error" required><small class="invalid-feedback" id="n-error" data-error-for="name" role="alert"></small></div>
-        <div class="f"><label for="p">Phone</label><input id="p" name="phone" type="tel" autocomplete="tel" placeholder="+91" aria-describedby="p-error" required><small class="invalid-feedback" id="p-error" data-error-for="phone" role="alert"></small></div>
+        <div class="f enquiry-phone-field"><label for="p">Phone</label><input id="p" name="phone" type="tel" inputmode="tel" autocomplete="tel" aria-describedby="p-error" required><small class="invalid-feedback" id="p-error" data-error-for="phone" role="alert"></small></div>
         <div class="f"><label for="c">City</label><input id="c" name="city" autocomplete="address-level2" aria-describedby="c-error"><small class="invalid-feedback" id="c-error" data-error-for="city" role="alert"></small></div>
         <div class="f"><label for="m">Car</label><input id="m" name="car" placeholder="Make and model" aria-describedby="m-error"><small class="invalid-feedback" id="m-error" data-error-for="car" role="alert"></small></div>
         <div class="f full"><label for="s">I'm interested in</label>
@@ -188,5 +189,6 @@
       window.DD_FRAMES = @json(collect(range(1, $site['hero']['frames']))->map(fn ($i) => sprintf($site['hero']['frame_pattern'], $i))->values());
   </script>
   <script src="{{ asset('assets/js/modules/home.js') }}"></script>
+  <script src="https://cdn.jsdelivr.net/npm/intl-tel-input@29.1.2/dist/js/intlTelInput.min.js"></script>
   <script src="{{ asset('assets/js/modules/enquiry.js') }}"></script>
 @endpush
