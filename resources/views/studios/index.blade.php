@@ -21,7 +21,7 @@
             <span class="lbl">Find a location</span>
             <h1 class="disp" id="studio-title">Our studios</h1>
             <p class="studio-hero__lead">Premium car care. Now closer to you.</p>
-            <p class="studio-hero__description">Explore our {{ count($studios) }} studio locations across India and find the one that works for you.</p>
+            <p class="studio-hero__description">Explore our studio locations across India and find the one that works for you.</p>
         </div>
     </section>
 
@@ -75,7 +75,7 @@
                     <div class="studio-results" id="studio-results">
                         @foreach ($studios as $studio)
                             <article class="studio-card" data-search="{{ $studio['name'].' '.$studio['address'].' '.$studio['state'].' '.implode(' ', $studio['phones']) }}" data-state="{{ $studio['state'] }}">
-                                <div class="studio-card__index" aria-hidden="true">{{ str_pad((string) ($loop->index + 1), 2, '0', STR_PAD_LEFT) }}</div>
+                                <div class="studio-card__index" aria-hidden="true" style="visibility:hidden;">{{ str_pad((string) ($loop->index + 1), 2, '0', STR_PAD_LEFT) }}</div>
                                 <div class="studio-card__details">
                                     <span class="studio-card__state">{{ $studio['state'] }}</span>
                                     <h3>{{ $studio['name'] }}</h3>

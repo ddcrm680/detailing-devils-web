@@ -9,9 +9,9 @@
         </a>
         <p class="about">{{ $site['footer_about'] }}</p>
         <address class="contact">
-          <a href="tel:{{ $site['phone_link'] }}">{{ $site['phone'] }}</a>
-          <a href="mailto:{{ $site['email'] }}">{{ $site['email'] }}</a>
-          <span>{{ $site['address'] }}</span>
+          <a href="tel:{{ $site['phone_link'] }}"><i class="fa-solid fa-phone" aria-hidden="true"></i>{{ $site['phone'] }}</a>
+          <a href="mailto:{{ $site['email'] }}"><i class="fa-solid fa-envelope" aria-hidden="true"></i>{{ $site['email'] }}</a>
+          <span><i class="fa-solid fa-location-dot" aria-hidden="true"></i>{{ $site['address'] }}</span>
         </address>
       </div>
       <div>
@@ -63,4 +63,11 @@
     </div>
     <div class="giant" aria-hidden="true">Detailing Devils</div>
   </div>
+
+  <div class="whats-btn">
+  <a href="https://api.whatsapp.com/send?phone={{ $site['whatsapp_phone'] }}" target="_blank" rel="noopener noreferrer" aria-label="Chat with Detailing Devils on WhatsApp">
+    <i class="fa-brands fa-whatsapp" aria-hidden="true"></i>
+  </a>
+</div>
+
 </footer>

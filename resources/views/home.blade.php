@@ -156,9 +156,9 @@
         <span class="pre">Are you ready to</span>
         <h2 class="disp">Refuse<br><span class="acc">Dull</span></h2>
         <address class="contact big">
-          <a href="tel:{{ $site['phone_link'] }}">{{ $site['phone'] }}</a>
-          <a href="mailto:{{ $site['email'] }}">{{ $site['email'] }}</a>
-          <span>{{ $site['address'] }}</span>
+          <a href="tel:{{ $site['phone_link'] }}"><i class="fa-solid fa-phone" aria-hidden="true"></i>{{ $site['phone'] }}</a>
+          <a href="mailto:{{ $site['email'] }}"><i class="fa-solid fa-envelope" aria-hidden="true"></i>{{ $site['email'] }}</a>
+          <span><i class="fa-solid fa-location-dot" aria-hidden="true"></i>{{ $site['address'] }}</span>
         </address>
       </div>
       <form id="form" method="POST" action="{{ route('enquiry.store') }}" novalidate>
@@ -168,7 +168,7 @@
         <div class="f"><label for="c">City</label><input id="c" name="city" autocomplete="address-level2" aria-describedby="c-error"><small class="invalid-feedback" id="c-error" data-error-for="city" role="alert"></small></div>
         <div class="f"><label for="m">Car</label><input id="m" name="car" placeholder="Make and model" aria-describedby="m-error"><small class="invalid-feedback" id="m-error" data-error-for="car" role="alert"></small></div>
         <div class="f full"><label for="s">I'm interested in</label>
-          <select id="s" name="interest" aria-describedby="s-error">@foreach($site['services'] as $svc)<option>{{ $svc['title'] }}</option>@endforeach<option>Franchise enquiry</option></select><small class="invalid-feedback" id="s-error" data-error-for="interest" role="alert"></small>
+          <select id="s" name="interest" aria-describedby="s-error">@foreach($site['services'] as $svc)<option>{{ $svc['title'] }}</option>@endforeach</select><small class="invalid-feedback" id="s-error" data-error-for="interest" role="alert"></small>
         </div>
         <div class="ff"><button class="cta red" type="submit">Start Your Detail <i>→</i></button><p class="note" id="note" role="status"></p></div>
       </form>

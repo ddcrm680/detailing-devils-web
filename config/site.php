@@ -17,6 +17,7 @@ return [
     // Contact details (header, contact section and footer)
     'phone' => '+91 9555 695 695',
     'phone_link' => '+919555695695',          // digits only, used for tap-to-call
+    'whatsapp_phone' => '918076767898',          // whatsapp message
     'email' => 'info@detailingdevils.com',      // also receives new enquiries
     'support_email' => 'care@detailingdevils.com',
     'address' => 'B-24, Pushpanjali Enclave, Pitampura, Delhi 110034',

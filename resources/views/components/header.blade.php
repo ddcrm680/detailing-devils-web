@@ -10,6 +10,6 @@
       @endif
     </div>
     <a class="brand" href="{{ request()->is('/') ? '#top' : url('/') . '#top' }}" aria-label="Detailing Devils home"><img class="logo" src="{{ asset('img/logo.png') }}" alt="{{ $site['brand'] }}" width="1600" height="377"></a>
-    <div class="right"><a class="ph-no" href="tel:{{ $site['phone_link'] }}">{{ $site['phone'] }}</a><button class="burger" id="burger" aria-expanded="false" aria-controls="menu">Menu<span><b></b><b></b></span></button></div>
+    <div class="right"><a class="ph-no" href="tel:{{ $site['phone_link'] }}"> <i class="fa-solid fa-phone" aria-hidden="true"></i>{{ $site['phone'] }}</a><button class="burger" id="burger" aria-expanded="false" aria-controls="menu">Menu<span><b></b><b></b></span></button></div>
   </div>
 </header>
