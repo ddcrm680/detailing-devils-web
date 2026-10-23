@@ -240,7 +240,16 @@ label.error { display: block; margin-top: 6px; color: var(--danger); font-size: 
 .required-note { color: #7a8492; font-size: .74rem; }
 #formAlert { border-radius: 12px; }
 
-.site-footer { padding: 24px 0; color: #7b8492; background: #0d0f14; font-size: .74rem; }
+/* Keep the shared footer independent of Prime's light form palette. */
+.prime-page > footer {
+    --line: #212120;
+    --soft: #BAB6AF;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--body);
+    font-size: 16px;
+    line-height: 1.6;
+}
 
 @media (max-width: 991.98px) {
     .hero-section { padding: 52px 0 66px; }

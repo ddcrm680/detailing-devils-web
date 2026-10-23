@@ -32,7 +32,7 @@ This map describes the current Laravel checkout. The original `devils-new-web.zi
 | `resources/views/legal/` | Four policy pages and the unlisted warranty terms page using the shared website layout and existing legal-page CSS |
 | `resources/views/studios/index.blade.php`, `public/assets/css/studios.css`, `public/assets/js/modules/studios.js` | Shared-layout, full-width studio directory with Blade-rendered records, browser search/state and popular-location filtering, phone and Google Maps links |
 | `resources/views/studios/tour.blade.php`, `public/assets/css/studio-tour.css`, `public/assets/js/modules/studio-tour.js`, `public/frames/studio-tour/` | Shared-layout Studio Tour with scroll-driven AVIF frames and links to the existing Prime and FOFO applications |
-| `resources/views/layouts/prime.blade.php`, `resources/views/forms/prime.blade.php` | Prime's independent five-step application layout and view; the layout reuses the shared website header and menu |
+| `resources/views/layouts/prime.blade.php`, `resources/views/forms/prime.blade.php` | Prime's independent five-step application layout and view; the layout reuses the shared website header, menu and footer, including the WhatsApp shortcut. Prime CSS isolates the shared footer from the light form palette. |
 | `app/Http/Controllers/Franchise/FofoController.php`, `resources/views/forms/fofo.blade.php` | FOFO page and disabled-by-default submission; new leads schedule team/applicant emails and an optional calling callback |
 | `app/Http/Controllers/LocationController.php` | Shared read-only CRM country, state and city queries |
 | `app/Http/Controllers/EmailValidationController.php` | Shared ZeroBounce email-deliverability endpoint; API key stays in `config/services.php` |

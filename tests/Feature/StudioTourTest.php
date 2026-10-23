@@ -93,6 +93,36 @@ class StudioTourTest extends TestCase
         $this->assertSame(1, $xpath->query('//*[@id="models"]')->length);
     }
 
+    public function test_prime_reuses_the_shared_footer_without_duplicate_controls(): void
+    {
+        config()->set('database.default', 'unconfigured');
+
+        $page = $this->get(route('prime.show'))->assertOk();
+        $xpath = $this->xpath($page->getContent());
+
+        $this->assertSame(1, $xpath->query('//footer')->length);
+        $this->assertSame(0, $xpath->query('//footer[@class="site-footer"]')->length);
+        foreach (['Services', 'Company', 'Follow'] as $heading) {
+            $this->assertSame(1, $xpath->query('//footer//h4[text()="'.$heading.'"]')->length);
+        }
+        foreach ([
+            'tel:'.config('site.phone_link'),
+            'mailto:'.config('site.email'),
+            route('studios.index'),
+            route('legal.terms'),
+            route('legal.privacy'),
+            'https://www.devilscrm.detailingdevils.com/check-warranty',
+        ] as $url) {
+            $this->assertSame(1, $xpath->query('//footer//a[@href="'.$url.'"]')->length);
+        }
+        $whatsapp = $xpath->query('//div[@class="whats-btn"]/a');
+        $this->assertSame(1, $whatsapp->length);
+        $this->assertSame('https://api.whatsapp.com/send?phone='.config('site.whatsapp_phone'), $whatsapp->item(0)->getAttribute('href'));
+        $this->assertSame('Chat with Detailing Devils on WhatsApp', $whatsapp->item(0)->getAttribute('aria-label'));
+        $this->assertSame(1, $xpath->query('//form[@id="franchiseForm"]')->length);
+        $this->assertSame(1, $xpath->query('//div[@id="otpModal"]')->length);
+    }
+
     private function xpath(string $html): DOMXPath
     {
         $document = new DOMDocument;

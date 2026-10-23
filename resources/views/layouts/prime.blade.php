@@ -11,8 +11,11 @@
 
     <link rel="preconnect" href="https://cdn.jsdelivr.net">
     <link rel="preconnect" href="https://code.jquery.com">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,300..900&family=Hanken+Grotesk:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
 
-    {{-- Prime keeps its own form layout while reusing the website header and menu. --}}
+    {{-- Prime keeps its own form layout while reusing the website header, menu and footer. --}}
     <link rel="stylesheet" href="{{ asset('assets/vendor/bootstrap.min.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" referrerpolicy="no-referrer">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css">
@@ -53,13 +56,7 @@
         @yield('content')
     </main>
 
-    {{-- Original Prime footer. --}}
-    <footer class="site-footer">
-        <div class="container d-flex flex-column flex-md-row justify-content-between align-items-center gap-2">
-            <p class="mb-0">&copy; {{ date('Y') }} Detailing Devils Prime. All rights reserved.</p>
-            <p class="mb-0">Your information is handled securely and used only for franchise communication.</p>
-        </div>
-    </footer>
+    <x-footer />
 
     {{-- Original OTP modal: phone text is populated by the wizard, never hard-coded. --}}
     <div class="modal fade" id="otpModal" tabindex="-1" aria-labelledby="otpModalLabel"
