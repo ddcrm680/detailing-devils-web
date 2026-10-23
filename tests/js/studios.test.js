@@ -7,7 +7,10 @@ import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const source = fs.readFileSync(path.join(root, 'public/assets/js/modules/studios.js'), 'utf8');
-const studios = JSON.parse(fs.readFileSync(path.join(root, 'resources/data/studios.json'), 'utf8'));
+const studios = JSON.parse(fs.readFileSync(path.join(root, 'resources/data/studios.json'), 'utf8')).filter(studio => studio.status === 'active');
+const countMessage = count => `${count} ${count === 1 ? 'location' : 'locations'} found`;
+const delhiCount = studios.filter(studio => studio.state === 'Delhi').length;
+const noidaCount = studios.filter(studio => `${studio.name} ${studio.address} ${studio.state} ${studio.phones.join(' ')}`.toLowerCase().includes('noida')).length;
 
 function setup() {
   const elements = new Map();
@@ -31,7 +34,7 @@ function setup() {
 test('shows all supplied records by default', () => {
   const { cards, get } = setup();
   assert.equal(cards.filter((card) => !card.hidden).length, studios.length);
-  assert.equal(get('studio-count').textContent, `${studios.length} locations found`);
+  assert.equal(get('studio-count').textContent, countMessage(studios.length));
 });
 
 test('search and state filtering show every matching record', () => {
@@ -39,15 +42,17 @@ test('search and state filtering show every matching record', () => {
   get('studio-search').value = 'Detailing Devils';
   get('studio-search').listeners.input();
   assert.equal(cards.filter((card) => !card.hidden).length, studios.length);
-  assert.equal(get('studio-count').textContent, `${studios.length} locations found`);
+  assert.equal(get('studio-count').textContent, countMessage(studios.length));
   get('studio-search').value = 'Malviya Nagar';
   get('studio-search').listeners.input();
-  assert.equal(get('studio-count').textContent, '2 locations found');
-  assert.equal(cards.filter((card) => !card.hidden).length, 2);
+  const malviya = studios.filter(studio => `${studio.name} ${studio.address}`.includes('Malviya Nagar'));
+  assert.equal(get('studio-count').textContent, countMessage(malviya.length));
+  assert.equal(cards.filter((card) => !card.hidden).length, malviya.length);
   get('studio-state').value = 'Delhi';
   get('studio-state').listeners.change();
-  assert.equal(get('studio-count').textContent, '1 location found');
-  assert.equal(cards.filter((card) => !card.hidden).length, 1);
+  const delhiMalviyaCount = malviya.filter(studio => studio.state === 'Delhi').length;
+  assert.equal(get('studio-count').textContent, countMessage(delhiMalviyaCount));
+  assert.equal(cards.filter((card) => !card.hidden).length, delhiMalviyaCount);
   get('studio-search').value = 'not a studio';
   get('studio-search').listeners.input();
   assert.equal(get('studio-count').textContent, '0 locations found');
@@ -59,23 +64,23 @@ test('popular locations and the state dropdown show all matching studios', () =>
   const { cards, get } = setup();
   get('studio-state').value = 'Delhi';
   get('studio-state').listeners.change();
-  assert.equal(cards.filter((card) => !card.hidden).length, 10);
+  assert.equal(cards.filter((card) => !card.hidden).length, delhiCount);
 
   get('studio-popular').listeners.click({ target: { closest: () => ({ dataset: { studioSearch: 'Noida' } }) } });
   assert.equal(get('studio-search').value, 'Noida');
   assert.equal(get('studio-state').value, '');
-  assert.equal(get('studio-count').textContent, '7 locations found');
-  assert.equal(cards.filter((card) => !card.hidden).length, 7);
+  assert.equal(get('studio-count').textContent, countMessage(noidaCount));
+  assert.equal(cards.filter((card) => !card.hidden).length, noidaCount);
 
   get('studio-search').value = '';
   get('studio-state').value = 'Delhi';
   get('studio-state').listeners.change();
-  assert.equal(get('studio-count').textContent, '10 locations found');
-  assert.equal(cards.filter((card) => !card.hidden).length, 10);
+  assert.equal(get('studio-count').textContent, countMessage(delhiCount));
+  assert.equal(cards.filter((card) => !card.hidden).length, delhiCount);
 
   get('studio-state').value = '';
   get('studio-state').listeners.change();
   assert.equal(get('studio-state').value, '');
-  assert.equal(get('studio-count').textContent, `${studios.length} locations found`);
+  assert.equal(get('studio-count').textContent, countMessage(studios.length));
   assert.equal(cards.filter((card) => !card.hidden).length, studios.length);
 });

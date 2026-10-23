@@ -10,6 +10,7 @@ class StudioController extends Controller
     public function index(): View
     {
         $studios = File::json(resource_path('data/studios.json'));
+        $studios = array_values(array_filter($studios, fn ($studio) => ($studio['status'] ?? null) === 'active'));
         foreach ($studios as &$studio) {
             $studio['directions_url'] = $this->directionsUrl($studio);
         }

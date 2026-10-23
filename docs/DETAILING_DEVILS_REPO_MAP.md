@@ -18,7 +18,7 @@ This map describes the current Laravel checkout. The original `devils-new-web.zi
 | `routes/web.php` | Home and shared email-validation routes; central entry point for the franchise, location, OTP, enquiry, legal, and studio route files |
 | `routes/forms.php`, `routes/locations.php`, `routes/otp.php`, `routes/enquiry.php`, `routes/legal.php` | Prime and FOFO form routes, shared location GET routes, shared OTP routes, homepage enquiry route, four named legal policy pages and the unlisted warranty terms page |
 | `routes/deploy.php`, `app/Http/Controllers/DeployController.php` | Deployment-related route and handler; do not invoke during routine testing |
-| `routes/studios.php`, `app/Http/Controllers/StudioController.php`, `resources/data/studios.json` | Public studio locator using the approved static studio list; no CRM query is made; also provides the presentation-only Studio Tour route |
+| `routes/studios.php`, `app/Http/Controllers/StudioController.php`, `resources/data/studios.json` | Public studio locator using the approved static studio list; only records with exact `status: "active"` reach cards, counts, state filters and quick chips. Set `status` to `inactive` to hide a record without deleting it; missing or invalid status stays hidden. No CRM query is made; also provides the presentation-only Studio Tour route |
 | `app/Http/Controllers/HomeController.php` | Passes `config('site')` to the home view |
 | `app/Http/Controllers/EnquiryController.php` | Disabled-by-default CRM enquiry validation, insert, and optional mail attempt |
 | `app/Http/Requests/Franchise/StorePrimeRequest.php` | Prime server-side validation, CRM column-length checks, and normalized phone numbers |
