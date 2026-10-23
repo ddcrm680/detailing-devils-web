@@ -30,7 +30,7 @@ This map describes the current Laravel checkout. The original `devils-new-web.zi
 | `config/form_options.php` | Shared state options and Prime choice values, labels, and JavaScript-dependent IDs |
 | `resources/views/layouts/app.blade.php` | Shared HTML document, metadata, CSS/JS order, components and main content slot |
 | `resources/views/legal/` | Four policy pages and the unlisted warranty terms page using the shared website layout and existing legal-page CSS |
-| `resources/views/studios/index.blade.php`, `public/assets/css/studios.css`, `public/assets/js/modules/studios.js` | Shared-layout, full-width studio directory with Blade-rendered records, browser search/state and popular-location filtering, phone and Google Maps links |
+| `resources/views/studios/index.blade.php`, `public/assets/css/studios.css`, `public/assets/js/modules/studios.js` | Shared-layout, full-width studio directory with Blade-rendered records, browser search/state and popular-location filtering, phone and Google Maps links. The controller prefers a validated HTTPS Google Maps `map_url` from the JSON source; absent or invalid URLs retain the name/address search fallback. |
 | `resources/views/studios/tour.blade.php`, `public/assets/css/studio-tour.css`, `public/assets/js/modules/studio-tour.js`, `public/frames/studio-tour/` | Shared-layout Studio Tour with scroll-driven AVIF frames and links to the existing Prime and FOFO applications |
 | `resources/views/layouts/prime.blade.php`, `resources/views/forms/prime.blade.php` | Prime's independent five-step application layout and view; the layout reuses the shared website header, menu and footer, including the WhatsApp shortcut. Prime CSS isolates the shared footer from the light form palette. |
 | `app/Http/Controllers/Franchise/FofoController.php`, `resources/views/forms/fofo.blade.php` | FOFO page and disabled-by-default submission; new leads schedule team/applicant emails and an optional calling callback |
@@ -81,7 +81,7 @@ The Prime button uses the named `prime.show` route, which renders the migrated f
 | `GET /` | `HomeController::__invoke` | Renders the homepage with site configuration |
 | `GET /terms-of-use`, `/privacy-policy`, `/refund-policy`, `/cancellation-policy` | Named `Route::view` routes | Render the four legal policies in the shared website layout |
 | `GET /warranty-terms-condition` | `legal.warranty-terms` (`Route::view`) | Unlisted warranty terms from `docs/warranty-terms.php`; shared legal-page layout/styles, no navigation links; Warranty Check uses the existing external CRM destination |
-| `GET /locate-a-store` | `StudioController::index` | Loads the source-controlled studio list; Blade renders every entry and vanilla JavaScript filters all 63 records |
+| `GET /locate-a-store` | `StudioController::index` | Loads the source-controlled studio list; Blade renders every entry and vanilla JavaScript filters every record |
 | `GET /studio-tour` | Named `Route::view` | Renders the cinematic Studio Tour without a database query or submission endpoint |
 | `GET /detailing-devils-prime-form` | `PrimeController::create` (`prime.show`) | Renders the independent Prime application view |
 | `GET /franchise-owned-franchise-operated-model` | `FofoController::create` (`fofo.show`) | Renders the FOFO form in the shared website layout; submit button is disabled by default |

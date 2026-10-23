@@ -95,7 +95,7 @@
                                     @if (isset($studio['phones'][0]) && preg_match('/^91[6-9][0-9]{9}$/', preg_replace('/[^0-9]/', '', $studio['phones'][0])))
                                         <a href="tel:+{{ preg_replace('/[^0-9]/', '', $studio['phones'][0]) }}" class="studio-action"><i class="bi bi-telephone" aria-hidden="true"></i> Call</a>
                                     @endif
-                                    <a href="https://www.google.com/maps/search/?api=1&amp;query={{ rawurlencode($studio['name'].' '.$studio['address']) }}" class="studio-action studio-action--red" target="_blank" rel="noopener noreferrer">Directions <i class="bi bi-arrow-up-right" aria-hidden="true"></i></a>
+                                    <a href="{{ $studio['directions_url'] }}" class="studio-action studio-action--red" target="_blank" rel="noopener noreferrer">Directions <i class="bi bi-arrow-up-right" aria-hidden="true"></i></a>
                                 </div>
                             </article>
                         @endforeach

@@ -28,18 +28,18 @@ function setup() {
   return { cards, get: (id) => elements.get(id) };
 }
 
-test('shows all 63 approved records by default', () => {
+test('shows all supplied records by default', () => {
   const { cards, get } = setup();
-  assert.equal(cards.filter((card) => !card.hidden).length, 63);
-  assert.equal(get('studio-count').textContent, '63 locations found');
+  assert.equal(cards.filter((card) => !card.hidden).length, studios.length);
+  assert.equal(get('studio-count').textContent, `${studios.length} locations found`);
 });
 
 test('search and state filtering show every matching record', () => {
   const { cards, get } = setup();
   get('studio-search').value = 'Detailing Devils';
   get('studio-search').listeners.input();
-  assert.equal(cards.filter((card) => !card.hidden).length, 63);
-  assert.equal(get('studio-count').textContent, '63 locations found');
+  assert.equal(cards.filter((card) => !card.hidden).length, studios.length);
+  assert.equal(get('studio-count').textContent, `${studios.length} locations found`);
   get('studio-search').value = 'Malviya Nagar';
   get('studio-search').listeners.input();
   assert.equal(get('studio-count').textContent, '2 locations found');
@@ -76,6 +76,6 @@ test('popular locations and the state dropdown show all matching studios', () =>
   get('studio-state').value = '';
   get('studio-state').listeners.change();
   assert.equal(get('studio-state').value, '');
-  assert.equal(get('studio-count').textContent, '63 locations found');
-  assert.equal(cards.filter((card) => !card.hidden).length, 63);
+  assert.equal(get('studio-count').textContent, `${studios.length} locations found`);
+  assert.equal(cards.filter((card) => !card.hidden).length, studios.length);
 });
