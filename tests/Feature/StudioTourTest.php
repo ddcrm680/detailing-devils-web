@@ -55,9 +55,15 @@ class StudioTourTest extends TestCase
             $this->assertSame(1, $xpath->query('//header[@id="hdr"]//button[@id="burger"]')->length);
             $this->assertSame(1, $xpath->query('//div[@id="menu"][@inert][@data-lenis-prevent]')->length);
             $menuLinks = $xpath->query('//div[@id="menu"]/nav/a');
-            $this->assertSame(7, $menuLinks->length);
+            $this->assertSame(8, $menuLinks->length);
             $this->assertSame('https://www.devilscrm.detailingdevils.com/check-warranty', $menuLinks->item(5)->getAttribute('href'));
             $this->assertSame('06Warranty Check', trim($menuLinks->item(5)->textContent));
+            $this->assertSame('07Shop', trim($menuLinks->item(6)->textContent));
+            $this->assertSame('https://www.shop.detailingdevils.com/', $menuLinks->item(6)->getAttribute('href'));
+            $this->assertSame('_blank', $menuLinks->item(6)->getAttribute('target'));
+            $this->assertSame('08Contact', trim($menuLinks->item(7)->textContent));
+            $this->assertSame($url === '/' ? '#contact' : url('/').'#contact', $menuLinks->item(7)->getAttribute('href'));
+            $this->assertSame(1, $xpath->query('//head/link[@href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"]')->length);
             $this->assertSame(0, $xpath->query('//div[@id="menu"]//a[@href="'.route('studios.tour').'"]')->length);
         }
 

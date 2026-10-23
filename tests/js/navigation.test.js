@@ -19,7 +19,7 @@ function setup() {
   const burger = element('BUTTON');
   const menu = element();
   menu.inert = true;
-  const links = Array.from({ length: 7 }, () => element('A'));
+  const links = Array.from({ length: 8 }, () => element('A'));
   const headerLinks = Array.from({ length: 3 }, () => element('A'));
   headerLinks[2].visible = false;
   const nav = { scrollTop: 100 };
@@ -72,15 +72,18 @@ test('opening contains the page and closing restores focus, inert state and scro
   assert.deepEqual(ui.events.map((event) => event.detail.open), [true, false]);
 });
 
-test('Tab and Shift+Tab wrap between the visible header and menu without reaching the page', () => {
+test('Tab and Shift+Tab wrap after the eighth menu link without trapping the seventh', () => {
   const ui = setup();
   ui.burger.listeners.click();
   ui.links[6].focus();
   let prevented = 0;
   ui.window.listeners.keydown({ key: 'Tab', shiftKey: false, preventDefault() { prevented++; } });
+  assert.equal(prevented, 0);
+  ui.links[7].focus();
+  ui.window.listeners.keydown({ key: 'Tab', shiftKey: false, preventDefault() { prevented++; } });
   assert.equal(ui.document.activeElement, ui.headerLinks[0]);
   ui.window.listeners.keydown({ key: 'Tab', shiftKey: true, preventDefault() { prevented++; } });
-  assert.equal(ui.document.activeElement, ui.links[6]);
+  assert.equal(ui.document.activeElement, ui.links[7]);
   assert.equal(prevented, 2);
 });
 
@@ -92,10 +95,17 @@ test('menu and header links close the overlay, and Escape only acts on an open m
     assert.equal(ui.menu.inert, true);
     assert.equal(ui.main.inert, false);
   }
-  ui.burger.listeners.click();
-  ui.window.listeners.keydown({ key: 'Escape' });
-  assert.equal(ui.menu.inert, true);
-  assert.equal(ui.document.activeElement, ui.burger);
+  for (const link of ui.links) {
+    ui.burger.listeners.click();
+    link.focus();
+    ui.window.listeners.keydown({ key: 'Escape' });
+    assert.equal(ui.menu.inert, true);
+    assert.equal(ui.menu.attributes['aria-hidden'], 'true');
+    assert.equal(ui.burger.attributes['aria-expanded'], 'false');
+    assert.equal(ui.main.inert, false);
+    assert.equal(ui.document.body.classList.contains('menu-open'), false);
+    assert.equal(ui.document.activeElement, ui.burger);
+  }
   ui.main.focus();
   const signals = ui.events.length;
   ui.window.listeners.keydown({ key: 'Escape' });

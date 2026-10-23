@@ -14,6 +14,7 @@
 
     {{-- Prime keeps its own form layout while reusing the website header and menu. --}}
     <link rel="stylesheet" href="{{ asset('assets/vendor/bootstrap.min.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" referrerpolicy="no-referrer">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intl-tel-input@29.1.2/dist/css/intlTelInput.css">
     <link rel="stylesheet" href="{{ asset('assets/css/style.css') }}">
