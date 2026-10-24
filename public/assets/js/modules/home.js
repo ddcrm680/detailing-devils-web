@@ -1,4 +1,5 @@
-(function(){
+(async function(){
+  const loaderModule = new URL('./frame-loader.js', document.currentScript.src);
   const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
   let lenis=null;
 
@@ -18,23 +19,19 @@
   const htop=document.getElementById('htop'),hbot=document.getElementById('hbot'),hint=document.getElementById('hint'),meter=document.querySelector('.meter'),dim=document.querySelector('.stage .dim');
   const fnum=document.getElementById('fnum'),fbar=document.getElementById('fbar'),loader=document.getElementById('loader');
   const BG='#070707';
-  const imgs=new Array(N);let loaded=0,last='';
-  const start=new Image();start.decoding='async';start.onload=()=>{start.ok=true;last=''};start.src=src(0);
+  const { FrameLoader } = await import(loaderModule.href);
+  const frames = new FrameLoader({
+    count: N, source: src, frameBytes: 1920 * 1080 * 4,
+    nativeImages: () => true, fetchConcurrency: (compact) => compact ? 2 : 4,
+    onProgress: (fraction, ready) => {
+      loader.style.width = `${fraction * 100}%`;
+      if (ready) loader.style.opacity = 0;
+    },
+  });
+  let last='';
   const clamp=(v,a,b)=>Math.min(b,Math.max(a,v)),lerp=(a,b,t)=>a+(b-a)*t;
   const ease=t=>1-Math.pow(1-t,3),inout=t=>t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;
   function size(){const d=Math.min(devicePixelRatio||1,2),w=Math.round(cv.clientWidth*d),h=Math.round(cv.clientHeight*d);if(w===cv.width&&h===cv.height)return;cv.width=w;cv.height=h;last=''}
-  // phones/tablets: frames are downloaded once, but only ~40 are kept decoded around the current position,
-  // so memory stays low and touch scrolling never stalls or skips
-  const TOUCH=matchMedia('(pointer:coarse)').matches||matchMedia('(max-width:900px)').matches;
-  const urls=new Array(N),cache=new Map();let curFi=0,dir=1;
-  function ensure(i){if(i<0||i>=N||!urls[i]||cache.has(i))return;const im=new Image();im.decoding='async';im.src=urls[i];cache.set(i,im);
-    (im.decode?im.decode():new Promise(r=>im.onload=r)).then(()=>{im.ok=true;last=''}).catch(()=>{})}
-  function prime(fi){if(fi!==curFi){dir=fi>curFi?1:-1;curFi=fi}
-    for(let k=0;k<=24;k++)ensure(fi+dir*k);for(let k=1;k<=8;k++)ensure(fi-dir*k);
-    if(cache.size>44)for(const [i,im] of cache){if(Math.abs(i-fi)>22){im.src='';cache.delete(i)}}}
-  function nearest(i){
-    if(TOUCH){prime(i);for(let k=0;k<N;k++){const a=cache.get(i-k),b=cache.get(i+k);if(a&&a.ok)return a;if(b&&b.ok)return b}return i===0&&start.ok?start:null}
-    for(let k=0;k<N;k++){if(imgs[i-k]&&imgs[i-k].ok)return imgs[i-k];if(imgs[i+k]&&imgs[i+k].ok)return imgs[i+k]}return null}
   const IW=1920,IH=1080,EW=1920;                                       // uploaded banner frame size
   function scales(){
     const W=cv.width,H=cv.height,wide=W/H>1.1;
@@ -43,7 +40,7 @@
     return {W,H,wide,s0,s1};
   }
   function paint(im,s,cy,W,H,edge){
-    const w=im.naturalWidth*s,h=im.naturalHeight*s,x=(W-w)/2,y=cy-h/2;
+    const w=(im.naturalWidth||im.width)*s,h=(im.naturalHeight||im.height)*s,x=(W-w)/2,y=cy-h/2;
     cx.drawImage(im,x,y,w,h);
     // melt every edge of the frame into the studio black so it never reads as a box (car band stays untouched)
     const T='rgba(7,7,7,0)',lin=(x0,y0,x1,y1)=>{const g=cx.createLinearGradient(x0,y0,x1,y1);g.addColorStop(0,BG);g.addColorStop(1,T);return g};
@@ -59,27 +56,24 @@
     const {W,H,wide,s0,s1}=scales();
     const q=clamp(sp/P2,0,1),fi=Math.round(q*(N-1));                 // video frames advance from the very first scroll
     const k=ease(clamp(sp/P1,0,1));                                  // camera closes in at the same time
-    const key=[W,H,fi,k.toFixed(4),!!start.ok,loaded].join('|');if(key===last)return fi;last=key;
+    const start=frames.cache.get(0),current=frames.get(fi),im=current?.image;
+    const key=[W,H,fi,k.toFixed(4),!!start,current?.version].join('|');if(key===last)return fi;last=key;
     cx.fillStyle=BG;cx.fillRect(0,0,W,H);
     const s=sp<=P1?lerp(s0,s1,k):s1*(1+.05*clamp((sp-P1)/(P2-P1),0,1));
     const h0=IH*s0,cy0=wide?Math.max(H*.5,H-h0*.47):H*.56,cy=lerp(cy0,H*.5,k);
     const u=1-clamp(sp/.035,0,1);                                    // full uncropped line-up at rest; hands over within the first scroll
-    if(start.ok&&u>0){cx.globalAlpha=u;paint(start,s,cy,W,H,true);cx.globalAlpha=1}
-    const im=nearest(fi);
+    if(start&&u>0){cx.globalAlpha=u;paint(start,s,cy,W,H,true);cx.globalAlpha=1}
     if(im){const w=IW*s,x=(W-w)/2;
-      if(u>=1&&start.ok){}                                           // at rest the widened frame is the whole picture
+      if(u>=1&&start){}                                              // at rest the widened frame is the whole picture
       else paint(im,s,cy,W,H,wide?false:true);}
-    else if(start.ok&&u<=0)paint(start,s,cy,W,H,true);
+    else if(start&&u<=0)paint(start,s,cy,W,H,true);
     return fi;
   }
-  function load(i){return new Promise(r=>{const im=new Image();im.decoding='async';im.onload=()=>{im.ok=true;imgs[i]=im;loaded++;loader.style.width=(loaded/N*100)+'%';if(loaded===N)loader.style.opacity=0;r()};im.onerror=r;im.src=src(i)})}
-  function fetchFrame(i){return fetch(src(i)).then(r=>r.ok?r.blob():null).then(b=>{if(b){urls[i]=URL.createObjectURL(b);if(Math.abs(i-curFi)<=24)ensure(i)}loaded++;loader.style.width=(loaded/N*100)+'%';if(loaded===N)loader.style.opacity=0}).catch(()=>{loaded++})}
-  if(TOUCH){(async()=>{for(let i=0;i<N;i+=6)await Promise.all([0,1,2,3,4,5].map(k=>i+k<N?fetchFrame(i+k):null))})()}
-  else load(0).then(()=>{(async()=>{for(let i=1;i<N;i+=6)await Promise.all([0,1,2,3,4,5].map(k=>i+k<N?load(i+k):null))})()});
-  function prog(){const r=seq.getBoundingClientRect(),t=r.height-innerHeight;return clamp(-r.top/t,0,1)}
   let sp=0;
   function tick(){
-    const p=prog();sp+=reduce?(p-sp):(p-sp)*.14;if(Math.abs(p-sp)<.0002)sp=p;
+    const bounds=seq.getBoundingClientRect(),p=clamp(-bounds.top/(bounds.height-innerHeight),0,1);
+    sp+=reduce?(p-sp):(p-sp)*.14;if(Math.abs(p-sp)<.0002)sp=p;
+    frames.update(Math.round(clamp(sp/P2,0,1)*(N-1)),bounds.bottom>0&&bounds.top<innerHeight);
     const fi=draw(sp);
     fnum.textContent=String(fi+1).padStart(3,'0')+' / '+String(N).padStart(3,'0');fbar.style.transform=`scaleY(${clamp(sp/P2,0,1)})`;
     const t=ease(clamp(sp/TXT,0,1));                                  // hero text drifts up and fades over the first few scrolls
@@ -129,6 +123,7 @@
   gsap.registerPlugin(ScrollTrigger);
   if(window.Lenis){
     lenis=new Lenis({lerp:.085});
+    if(document.documentElement.classList.contains('menu-open'))lenis.stop();
     lenis.on('scroll',ScrollTrigger.update);
     gsap.ticker.add(t=>lenis.raf(t*1000));gsap.ticker.lagSmoothing(0);
     document.querySelectorAll('a[href^="#"]').forEach(a=>a.addEventListener('click',e=>{const id=a.getAttribute('href');if(id==='#'){e.preventDefault();return}const el=document.querySelector(id);if(el){e.preventDefault();lenis.scrollTo(el,{offset:id==='#top'?0:-40,duration:1.4})}}));

@@ -1,0 +1,375 @@
+/* Shared, demand-driven loading. Rendering and scroll choreography stay with each page. */
+export class FrameLoader {
+  constructor({ count, source, frameBytes, initialAhead = 6, fetchConcurrency = 4, bitmapConcurrency = 4, nativeImages = () => false, onProgress = () => {} }) {
+    this.count = count;
+    this.source = source;
+    this.frameBytes = frameBytes;
+    this.initialAhead = initialAhead;
+    this.fetchConcurrency = fetchConcurrency;
+    this.bitmapConcurrency = bitmapConcurrency;
+    this.nativeImages = nativeImages;
+    this.nativeFallback = new Set();
+    this.versions = new WeakMap();
+    this.version = 0;
+    this.onProgress = onProgress;
+    this.cache = new Map();
+    this.blobs = new Map();
+    this.requests = new Map();
+    this.decoding = new Set();
+    this.warming = new Map();
+    this.failures = new Map();
+    this.bytes = 0;
+    this.blobBytes = 0;
+    this.target = 0;
+    this.displayed = 0;
+    this.fallback = null;
+    this.fallbackJob = null;
+    this.direction = 1;
+    this.velocity = 0;
+    this.changedAt = performance.now();
+    this.inView = true;
+    this.active = false;
+    this.paused = document.documentElement.classList.contains('menu-open');
+    this.destroyed = false;
+    this.warmed = false;
+    this.media = matchMedia('(pointer:coarse), (max-width:900px)');
+    this.listeners = {
+      visibilitychange: () => this.update(this.target, this.inView),
+      'dd:menu-toggle': (event) => {
+        this.paused = event.detail.open;
+        this.update(this.target, this.inView);
+      },
+      pagehide: (event) => {
+        if (event.persisted) this.suspend();
+        else this.destroy();
+      },
+      pageshow: () => this.update(this.target, this.inView),
+    };
+    Object.entries(this.listeners).forEach(([name, handler]) => window.addEventListener(name, handler));
+  }
+
+  update(index, inView = true) {
+    if (this.destroyed) return;
+    index = Math.max(0, Math.min(this.count - 1, Math.round(index)));
+    const now = performance.now();
+    const previousTarget = this.target;
+    const previousDirection = this.direction;
+    if (index !== this.target) {
+      this.direction = index > this.target ? 1 : -1;
+      this.velocity = this.velocity * .7 + Math.abs(index - this.target) / Math.max(now - this.changedAt, 1) * 300;
+      this.changedAt = now;
+    }
+    const compact = this.media.matches;
+    const nativeMode = this.nativeImages(index);
+    const active = inView && !document.hidden && !this.paused;
+    this.inView = inView;
+    if (index === this.target && active === this.active && compact === this.compact && nativeMode === this.nativeMode) return;
+    this.target = index;
+    this.compact = compact;
+    this.nativeMode = nativeMode;
+    this.maxBytes = (compact ? 96 : 160) * 1024 * 1024;
+    // Enough for either current sequence after traversal; still bounded for future assets.
+    this.maxBlobBytes = 40 * 1024 * 1024;
+    this.active = active;
+    if (!active) { this.suspend(); return; }
+
+    // Keep a small forward buffer at rest; extend it when scrolling quickly.
+    const connection = navigator.connection;
+    const slow = connection?.saveData || /(^|-)2g$/.test(connection?.effectiveType || '')
+      || (connection?.downlink > 0 && connection.downlink < 2 && connection.rtt >= 100);
+    const fetchLimit = typeof this.fetchConcurrency === 'function' ? this.fetchConcurrency(compact) : this.fetchConcurrency;
+    this.concurrency = Math.min(fetchLimit, slow ? 2 : 4);
+    const ahead = Math.min(slow ? 12 : 32, Math.max(this.initialAhead, Math.ceil(this.velocity * .5)));
+    const behind = Math.max(2, Math.ceil(ahead / 4));
+    const candidates = [index];
+    for (let score = 1; score <= Math.max(ahead, behind * 3); score += 1) {
+      const back = index - score / 3 * this.direction;
+      if (score % 3 === 0 && score / 3 <= behind && back >= 0 && back < this.count) candidates.push(back);
+      const front = index + score * this.direction;
+      if (score <= ahead && front >= 0 && front < this.count) candidates.push(front);
+    }
+    this.wanted = candidates.includes(0) ? candidates : [...candidates, 0];
+    this.candidates = candidates;
+    this.selectWindow();
+    for (const [key, controller] of this.requests) {
+      // Continuous scrubbing must not repeatedly abort every slow download before it finishes.
+      const jumped = Math.abs(index - previousTarget) > ahead + behind || previousDirection !== this.direction;
+      if (jumped && !this.wanted.includes(key)) controller.abort();
+    }
+    this.makeRoom(this.frameBytes * this.decoding.size);
+    this.trimBlobs();
+    this.pump();
+  }
+
+  priority(index) {
+    const offset = (index - this.target) * this.direction;
+    return offset >= 0 ? offset : -offset * 3;
+  }
+
+  useNative(index) {
+    return this.nativeImages(index) || index === 0 || this.nativeFallback.has(index) || typeof createImageBitmap !== 'function';
+  }
+
+  ready(index) {
+    const image = this.cache.get(index);
+    return image && !image.close === this.useNative(index);
+  }
+
+  selectWindow() {
+    const slots = Math.max(3, Math.floor(this.maxBytes / this.frameBytes));
+    const pinned = new Set([0, this.target, this.displayed, ...this.warming.keys()]);
+    if (this.fallback !== null) pinned.add(this.fallback);
+    // Retain the last displayed image for reversal; use the remaining pixel budget
+    // ahead of motion rather than repeatedly preparing frames already passed.
+    this.decodeWanted = this.candidates.filter((index) => !pinned.has(index)
+      && (index - this.target) * this.direction >= 0).slice(0, slots - pinned.size);
+    this.decodeWanted.push(...pinned);
+    const targetPosition = this.decodeWanted.indexOf(this.target);
+    if (targetPosition > 0) {
+      this.decodeWanted.splice(targetPosition, 1);
+      this.decodeWanted.unshift(this.target);
+    }
+    this.window = new Set(this.decodeWanted);
+  }
+
+  closerThanCache(index) {
+    const distance = Math.abs(index - this.target);
+    for (const key of this.cache.keys()) {
+      if (Math.abs(key - this.target) <= distance) return false;
+    }
+    return true;
+  }
+
+  keepFallback(index) {
+    const previous = this.fallback;
+    this.fallback = index;
+    this.selectWindow();
+    if (previous !== null && !this.window.has(previous) && this.cache.has(previous)
+      && !this.warming.has(previous)) this.evict(previous);
+  }
+
+  get(index) {
+    let image = this.cache.get(index);
+    let nearest = index;
+    if (!image) {
+      let distance = Infinity;
+      for (const [key, candidate] of this.cache) {
+        const delta = Math.abs(key - index);
+        if (delta < distance || (delta === distance && key < nearest)) {
+          nearest = key;
+          image = candidate;
+          distance = delta;
+        }
+      }
+    }
+    if (!image) return null;
+    this.displayed = nearest;
+    if (this.selection?.index !== nearest || this.selection.image !== image) {
+      this.selection = { index: nearest, image, version: this.versions.get(image) };
+    }
+    return this.selection;
+  }
+
+  retryable(index) {
+    const failure = this.failures.get(index);
+    return !failure || (failure.attempts < 2 && performance.now() >= failure.after);
+  }
+
+  pump() {
+    if (!this.active || this.destroyed) return;
+    if (this.fallback !== null && !this.decoding.has(this.fallback)
+      && (this.cache.has(this.target) || !this.cache.has(this.fallback))) this.keepFallback(null);
+    for (const index of this.wanted) {
+      if (this.requests.size >= this.concurrency) break;
+      if (this.ready(index) || this.blobs.has(index) || this.requests.has(index) || !this.retryable(index)) continue;
+      this.fetch(index);
+    }
+    for (const index of this.decodeWanted) {
+      // Native loads publish on load; desktop bitmaps finish decoding first.
+      // Both paths reserve their full pixel footprint before starting.
+      const reserve = this.fallbackJob !== null && index !== this.target ? 1 : 0;
+      const limit = Math.min(this.useNative(index) ? 6 : this.bitmapConcurrency,
+        reserve ? (this.useNative(this.target) ? 6 : this.bitmapConcurrency) : Infinity);
+      if (this.decoding.size >= limit - reserve) break;
+      if (!this.window.has(index) || (index === this.fallback && index !== this.target)) continue;
+      if (this.ready(index) || this.decoding.has(index) || !this.blobs.has(index) || !this.retryable(index)) continue;
+      if (!this.makeRoom(this.frameBytes * (this.decoding.size + 1 + reserve), index === this.target)) break;
+      this.decode(index);
+    }
+    // Only downloaded data can supply the single extra fallback. Start it while
+    // idle and leave both a decode slot and a pixel allocation for the request.
+    if (!this.cache.has(this.target) && this.decoding.size === 0) {
+      let nearest = null;
+      for (const index of this.blobs.keys()) {
+        if (this.window.has(index) || this.cache.has(index) || !this.retryable(index)) continue;
+        if (nearest === null || Math.abs(index - this.target) < Math.abs(nearest - this.target)
+          || (Math.abs(index - this.target) === Math.abs(nearest - this.target) && index < nearest)) nearest = index;
+      }
+      if (nearest !== null && this.closerThanCache(nearest)
+        && this.bitmapConcurrency > 1 && this.makeRoom(this.frameBytes * 2)) {
+        this.keepFallback(nearest);
+        this.decode(nearest, true);
+      }
+    }
+    // Prewarming must never gate publication of an already loaded image.
+    for (const index of this.decodeWanted) {
+      if (this.warming.size >= 2) break;
+      const image = this.cache.get(index);
+      if (!this.compact || !image || index === 0 || image.prepared || !image.decode) continue;
+      image.prepared = true;
+      this.warming.set(index, image);
+      image.decode().catch(() => {}).finally(() => {
+        if (this.warming.get(index) === image) this.warming.delete(index);
+        if (this.active && !this.destroyed) this.selectWindow();
+        this.pump();
+      });
+    }
+    if (!this.warmed) {
+      const complete = this.decodeWanted.filter((index) => this.cache.has(index) || this.failures.get(index)?.attempts >= 2).length;
+      this.warmed = complete === this.decodeWanted.length;
+      this.onProgress(complete / this.decodeWanted.length, this.warmed);
+    }
+  }
+
+  async fetch(index) {
+    const controller = new AbortController();
+    this.requests.set(index, controller);
+    try {
+      const response = await fetch(this.source(index), {
+        signal: controller.signal,
+        priority: index === this.target ? 'high' : 'low',
+      });
+      if (!response.ok) throw new Error('Frame unavailable');
+      const blob = await response.blob();
+      if (controller.signal.aborted || this.destroyed) return;
+      this.blobs.set(index, blob);
+      this.blobBytes += blob.size;
+      this.trimBlobs();
+    } catch (error) {
+      if (error.name !== 'AbortError') this.failed(index);
+    } finally {
+      this.requests.delete(index);
+      this.pump();
+    }
+  }
+
+  async decode(index, fallback = false) {
+    this.decoding.add(index);
+    if (fallback) this.fallbackJob = index;
+    const blob = this.blobs.get(index);
+    // Refresh the compressed LRU without keeping every visited frame forever.
+    this.blobs.delete(index);
+    this.blobs.set(index, blob);
+    let image;
+    try {
+      if (!this.useNative(index)) {
+        try { image = await createImageBitmap(blob); }
+        catch { this.nativeFallback.add(index); }
+      }
+      if (!image) {
+        // Native images preserve the original downscaling on small screens.
+        image = new Image();
+        image.decoding = 'async';
+        image.frameUrl = URL.createObjectURL(blob);
+        await new Promise((resolve, reject) => {
+          image.onload = resolve;
+          image.onerror = reject;
+          image.src = image.frameUrl;
+        });
+      }
+      const bytes = (image.naturalWidth || image.width) * (image.naturalHeight || image.height) * 4;
+      // A late normal decode can become the fallback without decoding it again.
+      if (!this.destroyed && this.active && !this.window.has(index) && this.closerThanCache(index)
+        && !image.close === this.useNative(index)
+        && this.makeRoom(bytes + this.frameBytes * (this.decoding.size - 1 + (this.decoding.has(this.target) ? 0 : 1)))) this.keepFallback(index);
+      if (this.destroyed || !this.active || !this.window.has(index)
+        || (index === this.fallback && index !== this.target && !this.closerThanCache(index))
+        || !image.close !== this.useNative(index) || !this.makeRoom(bytes, index === this.target)) {
+        this.release(image);
+      } else {
+        if (this.cache.has(index)) this.evict(index);
+        this.versions.set(image, ++this.version);
+        this.cache.set(index, image);
+        this.bytes += bytes;
+        this.failures.delete(index);
+      }
+    } catch {
+      if (image) this.release(image);
+      this.failed(index);
+    } finally {
+      this.decoding.delete(index);
+      if (fallback) this.fallbackJob = null;
+      this.pump();
+    }
+  }
+
+  failed(index) {
+    if (this.destroyed) return;
+    const attempts = (this.failures.get(index)?.attempts || 0) + 1;
+    this.failures.set(index, { attempts, after: performance.now() + 1500 });
+    clearTimeout(this.retryTimer);
+    this.retryTimer = setTimeout(() => this.pump(), 1500);
+  }
+
+  makeRoom(extra, allowFallback = false) {
+    if (this.bytes + extra <= this.maxBytes) return true;
+    while (this.bytes + extra > this.maxBytes) {
+      let victim, worst = -Infinity;
+      for (const key of this.cache.keys()) {
+        if (key === 0 || key === this.target || key === this.displayed || this.warming.has(key)
+          || (key === this.fallback && !allowFallback)) continue;
+        // An obsolete nearby frame must not displace a still-wanted forward frame:
+        // otherwise the refill loop repeatedly decodes its own eviction victim.
+        const score = this.priority(key) + (this.window.has(key) ? 0 : this.count * 4);
+        if (score > worst) { worst = score; victim = key; }
+      }
+      if (victim === undefined) return false;
+      this.evict(victim);
+    }
+    return true;
+  }
+
+  trimBlobs() {
+    for (const [index, blob] of this.blobs) {
+      if (this.blobBytes <= this.maxBlobBytes) break;
+      if (index === 0 || this.decodeWanted.includes(index)) continue;
+      this.blobs.delete(index);
+      this.blobBytes -= blob.size;
+    }
+  }
+
+  release(image) {
+    if (image.close) image.close();
+    else {
+      image.src = '';
+      if (image.frameUrl) URL.revokeObjectURL(image.frameUrl);
+    }
+    if (this.selection?.image === image) this.selection = null;
+  }
+
+  evict(index) {
+    const image = this.cache.get(index);
+    this.bytes -= (image.naturalWidth || image.width) * (image.naturalHeight || image.height) * 4;
+    this.release(image);
+    this.cache.delete(index);
+    if (index === this.fallback) { this.fallback = null; this.selectWindow(); }
+  }
+
+  suspend() {
+    this.active = false;
+    for (const controller of this.requests.values()) controller.abort();
+    for (const index of this.cache.keys()) {
+      if (index !== 0 && index !== this.displayed) this.evict(index);
+    }
+  }
+
+  destroy() {
+    this.destroyed = true;
+    this.suspend();
+    clearTimeout(this.retryTimer);
+    for (const index of this.cache.keys()) this.evict(index);
+    this.blobs.clear();
+    this.blobBytes = 0;
+    Object.entries(this.listeners).forEach(([name, handler]) => window.removeEventListener(name, handler));
+  }
+}
