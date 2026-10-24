@@ -1,5 +1,8 @@
 (async function(){
-  const loaderModule = new URL('./frame-loader.js', document.currentScript.src);
+  const loaderModule = new URL(
+    document.currentScript?.src ? './frame-loader.js' : '/assets/js/modules/frame-loader.js',
+    document.currentScript?.src || document.baseURI,
+  );
   const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
   let lenis=null;
 

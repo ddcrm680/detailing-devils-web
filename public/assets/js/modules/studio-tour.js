@@ -1,6 +1,9 @@
 /* Scroll-driven Studio Tour. Each AVIF contains two consecutive film frames. */
 (async () => {
-  const loaderModule = new URL('./frame-loader.js', document.currentScript.src);
+  const loaderModule = new URL(
+    document.currentScript?.src ? './frame-loader.js' : '/assets/js/modules/frame-loader.js',
+    document.currentScript?.src || document.baseURI,
+  );
   const page = document.querySelector('.tour-page');
   if (!page) return;
 
