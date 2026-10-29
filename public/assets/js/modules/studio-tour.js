@@ -12,7 +12,7 @@
   const lerp = (start, end, amount) => start + (end - start) * amount;
   const ease = (amount) => 1 - Math.pow(1 - amount, 3);
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const frameCount = 660;
+  const frameCount = Number(page.dataset.frameCount) === 800 ? 800 : 660;
   const perFile = 2;
   const fileCount = frameCount / perFile;
   const base = page.dataset.framesBase;
@@ -34,7 +34,10 @@
     element, start: Number(element.dataset.a), finish: Number(element.dataset.b),
   }));
 
-  [34, 95, 203, 310, 351, 392, 440, 500, 548, 596].forEach((frame) => {
+  const ticks = frameCount === 660
+    ? [34, 95, 203, 310, 351, 392, 440, 500, 548, 596]
+    : captions.flatMap(({ start, finish }) => [start, finish]);
+  ticks.forEach((frame) => {
     const tick = document.createElement('i');
     tick.style.left = `${(frame / (frameCount - 1) * 100).toFixed(2)}%`;
     progress.appendChild(tick);

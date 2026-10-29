@@ -26,9 +26,95 @@ class StudioTourTest extends TestCase
 
         $html = $page->getContent();
         $this->assertSame(5, substr_count($html, 'class="tour-page__caption"'));
-        $this->assertSame(2, substr_count($html, 'class="tour-page__tier"'));
+        $this->assertSame(3, substr_count($html, '<article class="tour-page__tier'));
         $this->assertStringNotContainsString('Red Carpet', $html);
         $this->assertStringNotContainsString('wa.me', $html);
+    }
+
+    public function test_models_select_only_their_sequence_and_preserve_application_routes(): void
+    {
+        config()->set('database.default', 'unconfigured');
+
+        foreach (['xclusive', 'fofo', 'prime', 'unknown', ['fofo']] as $requested) {
+            $model = is_string($requested) && in_array($requested, ['fofo', 'prime'], true) ? $requested : 'xclusive';
+            $page = $this->get(route('studios.tour', ['model' => $requested]))->assertOk();
+            $page->assertSee('data-model="'.$model.'"', false)
+                ->assertSee('data-frame-count="'.($model === 'xclusive' ? 660 : 800).'"', false)
+                ->assertSee('data-frames-base="'.asset($model === 'xclusive' ? 'frames/studio-tour' : 'frames/fofo-tour').'/', false)
+                ->assertSee(route('prime.show'))->assertSee(route('fofo.show'))
+                ->assertSee('Applications Coming Soon')->assertSee('X-Clusive pricing is provisional');
+            $this->assertSame($model === 'xclusive' ? 5 : 6, substr_count($page->getContent(), 'class="tour-page__caption"'));
+            $xpath = $this->xpath($page->getContent());
+            $selected = $xpath->query('//nav[@aria-label="Choose a studio tour"]/a[@aria-current="page"]');
+            $this->assertSame(1, $selected->length);
+            $this->assertSame(route('studios.tour', ['model' => $model]), $selected->item(0)->getAttribute('href'));
+            $otherTours = $xpath->query('//*[@id="tour-end"]//a[@class="tour-page__other-card"]');
+            $this->assertSame(2, $otherTours->length);
+            $expectedOthers = array_values(array_diff(['prime', 'fofo', 'xclusive'], [$model]));
+            foreach ($expectedOthers as $index => $otherModel) {
+                $this->assertSame(route('studios.tour', ['model' => $otherModel]), $otherTours->item($index)->getAttribute('href'));
+                $this->assertStringContainsString(['prime' => '15 Lakh', 'fofo' => '35 Lakh', 'xclusive' => '1.5 Crore'][$otherModel], $otherTours->item($index)->textContent);
+                if ($otherModel === 'xclusive') {
+                    $this->assertStringContainsString('Provisional', $otherTours->item($index)->textContent);
+                }
+            }
+            $endLinks = $xpath->query('//*[@id="tour-end"]//a[starts-with(text(), "Apply for")]');
+            $this->assertSame($model === 'xclusive' ? 0 : 1, $endLinks->length);
+            if ($model !== 'xclusive') {
+                $this->assertSame(route($model.'.show'), $endLinks->item(0)->getAttribute('href'));
+            }
+            if ($model === 'prime') {
+                $page->assertSee('Illustrative preview')->assertSee('not a Prime studio specification');
+            }
+        }
+        $this->assertCount(400, glob(public_path('frames/fofo-tour/*.avif')));
+        for ($index = 1; $index <= 400; $index++) {
+            $this->assertFileExists(public_path(sprintf('frames/fofo-tour/%03d.avif', $index)));
+        }
+    }
+
+    public function test_model_cards_group_tour_and_application_controls_after_correct_prices(): void
+    {
+        config()->set('database.default', 'unconfigured');
+        foreach ([null, 'xclusive', 'fofo', 'prime'] as $selected) {
+            $active = $selected ?? 'xclusive';
+            $xpath = $this->xpath($this->get(route('studios.tour', $selected ? ['model' => $selected] : []))->assertOk()->getContent());
+            $cards = $xpath->query('//article[contains(@class, "tour-page__tier")]');
+            foreach (['prime', 'fofo', 'xclusive'] as $index => $model) {
+                $this->assertStringContainsString('Model 0'.($index + 1), $cards->item($index)->textContent);
+                $price = $xpath->query('.//div[@class="tour-page__tier-price"]', $cards->item($index))->item(0);
+                $children = $xpath->query('./*', $price);
+                $this->assertSame(3, $children->length);
+                $this->assertSame('tour-page__amount', $children->item(0)->getAttribute('class'));
+                $this->assertSame('p', $children->item(1)->nodeName);
+                $this->assertSame(['15Lakh', '35Lakh', '1.5Crore'][$index], mb_substr(trim($children->item(0)->textContent), 1));
+                $this->assertStringContainsString(['17.7 lakh', '41.3 lakh', '1.77 Crore'][$index], $children->item(1)->textContent);
+                $controls = $xpath->query('./*', $children->item(2));
+                $this->assertSame($model === $active ? 1 : 2, $controls->length);
+                $primary = $controls->item(0);
+                $this->assertSame(1, $xpath->query('./*[contains(concat(" ", normalize-space(@class), " "), " cta ")]', $children->item(2))->length);
+                $this->assertSame($model === $active && $model !== 'xclusive', str_contains(' '.$primary->getAttribute('class').' ', ' red '));
+                if ($model === 'xclusive') {
+                    $this->assertStringContainsString('tour-page__tier--flagship', $cards->item($index)->getAttribute('class'));
+                    $application = $controls->item($controls->length - 1);
+                    $this->assertSame('span', $application->nodeName);
+                    $this->assertSame('true', $application->getAttribute('aria-disabled'));
+                    $this->assertFalse($application->hasAttribute('href'));
+                    if ($model !== $active) {
+                        $this->assertSame(route('studios.tour', ['model' => $model]), $primary->getAttribute('href'));
+                        $this->assertSame('tour-page__tier-secondary', $application->getAttribute('class'));
+                    }
+                } else {
+                    $this->assertSame(route($model.'.show'), $primary->getAttribute('href'));
+                    if ($model !== $active) {
+                        $secondary = $controls->item(1);
+                        $this->assertSame('tour-page__tier-secondary', $secondary->getAttribute('class'));
+                        $this->assertSame(route('studios.tour', ['model' => $model]), $secondary->getAttribute('href'));
+                        $this->assertStringContainsString('Watch Studio Tour', $secondary->textContent);
+                    }
+                }
+            }
+        }
     }
 
     public function test_original_frame_sequence_is_complete(): void

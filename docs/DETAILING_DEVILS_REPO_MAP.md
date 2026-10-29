@@ -115,3 +115,7 @@ The homepage enquiry phone field reuses Prime/FOFO's pinned `intl-tel-input@29.1
 - The studio locator uses `resources/data/studios.json`, extracted from the owner-supplied HTML. Its private `tbl_studio` backups remain Git-ignored and are not used by the page.
 - The deployment endpoint warrants separate security work; this cleanup does not change it.
 - For shared-site changes, start with `layouts/app.blade.php`, the relevant component, `style.css` and `navigation.js`. For homepage changes, add `home.blade.php`, `home.css` and `home.js`. For enquiry changes, also inspect `routes/enquiry.php`, `EnquiryController` and `enquiry.js`.
+
+## Studio Tour model selection
+
+The existing `studios.tour` route accepts `model=xclusive|fofo|prime`; missing/invalid values use X-Clusive. The single Tour Blade renders model-specific captions and sequence metadata. X-Clusive retains `public/frames/studio-tour/` (330 AVIFs / 660 film frames). FOFO and the explicitly illustrative Prime preview share `public/frames/fofo-tour/` (400 AVIFs / 800 film frames). Model links use full navigation, with V2.1 cleanup and fresh loader state. The shared frame loader and its 96/160 MiB decoded and 40 MiB compressed budgets are unchanged; FOFO traversal can evict compressed frames and require downloads during reversal. Existing Prime/FOFO prices and application routes remain; X-Clusive applications are Coming Soon without a new backend; its reference pricing is displayed with the approved provisional/commercial-confirmation disclaimer.
