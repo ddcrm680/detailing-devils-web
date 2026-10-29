@@ -14,7 +14,7 @@ This map describes the current Laravel checkout. The original `devils-new-web.zi
 
 | Location | Responsibility |
 | --- | --- |
-| `Anybuild` | Wasmer build definition using Anybuild 0.33.0 Laravel defaults; a `build_post` step removes staged `node_modules` after Vite and before artifact export. Local npm scripts, PHP dependencies and production assets are unchanged. |
+| `Anybuild` | Wasmer build definition using Anybuild 0.33.0 Laravel defaults; a build-only `COMPOSER_NO_DEV=1` environment step installs production Composer packages, and `build_post` removes staged `node_modules` after Vite and before artifact export. Local npm scripts, production PHP dependencies and production assets are unchanged. |
 | `routes/web.php` | Home and shared email-validation routes; central entry point for the franchise, location, OTP, enquiry, legal, and studio route files |
 | `routes/forms.php`, `routes/locations.php`, `routes/otp.php`, `routes/enquiry.php`, `routes/legal.php` | Prime and FOFO form routes, shared location GET routes, shared OTP routes, homepage enquiry route, four named legal policy pages and the unlisted warranty terms page |
 | `routes/deploy.php`, `app/Http/Controllers/DeployController.php` | Deployment-related route and handler; do not invoke during routine testing |
@@ -119,3 +119,10 @@ The homepage enquiry phone field reuses Prime/FOFO's pinned `intl-tel-input@29.1
 ## Studio Tour model selection
 
 The existing `studios.tour` route accepts `model=xclusive|fofo|prime`; missing/invalid values use X-Clusive. The single Tour Blade renders model-specific captions and sequence metadata. X-Clusive retains `public/frames/studio-tour/` (330 AVIFs / 660 film frames). FOFO and the explicitly illustrative Prime preview share `public/frames/fofo-tour/` (400 AVIFs / 800 film frames). Model links use full navigation, with V2.1 cleanup and fresh loader state. The shared frame loader and its 96/160 MiB decoded and 40 MiB compressed budgets are unchanged; FOFO traversal can evict compressed frames and require downloads during reversal. Existing Prime/FOFO prices and application routes remain; X-Clusive applications are Coming Soon without a new backend; its reference pricing is displayed with the approved provisional/commercial-confirmation disclaimer.
+
+## Wasmer production build memory
+
+- Deployment 1241969 completed Docker export (247.28 MB) before Wasmer rejected reported builder usage of 1353 MB against a 1536 MB allowance. These are builder limits, separate from PHP runtime memory; successful local checks do not guarantee remote acceptance.
+- The v28-era fix (`b466b2f`) still removes only staged `/app/node_modules` after Vite. The additional `build_pre = [env(COMPOSER_NO_DEV = "1")]` persists through Docker layers and excludes Composer development packages without changing the lockfile, local npm workflow, runtime commands or migration hook.
+- Verify with Anybuild **0.33.0** in an isolated checkout: compare `plan --wasmer --docker`, generate the Dockerfile and confirm `ENV COMPOSER_NO_DEV=1` precedes `composer install`; confirm Vite precedes Node cleanup. Install from the lockfile with the build environment set, inspect installed production/development package names, then test package discovery, Laravel boot/routes, config/event/route/view preparation and session behavior with database connections disabled. Keep development dependencies in the regular testing checkout.
+- Preserve all 970 animation assets (240 JPGs and 730 AVIFs), both proposal PDFs, and the existing frame URLs. If remote memory still fails, retain the active deployment, collect the complete sanitized export/packaging logs and measured artifact size, and investigate Wasmer packaging allocation/headroom with support. Do not repeat identical deployments, raise PHP runtime memory, or remove footage as a substitute for diagnosis.

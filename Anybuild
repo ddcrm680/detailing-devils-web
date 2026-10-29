@@ -19,6 +19,8 @@ laravel_serve(
     config,
     build,
     name = "detailing-devils-web",
+    # Production artifacts do not need Composer development packages.
+    build_pre = [env(COMPOSER_NO_DEV = "1")],
     build_post = [
         workdir(build.app.path),
         run("rm -rf -- node_modules", group = "build"),
