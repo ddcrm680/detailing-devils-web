@@ -1,0 +1,13 @@
+# Studio Tour AVIF MIME and Caching
+
+<IfModule mod_mime.c>
+    AddType image/avif .avif
+</IfModule>
+
+<IfModule mod_headers.c>
+    <FilesMatch "\.avif$">
+        Header onsuccess unset Cache-Control
+        Header always unset Cache-Control
+        Header always set Cache-Control "public, max-age=604800"
+    </FilesMatch>
+</IfModule>
