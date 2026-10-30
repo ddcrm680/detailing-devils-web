@@ -23,7 +23,6 @@
 
     const phoneOptions = {
         initialCountry: 'in',
-        preferredCountries: ['in'],
         separateDialCode: true,
         strictMode: true,
         numberDisplayFormat: 'NATIONAL',
