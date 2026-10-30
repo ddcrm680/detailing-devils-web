@@ -470,10 +470,14 @@ class XclusiveSubmissionTest extends TestCase
         Log::shouldHaveReceived('warning')->with('X-Clusive franchise emails skipped: a delivery mailer is not configured.')->once();
     }
 
-    public function test_studio_tour_keeps_xclusive_application_disabled(): void
+    public function test_studio_tour_links_to_xclusive_without_enabling_submission(): void
     {
-        $this->get(route('studios.tour'))->assertOk()->assertSee('Applications Coming Soon')
-            ->assertDontSee('href="'.route('xclusive.show').'"', false);
+        $this->get(route('studios.tour'))->assertOk()
+            ->assertDontSee('Coming Soon')
+            ->assertSee('href="'.route('xclusive.show', [], false).'"', false);
+        $this->get(route('xclusive.show'))->assertOk()->assertSee('id="fofo-submit" disabled', false);
+        $this->assertFalse(config('services.xclusive.submission_enabled'));
+        $this->assertFalse(config('services.xclusive.call_enabled'));
     }
 
     public function test_applicant_email_hides_the_entire_proposal_paragraph_without_a_pdf(): void

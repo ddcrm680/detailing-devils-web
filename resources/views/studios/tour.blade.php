@@ -7,7 +7,8 @@
     $modelNames = ['xclusive' => 'X-Clusive', 'fofo' => 'FOFO', 'prime' => 'Prime'];
     $modelName = $modelNames[$model];
     $isXclusive = $model === 'xclusive';
-    $applicationUrl = $isXclusive ? null : route($model.'.show');
+    $xclusiveApplicationUrl = route('xclusive.show', [], false);
+    $applicationUrl = $isXclusive ? $xclusiveApplicationUrl : route($model.'.show');
     $otherTourPrices = ['prime' => '15 Lakh', 'fofo' => '35 Lakh', 'xclusive' => '1.5 Crore'];
     $fofoCaptions = [
         [38, 72, 'Foam & wash bay', 'Foam &', 'wash', 'Pre-wash and decontamination in its own glass bay.'],
@@ -71,14 +72,10 @@
             <div class="tour-page__end" id="tour-end" data-lenis-prevent>
                 <span class="lbl">End of {{ $modelName }} tour</span>
                 <h2 class="disp">Your Studio<br>Is <span class="acc">Next</span></h2>
-                <p>{{ $isXclusive ? 'X-Clusive applications are coming soon. Explore Prime and FOFO below.' : ($model === 'prime' ? 'Prime illustrative tour complete: FOFO footage, not a Prime studio specification.' : 'Your FOFO studio journey starts here. Explore the model and apply.') }}</p>
+                <p>{{ $isXclusive ? 'Your X-Clusive studio journey starts here. Explore the model and apply.' : ($model === 'prime' ? 'Prime illustrative tour complete: FOFO footage, not a Prime studio specification.' : 'Your FOFO studio journey starts here. Explore the model and apply.') }}</p>
                 <div class="tour-page__actions">
                     <a class="cta red" href="#models">Explore Models <i aria-hidden="true">&darr;</i></a>
-                    @if ($applicationUrl)
-                        <a class="cta" href="{{ $applicationUrl }}">Apply for {{ $modelName }} <i aria-hidden="true">&rarr;</i></a>
-                    @else
-                        <span class="cta" aria-disabled="true">X-Clusive: Coming Soon</span>
-                    @endif
+                    <a class="cta" href="{{ $applicationUrl }}">Apply for {{ $modelName }} <i aria-hidden="true">&rarr;</i></a>
                 </div>
                 <nav class="tour-page__other-tours" aria-label="Watch another studio tour">
                     <h3>Watch another studio tour</h3>
@@ -146,10 +143,10 @@
                     <p>+ 18% GST &middot; <b>&#8377;1.77 Crore</b> all-in</p>
                     <div class="tour-page__tier-actions">
                         @if ($model === 'xclusive')
-                            <span class="cta" aria-disabled="true">Applications Coming Soon</span>
+                            <a class="cta red" href="{{ $xclusiveApplicationUrl }}">Apply for X-Clusive <i aria-hidden="true">&rarr;</i></a>
                         @else
                             <a class="cta" href="{{ route('studios.tour', ['model' => 'xclusive']) }}">Tour X-Clusive <i aria-hidden="true">&rarr;</i></a>
-                            <span class="tour-page__tier-secondary" aria-disabled="true">Applications Coming Soon</span>
+                            <a class="tour-page__tier-secondary" href="{{ $xclusiveApplicationUrl }}">Apply for X-Clusive <span aria-hidden="true">&rarr;</span></a>
                         @endif
                     </div>
                 </div>

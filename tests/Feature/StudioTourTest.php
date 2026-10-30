@@ -42,7 +42,8 @@ class StudioTourTest extends TestCase
                 ->assertSee('data-frame-count="'.($model === 'xclusive' ? 660 : 800).'"', false)
                 ->assertSee('data-frames-base="'.asset($model === 'xclusive' ? 'frames/studio-tour' : 'frames/fofo-tour').'/', false)
                 ->assertSee(route('prime.show'))->assertSee(route('fofo.show'))
-                ->assertSee('Applications Coming Soon')->assertSee('X-Clusive pricing is provisional');
+                ->assertSee('href="'.route('xclusive.show', [], false).'"', false)
+                ->assertDontSee('Coming Soon')->assertSee('X-Clusive pricing is provisional');
             $this->assertSame($model === 'xclusive' ? 5 : 6, substr_count($page->getContent(), 'class="tour-page__caption"'));
             $xpath = $this->xpath($page->getContent());
             $selected = $xpath->query('//nav[@aria-label="Choose a studio tour"]/a[@aria-current="page"]');
@@ -59,10 +60,9 @@ class StudioTourTest extends TestCase
                 }
             }
             $endLinks = $xpath->query('//*[@id="tour-end"]//a[starts-with(text(), "Apply for")]');
-            $this->assertSame($model === 'xclusive' ? 0 : 1, $endLinks->length);
-            if ($model !== 'xclusive') {
-                $this->assertSame(route($model.'.show'), $endLinks->item(0)->getAttribute('href'));
-            }
+            $this->assertSame(1, $endLinks->length);
+            $this->assertSame($model === 'xclusive' ? route('xclusive.show', [], false) : route($model.'.show'), $endLinks->item(0)->getAttribute('href'));
+            $this->assertFalse($endLinks->item(0)->hasAttribute('aria-disabled'));
             if ($model === 'prime') {
                 $page->assertSee('Illustrative preview')->assertSee('not a Prime studio specification');
             }
@@ -93,13 +93,13 @@ class StudioTourTest extends TestCase
                 $this->assertSame($model === $active ? 1 : 2, $controls->length);
                 $primary = $controls->item(0);
                 $this->assertSame(1, $xpath->query('./*[contains(concat(" ", normalize-space(@class), " "), " cta ")]', $children->item(2))->length);
-                $this->assertSame($model === $active && $model !== 'xclusive', str_contains(' '.$primary->getAttribute('class').' ', ' red '));
+                $this->assertSame($model === $active, str_contains(' '.$primary->getAttribute('class').' ', ' red '));
                 if ($model === 'xclusive') {
                     $this->assertStringContainsString('tour-page__tier--flagship', $cards->item($index)->getAttribute('class'));
                     $application = $controls->item($controls->length - 1);
-                    $this->assertSame('span', $application->nodeName);
-                    $this->assertSame('true', $application->getAttribute('aria-disabled'));
-                    $this->assertFalse($application->hasAttribute('href'));
+                    $this->assertSame('a', $application->nodeName);
+                    $this->assertFalse($application->hasAttribute('aria-disabled'));
+                    $this->assertSame(route('xclusive.show', [], false), $application->getAttribute('href'));
                     if ($model !== $active) {
                         $this->assertSame(route('studios.tour', ['model' => $model]), $primary->getAttribute('href'));
                         $this->assertSame('tour-page__tier-secondary', $application->getAttribute('class'));
@@ -114,6 +114,22 @@ class StudioTourTest extends TestCase
                     }
                 }
             }
+        }
+    }
+
+    public function test_xclusive_application_links_stay_relative_on_different_hosts(): void
+    {
+        config()->set('database.default', 'unconfigured');
+
+        foreach (['http://localhost', 'https://cpanel.example.test', 'https://www.example.test'] as $origin) {
+            $xpath = $this->xpath($this->get($origin.'/studio-tour')->assertOk()->getContent());
+            $links = $xpath->query('//*[@id="tour-end"]//a[starts-with(text(), "Apply for")] | //article[contains(@class, "tour-page__tier--flagship")]//a[starts-with(text(), "Apply for")]');
+            $this->assertSame(2, $links->length);
+            foreach ($links as $link) {
+                $this->assertSame('/x-clusive-franchise-form', $link->getAttribute('href'));
+                $this->assertSame(route('xclusive.show', [], false), $link->getAttribute('href'));
+            }
+            $this->get($origin.route('xclusive.show', [], false))->assertOk()->assertViewIs('forms.fofo');
         }
     }
 
