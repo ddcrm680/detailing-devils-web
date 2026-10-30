@@ -24,5 +24,7 @@ laravel_serve(
     build_post = [
         workdir(build.app.path),
         run("rm -rf -- node_modules", group = "build"),
+        # PHPix cannot parse these Apache-only frame header directives.
+        run("rm -f -- public/frames/.htaccess", group = "build"),
     ],
 )
