@@ -21,7 +21,7 @@ function element(name = '', type = 'text') {
   };
 }
 
-function setup(post, { submissionEnabled = false, phoneValue = '', phoneInit = Promise.resolve(), phoneLibrary = true, historyState = null, fullscreenPhone = false } = {}) {
+function setup(post, { submissionEnabled = false, submitUrl = '/franchise/fofo', phoneValue = '', phoneInit = Promise.resolve(), phoneLibrary = true, historyState = null, fullscreenPhone = false } = {}) {
   const email = element('email', 'email');
   email.required = true;
   const feedback = { textContent: '', dataset: {} };
@@ -62,7 +62,7 @@ function setup(post, { submissionEnabled = false, phoneValue = '', phoneInit = P
   const imageChecks = [];
   const notifications = [];
   const form = {
-    dataset: { emailValidationUrl: '/email/validate', submitUrl: '/franchise/fofo' }, listeners: {},
+    dataset: { emailValidationUrl: '/email/validate', submitUrl }, listeners: {},
     querySelector: (selector) => fields.get(selector),
     querySelectorAll: (selector) => selector === 'input, select, textarea' ? Object.values(controls) : [],
     addEventListener(event, callback) { this.listeners[event] = callback; },
@@ -418,4 +418,52 @@ test('phone loading, failed assets and invalid numbers block submission with inl
   view.focusout(view.controls.phone);
   await tick();
   assert.equal(view.errors.phone.textContent, 'This field is required.');
+});
+
+
+test('X-Clusive reuses the shared client validation and configured submission destination', async () => {
+  const view = setup(async (url) => ({ data: url === '/email/validate'
+    ? { success: true, result: 'valid' }
+    : { success: true, created: true, message: 'X-Clusive application received.' } }),
+  { submissionEnabled: true, submitUrl: '/franchise/xclusive' });
+  view.input('preview@example.test');
+  view.submit();
+  await tick();
+  assert.equal(view.calls.length, 0);
+  view.blur();
+  await tick();
+  view.submit();
+  view.submit();
+  await tick();
+  assert.deepEqual(view.calls.map((call) => call.url), ['/email/validate', '/franchise/xclusive']);
+  assert.equal(view.calls[1].payload.get('phone'), '+919876543210');
+  assert.equal(view.submitButton.disabled, true);
+  assert.equal(view.notifications.filter((item) => item.type === 'success').length, 1);
+});
+
+test('X-Clusive server validation restores the shared input without a success notification', async () => {
+  const view = setup((url) => url === '/email/validate'
+    ? Promise.resolve({ data: { success: true, result: 'valid' } })
+    : Promise.reject({ response: { status: 422, data: { errors: { email: ['Validate your email again.'] } } } }),
+  { submissionEnabled: true, submitUrl: '/franchise/xclusive', phoneValue: '9876543210' });
+  view.input('preview@example.test');
+  view.blur();
+  await tick();
+  view.submit();
+  await tick();
+  assert.equal(view.calls[1].url, '/franchise/xclusive');
+  assert.equal(view.errors.email.textContent, 'Validate your email again.');
+  assert.equal(view.controls.phone.value, '9876543210');
+  assert.equal(view.submitButton.disabled, false);
+  assert.equal(view.notifications.length, 0);
+});
+
+test('X-Clusive disabled preview cannot submit through the shared JavaScript', async () => {
+  const view = setup(async () => { throw new Error('No request should be sent'); },
+    { submissionEnabled: false, submitUrl: '/franchise/xclusive' });
+  view.input('preview@example.test');
+  view.submit();
+  await tick();
+  assert.equal(view.calls.length, 0);
+  assert.equal(view.submitButton.disabled, true);
 });

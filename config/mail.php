@@ -119,4 +119,6 @@ return [
 
     'fofo_team_address' => env('FOFO_FRANCHISE_TEAM_EMAIL'),
 
+    'xclusive_team_address' => env('XCLUSIVE_FRANCHISE_TEAM_EMAIL'),
+
 ];

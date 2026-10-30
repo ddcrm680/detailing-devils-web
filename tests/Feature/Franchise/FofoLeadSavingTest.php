@@ -5,6 +5,7 @@ namespace Tests\Feature\Franchise;
 use App\Actions\Franchise\SaveFranchiseLeadAction;
 use App\Http\Requests\Franchise\StoreFofoRequest;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Mail\Message;
@@ -41,7 +42,7 @@ class FofoLeadSavingTest extends TestCase
         config()->set('services.sms_alert.enabled', false);
         config()->set('services.fofo.submission_enabled', false);
         config()->set('services.fofo.call_enabled', false);
-        config()->set('services.fofo.call_url', null);
+        config()->set('services.franchise_call.url', null);
         config()->set('app.key', 'base64:'.base64_encode(str_repeat('f', 32)));
         Mail::fake();
         Http::preventStrayRequests();
@@ -435,7 +436,7 @@ class FofoLeadSavingTest extends TestCase
     public function test_new_public_submission_sends_two_emails_and_one_call_after_save(): void
     {
         $this->enableSubmission();
-        config()->set('services.fofo.call_url', 'https://calls.detailingdevils.com/callback/playback.php');
+        config()->set('services.franchise_call.url', 'https://calls.detailingdevils.com/callback/playback.php');
         $this->get(route('fofo.show'))->assertOk()
             ->assertSee('id="fofo-submit"', false)
             ->assertDontSee('Submit Application — Coming Soon');
@@ -813,11 +814,131 @@ class FofoLeadSavingTest extends TestCase
         }
     }
 
+    public function test_mock_verification_to_public_submission_saves_full_application_and_runs_deferred_follow_up(): void
+    {
+        $this->enableSubmission();
+        config()->set('services.zerobounce.api_key', 'isolated-provider-key');
+        $emails = [];
+        Mail::shouldReceive('send')->twice()->andReturnUsing(function (string $view, array $data, callable $callback) use (&$emails): void {
+            $this->assertSame(0, DB::transactionLevel());
+            $message = new Message(new Email);
+            $callback($message);
+            $html = view($view, $data)->render();
+            $this->assertStringContainsString('Asha Sharma', $html);
+            $this->assertStringNotContainsString('X-Clusive', $html);
+            $this->assertSame('Franchise Owned Franchise Operated Model', $message->getSymfonyMessage()->getSubject());
+            $recipients = array_map(fn ($address): string => $address->getAddress(), $message->getSymfonyMessage()->getTo());
+            if ($view === 'emails.franchise.fofo-team') {
+                $this->assertSame(['team@example.test', 'other@example.test'], $recipients);
+                $this->assertSame(['India', 'Delhi', 'New Delhi'], [$data['savedLead']->country, $data['savedLead']->state, $data['savedLead']->city]);
+                foreach (['Two employees', 'Five years', 'Current facility', 'Main road'] as $answer) {
+                    $this->assertStringContainsString($answer, $html);
+                }
+                $this->assertStringContainsString($data['imageUrl'], $html);
+            } else {
+                $this->assertSame('emails.franchise.fofo-applicant', $view);
+                $this->assertSame(['asha@example.test'], $recipients);
+                $this->assertStringContainsString(asset('pdf/Franchise-Proposal-2024.pdf'), $html);
+            }
+            $emails[] = $view;
+        });
+        Http::fake(function ($request) {
+            if ($request->url() === 'https://api.zerobounce.net/v2/validate') {
+                $this->assertSame('asha@example.test', $request['email']);
+
+                return Http::response(['status' => 'valid']);
+            }
+            $this->assertSame('https://calls.example.test/callback/playback.php?cust_mob=09876543210', $request->url());
+            $this->assertSame('GET', $request->method());
+            $this->assertSame(0, DB::transactionLevel());
+            $this->assertSame('FOFO', DB::table('tbl_common_leads')->sole()->record_type);
+
+            return Http::response('ok');
+        });
+
+        $this->postJson(route('email.validate'), ['email' => 'asha@example.test'])
+            ->assertOk()->assertJsonPath('result', 'valid')->assertSessionHas('email_validation.proof');
+        $application = array_replace($this->validApplication(), [
+            'record_type' => 'xclusive', 'bussinessowner' => 'YES', 'type_of_bussiness' => 'Studio',
+            'product_service' => 'Detailing', 'bussiness_description' => 'Two employees',
+            'experienceautomotive' => 'YES', 'experience' => 'Five years',
+            'existingautomotive' => 'YES', 'existingfacility' => 'Current facility',
+            'spacearound' => 'YES', 'elaboratelocation' => 'Main road',
+            'locationimage' => UploadedFile::fake()->image('applicant-location.jpg'),
+        ]);
+        $this->post(route('fofo.submit'), $application, ['Accept' => 'application/json'])
+            ->assertOk()->assertJsonPath('success', true)->assertJsonPath('created', true);
+        $lead = DB::table('tbl_common_leads')->sole();
+        $this->assertSame('FOFO', $lead->record_type);
+        $this->assertSame('919876543210', $lead->phone);
+        $this->assertMatchesRegularExpression('/\A[A-Za-z0-9]{32}\.jpg\z/', $lead->image_franchise);
+        Storage::disk('fofo_images')->assertExists($lead->image_franchise);
+        $this->assertNull(session('email_validation.proof'));
+        $this->assertSame(['emails.franchise.fofo-team', 'emails.franchise.fofo-applicant'], $emails);
+        Http::assertSentCount(2);
+    }
+
+    #[DataProvider('mockVerificationFailures')]
+    public function test_failed_mock_email_verification_blocks_public_submission_and_follow_up(string $status, int $httpStatus): void
+    {
+        $this->enableSubmission();
+        config()->set('services.zerobounce.api_key', 'isolated-provider-key');
+        Http::fake(['https://api.zerobounce.net/v2/validate' => Http::response(['status' => $status], $httpStatus)]);
+        $this->postJson(route('email.validate'), ['email' => 'asha@example.test'])
+            ->assertStatus($httpStatus)->assertJsonPath('success', false)->assertSessionMissing('email_validation.proof');
+        $this->postJson(route('fofo.submit'), $this->validApplication())
+            ->assertUnprocessable()->assertJsonValidationErrors('email');
+        Http::assertNotSent(fn ($request): bool => $request->method() === 'GET');
+        $this->assertSame(0, DB::table('tbl_common_leads')->count());
+        $this->assertSame([], Storage::disk('fofo_images')->allFiles());
+        Mail::assertNothingSent();
+    }
+
+    public static function mockVerificationFailures(): array
+    {
+        return [['invalid', 200], ['unavailable', 503]];
+    }
+
+    public function test_public_route_enforces_csrf_when_the_test_bypass_is_disabled(): void
+    {
+        $this->enableSubmission();
+        Http::fake();
+        $this->app->instance(PreventRequestForgery::class, new class($this->app, $this->app['encrypter']) extends PreventRequestForgery
+        {
+            protected function runningUnitTests()
+            {
+                return false;
+            }
+        });
+        $this->withSession(['_token' => 'isolated-csrf-token']);
+        $this->postJson(route('fofo.submit'), $this->validApplication())->assertStatus(419);
+        $this->postJson(route('fofo.submit'), $this->validApplication() + ['_token' => 'wrong-token'])->assertStatus(419);
+        $this->assertSame(0, DB::table('tbl_common_leads')->count());
+        Http::assertNothingSent();
+        $this->verifiedEmail('asha@example.test');
+        $this->postJson(route('fofo.submit'), $this->validApplication() + ['_token' => 'isolated-csrf-token'])
+            ->assertOk()->assertJsonPath('created', true);
+        Http::assertSentCount(1);
+    }
+
+    public function test_public_submission_throttle_rejects_the_sixth_attempt_without_side_effects(): void
+    {
+        $this->enableSubmission();
+        Http::fake();
+        for ($attempt = 0; $attempt < 5; $attempt++) {
+            $this->postJson(route('fofo.submit'), [])->assertUnprocessable();
+        }
+        $this->postJson(route('fofo.submit'), [])->assertStatus(429)->assertHeader('Retry-After');
+        $this->assertSame(0, DB::table('tbl_common_leads')->count());
+        Mail::assertNothingSent();
+        Http::assertNothingSent();
+    }
+
     private function enableSubmission(): void
     {
         config()->set('services.fofo.submission_enabled', true);
         config()->set('services.fofo.call_enabled', true);
-        config()->set('services.fofo.call_url', 'https://calls.example.test/callback/playback.php');
+        config()->set('services.franchise_call.url', 'https://calls.example.test/callback/playback.php');
         config()->set('mail.default', 'array');
         config()->set('mail.fofo_team_address', 'team@example.test, invalid, other@example.test');
     }

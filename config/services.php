@@ -55,10 +55,19 @@ return [
         'email_enabled' => env('ENQUIRY_EMAIL_ENABLED', false),
     ],
 
+    'franchise_call' => [
+        'url' => env('FRANCHISE_CALL_URL'),
+    ],
+
     'fofo' => [
         'submission_enabled' => env('FOFO_SUBMISSION_ENABLED', false),
         'call_enabled' => env('FOFO_CALL_ENABLED', false),
-        'call_url' => env('FOFO_CALL_URL'),
+    ],
+
+    // Keep disabled until the provisional record type is approved by the CRM owner.
+    'xclusive' => [
+        'submission_enabled' => env('XCLUSIVE_SUBMISSION_ENABLED', false),
+        'call_enabled' => env('XCLUSIVE_CALL_ENABLED', false),
     ],
 
 ];

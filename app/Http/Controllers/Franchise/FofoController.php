@@ -3,13 +3,13 @@
 namespace App\Http\Controllers\Franchise;
 
 use App\Actions\Franchise\SaveFranchiseLeadAction;
+use App\Actions\Franchise\SendFranchiseCallAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Franchise\StoreFofoRequest;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Mail\Message;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\ValidationException;
@@ -22,10 +22,17 @@ class FofoController extends Controller
     {
         return view('forms.fofo', [
             'submissionEnabled' => (bool) config('services.fofo.submission_enabled'),
+            'formModel' => [
+                'name' => 'FOFO',
+                'title' => 'FOFO Franchise Application | Detailing Devils',
+                'description' => 'Explore the Detailing Devils Franchise Owned Franchise Operated model.',
+                'label' => 'Franchise Owned Franchise Operated',
+                'submitRoute' => 'fofo.submit',
+            ],
         ]);
     }
 
-    public function store(StoreFofoRequest $request, SaveFranchiseLeadAction $save): JsonResponse
+    public function store(StoreFofoRequest $request, SaveFranchiseLeadAction $save, SendFranchiseCallAction $call): JsonResponse
     {
         if (! config('services.fofo.submission_enabled')) {
             return response()->json([
@@ -51,6 +58,7 @@ class FofoController extends Controller
 
         if ($created) {
             $this->scheduleFollowUp($application, $mobile);
+            app()->terminating(static fn () => $call('fofo', $mobile));
         }
 
         return response()->json([
@@ -120,33 +128,6 @@ class FofoController extends Controller
                 } catch (Throwable $exception) {
                     Log::warning('FOFO franchise applicant email failed.', ['exception' => $exception::class]);
                 }
-            }
-
-            if (! config('services.fofo.call_enabled')) {
-                return;
-            }
-
-            $url = config('services.fofo.call_url');
-            if (! is_string($url) || parse_url($url, PHP_URL_SCHEME) !== 'https' || ! parse_url($url, PHP_URL_HOST)) {
-                Log::warning('FOFO calling callback skipped: HTTPS endpoint is not configured.');
-
-                return;
-            }
-
-            // The legacy callback accepts an eleven-digit Indian number prefixed with zero.
-            if (! preg_match('/\A\+91([0-9]{10})\z/', $mobile, $matches)) {
-                Log::warning('FOFO calling callback skipped: the mobile number is outside the legacy format.');
-
-                return;
-            }
-
-            try {
-                $response = Http::connectTimeout(2)->timeout(4)->get($url, ['cust_mob' => '0'.$matches[1]]);
-                if (! $response->successful()) {
-                    Log::warning('FOFO calling callback failed.', ['status' => $response->status()]);
-                }
-            } catch (Throwable $exception) {
-                Log::warning('FOFO calling callback failed.', ['exception' => $exception::class]);
             }
         });
     }

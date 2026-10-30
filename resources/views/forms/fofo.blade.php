@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
-@section('title', 'FOFO Franchise Application | Detailing Devils')
-@section('description', 'Explore the Detailing Devils Franchise Owned Franchise Operated model.')
+@section('title', $formModel['title'])
+@section('description', $formModel['description'])
 
 @push('css')
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intl-tel-input@29.1.2/dist/css/intlTelInput.css">
@@ -11,14 +11,14 @@
 @section('content')
 <section class="fofo-hero wrap" aria-labelledby="fofo-title">
     <div class="fofo-hero-inner">
-        <span class="lbl">Franchise Owned Franchise Operated</span>
+        <span class="lbl">{{ $formModel['label'] }}</span>
         <h1 class="disp" id="fofo-title"><span class="fofo-title-line">Build your</span>
             <span class="fofo-title-line"><span class="acc">Devils</span> studio.</span></h1>
         <p>Tell us about your background, preferred location and plans for a Detailing Devils franchise.</p>
     </div>
 </section>
 
-<section class="fofo-section wrap" aria-label="FOFO franchise application">
+<section class="fofo-section wrap" aria-label="{{ $formModel['name'] }} franchise application">
     <div class="fofo-shell">
         @unless($submissionEnabled)
         <div class="fofo-notice" role="status">
@@ -29,7 +29,7 @@
         @endunless
 
         <form id="fofo-form" method="post" enctype="multipart/form-data" novalidate
-            data-submit-url="{{ route('fofo.submit') }}"
+            data-submit-url="{{ route($formModel['submitRoute']) }}"
             data-countries-url="{{ route('locations.countries') }}"
             data-states-url="{{ route('locations.states') }}"
             data-cities-url="{{ route('locations.cities') }}"

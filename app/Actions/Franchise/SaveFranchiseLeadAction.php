@@ -38,11 +38,22 @@ class SaveFranchiseLeadAction
 
     public function saveFofo(array $data, string $normalizedMobile, Session $session): bool
     {
+        return $this->saveFofoApplication('FOFO', $data, $normalizedMobile, $session);
+    }
+
+    public function saveXclusive(array $data, string $normalizedMobile, Session $session): bool
+    {
+        // Provisional identity: production CRM compatibility must be confirmed before activation.
+        return $this->saveFofoApplication('xclusive', $data, $normalizedMobile, $session);
+    }
+
+    private function saveFofoApplication(string $recordType, array $data, string $normalizedMobile, Session $session): bool
+    {
         $storedImage = null;
 
         try {
             $created = $this->saveLead(
-                'FOFO',
+                $recordType,
                 $normalizedMobile,
                 $this->fofoRow($data),
                 fn (): bool => $this->verifyFofoEmail($data['email'], $session),
@@ -60,10 +71,10 @@ class SaveFranchiseLeadAction
             if ($storedImage !== null) {
                 try {
                     if (! Storage::disk('fofo_images')->delete($storedImage)) {
-                        Log::warning('A failed FOFO lead image could not be removed.');
+                        Log::warning('A failed franchise lead image could not be removed.');
                     }
                 } catch (Throwable) {
-                    Log::warning('A failed FOFO lead image could not be removed.');
+                    Log::warning('A failed franchise lead image could not be removed.');
                 }
             }
 
