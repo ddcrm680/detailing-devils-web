@@ -11,8 +11,10 @@
 
 return [
 
-    'brand' => 'Detailing Devils',
-    'description' => "Paint correction, ceramic coating and paint protection film from India's largest car detailing network.",
+    'brand' => 'Detailing Devils – Premium Car & Bike Detailing, Ceramic Coating & PPF Experts in India',
+    'description' => "Discover top-notch detailing, car wash, bike wash, nano ceramic coating, and PPF coating services in India with Detailing Devils. We provide the finest car and bike ceramic coating solutions, including the revolutionary 9H/10H DNA protection. Find reliable car and bike coating near me in Noida and Delhi, along with professional vehicle washing and comprehensive car detailing services. Elevate your vehicle's protection and aesthetics with our premium car coating options, all at competitive prices.",
+
+    'google_site_verification' => 'f25ynb1IIfLO7g_bwi9Y5oDfd60dDfabpYCoTxypYvk',
 
     // Contact details (header, contact section and footer)
     'phone' => '+91 9555 695 695',

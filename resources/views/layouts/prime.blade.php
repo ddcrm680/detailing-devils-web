@@ -7,6 +7,9 @@
 
     <title>@yield('title', 'Franchise Application | Detailing Devils Prime')</title>
     <meta name="description" content="@yield('description', 'Apply for a Detailing Devils Prime franchise opportunity.')">
+    @if (config('site.google_site_verification'))
+        <meta name="google-site-verification" content="{{ config('site.google_site_verification') }}">
+    @endif
     <link rel="icon" href="{{ asset('favicon.webp') }}" type="image/webp">
 
     <link rel="preconnect" href="https://cdn.jsdelivr.net">
