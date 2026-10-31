@@ -83,7 +83,7 @@ class XclusiveSubmissionTest extends TestCase
         });
     }
 
-    public function test_page_reuses_fofo_fields_assets_and_protected_submission_route(): void
+    public function test_page_owns_its_view_and_entry_with_shared_controls_and_protected_submission_route(): void
     {
         config()->set('database.default', 'unconfigured');
         $this->assertSame(url('/x-clusive-franchise-form'), route('xclusive.show'));
@@ -93,12 +93,14 @@ class XclusiveSubmissionTest extends TestCase
         $this->assertContains('web', $route->gatherMiddleware());
         $this->assertContains('throttle:5,1', $route->gatherMiddleware());
 
-        $response = $this->get(route('xclusive.show'))->assertOk()->assertViewIs('forms.fofo')
+        $response = $this->get(route('xclusive.show'))->assertOk()->assertViewIs('forms.xclusive')
             ->assertSee('X-Clusive Franchise Application | Detailing Devils')
             ->assertSee('X-Clusive Franchise')
             ->assertSee('data-submit-url="'.route('xclusive.submit').'"', false)
             ->assertSee('data-email-validation-url="'.route('email.validate').'"', false)
-            ->assertSee('assets/css/fofo.css')->assertSee('assets/js/modules/fofo.js')
+            ->assertSee('assets/css/fofo.css')->assertSee('assets/js/common/franchise-form.js')
+            ->assertSee('assets/js/modules/xclusive.js')->assertDontSee('assets/js/modules/fofo.js')
+            ->assertSeeInOrder(['assets/js/common/franchise-form.js', 'assets/js/modules/xclusive.js'])
             ->assertSee('intl-tel-input@29.1.2')->assertSee('name="_token"', false)
             ->assertSee('id="fofo-submit" disabled', false);
 
@@ -108,6 +110,65 @@ class XclusiveSubmissionTest extends TestCase
         $this->assertSame($fofoNames[1], $xclusiveNames[1]);
         Http::assertNothingSent();
         Mail::assertNothingSent();
+    }
+
+    #[DataProvider('models')]
+    public function test_questionnaire_choices_are_independent_in_rendering_and_validation(string $model): void
+    {
+        $this->enableSubmission();
+        config()->set('services.fofo.submission_enabled', true);
+        $other = $model === 'fofo' ? 'xclusive' : 'fofo';
+        config()->set("form_options.{$model}.hearabout", ['Isolated choice']);
+
+        $this->get(route("{$model}.show"))->assertOk()
+            ->assertSee('<option value="Isolated choice">', false)
+            ->assertDontSee('<option value="Google-Search">', false);
+        $this->get(route("{$other}.show"))->assertOk()
+            ->assertSee('<option value="Google-Search">', false)
+            ->assertDontSee('<option value="Isolated choice">', false);
+
+        $this->postJson(route("{$model}.submit"), $this->application())
+            ->assertUnprocessable()->assertJsonValidationErrors('hearabout');
+        $this->proof();
+        $this->postJson(route("{$other}.submit"), $this->application())
+            ->assertOk()->assertJsonPath('created', true);
+        $this->assertSame(1, DB::table('tbl_common_leads')->count());
+    }
+
+    public static function models(): array
+    {
+        return [['fofo'], ['xclusive']];
+    }
+
+    public function test_separate_model_mappings_preserve_identical_existing_crm_rows_and_uploads(): void
+    {
+        $this->enableSubmission();
+        config()->set('services.fofo.submission_enabled', true);
+        $rows = [];
+        foreach (['fofo' => 'FOFO', 'xclusive' => 'xclusive'] as $model => $recordType) {
+            $application = array_replace($this->application(), [
+                'bussinessowner' => 'YES', 'type_of_bussiness' => 'Retail',
+                'product_service' => 'QA services', 'bussiness_description' => 'QA business',
+                'experienceautomotive' => 'YES', 'experience' => 'QA experience',
+                'existingautomotive' => 'YES', 'existingfacility' => 'QA facility',
+                'spacearound' => 'YES', 'elaboratelocation' => 'QA property',
+                'locationimage' => UploadedFile::fake()->image('property.png', 20, 20),
+            ]);
+            $this->proof();
+            $this->post(route("{$model}.submit"), $application, ['Accept' => 'application/json'])
+                ->assertOk()->assertJsonPath('created', true);
+            $row = (array) DB::table('tbl_common_leads')->where('record_type', $recordType)->first();
+            $this->assertSame($recordType, $row['record_type']);
+            $this->assertSame('919876543210', $row['phone']);
+            $this->assertSame('Asha Sharma', $row['name']);
+            $this->assertSame('New Delhi', $row['whichcityfranchise']);
+            $this->assertSame('QA property', $row['elaboratelocation']);
+            Storage::disk('fofo_images')->assertExists($row['image_franchise']);
+            unset($row['id'], $row['record_type'], $row['image_franchise']);
+            $rows[$model] = $row;
+        }
+        $this->assertSame($rows['fofo'], $rows['xclusive']);
+        $this->assertCount(2, Storage::disk('fofo_images')->allFiles());
     }
 
     public function test_configuration_defaults_to_disabled_and_rejects_before_database_validation(): void
@@ -154,9 +215,9 @@ class XclusiveSubmissionTest extends TestCase
     }
 
     #[DataProvider('requiredFields')]
-    public function test_inherited_validation_rejects_missing_required_fields(string $field): void
+    public function test_independent_validation_rejects_missing_required_fields(string $field): void
     {
-        $this->assertTrue(is_subclass_of(StoreXclusiveRequest::class, StoreFofoRequest::class));
+        $this->assertFalse(is_subclass_of(StoreXclusiveRequest::class, StoreFofoRequest::class));
         $this->enableSubmission();
         $application = $this->application();
         unset($application[$field]);

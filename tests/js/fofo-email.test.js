@@ -6,6 +6,8 @@ import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
 
 const source = fs.readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), '../../public/assets/js/modules/fofo.js'), 'utf8');
+const sharedSource = fs.readFileSync(new URL('../../public/assets/js/common/franchise-form.js', import.meta.url), 'utf8');
+const xclusiveSource = fs.readFileSync(new URL('../../public/assets/js/modules/xclusive.js', import.meta.url), 'utf8');
 const tick = () => new Promise((resolve) => setImmediate(resolve));
 
 function element(name = '', type = 'text') {
@@ -14,7 +16,7 @@ function element(name = '', type = 'text') {
     name, type, value: '', disabled: false, required: false,
     validity: { valid: true }, dataset: {}, listeners: {},
     classList: { add: (value) => classes.add(value), remove: (value) => classes.delete(value), contains: (value) => classes.has(value) },
-    addEventListener(event, callback) { this.listeners[event] = callback; },
+    addEventListener(event, callback) { this.listenerCounts ??= {}; this.listenerCounts[event] = (this.listenerCounts[event] || 0) + 1; this.listeners[event] = callback; },
     setAttribute(name, value) { this[name] = value; },
     removeAttribute(name) { delete this[name]; },
     scrollIntoView() {}, focus() {}, matches() { return true; },
@@ -65,16 +67,16 @@ function setup(post, { submissionEnabled = false, submitUrl = '/franchise/fofo',
   const imageChecks = [];
   const notifications = [];
   const form = {
-    dataset: { emailValidationUrl: '/email/validate', submitUrl }, listeners: {},
+    dataset: { franchiseModel: submitUrl.endsWith('/xclusive') ? 'xclusive' : 'fofo', emailValidationUrl: '/email/validate', submitUrl }, listeners: {},
     querySelector: (selector) => fields.get(selector),
     querySelectorAll: (selector) => selector === 'input, select, textarea' ? Object.values(controls) : [],
-    addEventListener(event, callback) { this.listeners[event] = callback; },
+    addEventListener(event, callback) { this.listenerCounts ??= {}; this.listenerCounts[event] = (this.listenerCounts[event] || 0) + 1; this.listeners[event] = callback; },
     reset() { resets++; },
   };
   const window = {
     $: () => form,
     listeners: {},
-    addEventListener(event, callback) { this.listeners[event] = callback; },
+    addEventListener(event, callback) { this.listenerCounts ??= {}; this.listenerCounts[event] = (this.listenerCounts[event] || 0) + 1; this.listeners[event] = callback; },
     history: { state: historyState, replaceState(state) { this.state = state; } },
     location: { reload() { reloads.push(true); } },
     setTimeout(callback, delay) { timers.push({ callback, delay }); },
@@ -93,14 +95,18 @@ function setup(post, { submissionEnabled = false, submitUrl = '/franchise/fofo',
     handleResponseSuccess(response) { notifications.push({ type: 'success', response }); },
     handleResponseError(error) { notifications.push({ type: 'error', error }); },
   };
-  vm.runInNewContext(source, { window, axios: { post(url, payload, options) {
+  const context = { window, axios: { post(url, payload, options) {
     calls.push({ url, payload, options });
     return post(url, payload);
   } }, Date, FormData: class {
     constructor(target) { this.form = target; this.values = new Map(); }
     set(name, value) { this.values.set(name, value); }
     get(name) { return this.values.get(name); }
-  } });
+  } };
+  const entry = submitUrl.endsWith('/xclusive') ? xclusiveSource : source;
+  vm.runInNewContext(sharedSource, context);
+  vm.runInNewContext(entry, context);
+  const reloadEntries = () => { for (const script of [sharedSource, source, xclusiveSource]) vm.runInNewContext(script, context); };
 
   const blur = () => form.listeners.focusout({ target: email });
   const input = (value) => { email.value = value; email.listeners.input(); };
@@ -109,10 +115,30 @@ function setup(post, { submissionEnabled = false, submitUrl = '/franchise/fofo',
   const change = (target) => form.listeners.change({ target });
   const submit = () => form.listeners.submit({ preventDefault() {} });
   const resizePhone = (width) => { phone.offsetWidth = width; window.listeners.resize?.(); };
-  return { email, feedback, status, review, submitButton, calls, notifications, blur, input, reviewFields, submit, focusout, change, controls, errors, imageChecks, phoneIti, phoneOptions, fields, history: window.history, phoneDropdown, resizePhone, timers, reloads, get resets() { return resets; } };
+  return { email, feedback, status, review, submitButton, calls, notifications, blur, input, reviewFields, submit, focusout, change, controls, errors, imageChecks, phoneIti, phoneOptions, fields, history: window.history, phoneDropdown, resizePhone, timers, reloads, get resets() { return resets; }, reloadEntries, form };
 }
 
 for (const submitUrl of ['/franchise/fofo', '/franchise/xclusive']) {
+  test(`${submitUrl}: repeated common and model scripts initialize and submit only once`, async () => {
+    const view = setup(async (url) => ({ data: url === '/email/validate'
+      ? { success: true, result: 'valid' }
+      : { success: true, created: true } }), { submissionEnabled: true, submitUrl });
+    view.reloadEntries();
+    view.reloadEntries();
+    assert.equal(view.form.listenerCounts.submit, 1);
+    assert.equal(view.form.listenerCounts.focusout, 1);
+    assert.equal(view.form.listenerCounts.change, 1);
+    assert.equal(view.email.listenerCounts.input, 1);
+    view.input('preview@example.test');
+    view.blur();
+    await tick();
+    view.submit();
+    view.submit();
+    await tick();
+    assert.equal(view.calls.filter(call => call.url === submitUrl).length, 1);
+    assert.equal(view.timers.length, 1);
+  });
+
   test(`${submitUrl}: only a confirmed new lead refreshes after a visible confirmation`, async () => {
     let resolveSubmission;
     const view = setup((url) => url === '/email/validate'
@@ -214,6 +240,26 @@ for (const submitUrl of ['/franchise/fofo', '/franchise/xclusive']) {
     }
   });
 }
+
+test('each entry targets only its own model and owns an independent questionnaire policy', () => {
+  const policies = {};
+  for (const model of ['fofo', 'xclusive']) {
+    const form = { dataset: { franchiseModel: model } };
+    const calls = [];
+    const context = { window: { $: () => form, initFranchiseForm: (target, policy) => calls.push({ target, policy }) } };
+    for (const entry of [source, xclusiveSource]) vm.runInNewContext(entry, context);
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].target, form);
+    policies[model] = calls[0].policy;
+  }
+  policies.fofo.conditionals.pop();
+  assert.equal(policies.fofo.conditionals.length, 3);
+  assert.equal(policies.xclusive.conditionals.length, 4);
+  const question = { name: 'spendfranchise', type: 'radio' };
+  policies.fofo.validateQuestion = () => 'Model-only rule';
+  assert.equal(policies.fofo.validateQuestion(question), 'Model-only rule');
+  assert.equal(policies.xclusive.validateQuestion(question, { form: { querySelector: () => ({ checked: true }) } }), '');
+});
 
 test('validates on blur once and displays a valid result', async () => {
   let resolve;

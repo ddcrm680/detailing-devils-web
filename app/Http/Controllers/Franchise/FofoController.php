@@ -22,6 +22,7 @@ class FofoController extends Controller
     {
         return view('forms.fofo', [
             'submissionEnabled' => (bool) config('services.fofo.submission_enabled'),
+            'questionnaireOptions' => config('form_options.fofo'),
             'formModel' => [
                 'name' => 'FOFO',
                 'title' => 'FOFO Franchise Application | Detailing Devils',

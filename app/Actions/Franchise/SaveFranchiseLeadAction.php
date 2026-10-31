@@ -38,16 +38,16 @@ class SaveFranchiseLeadAction
 
     public function saveFofo(array $data, string $normalizedMobile, Session $session): bool
     {
-        return $this->saveFofoApplication('FOFO', $data, $normalizedMobile, $session);
+        return $this->saveVerifiedApplication('FOFO', $data, $normalizedMobile, $session, fn (): array => $this->fofoRow($data));
     }
 
     public function saveXclusive(array $data, string $normalizedMobile, Session $session): bool
     {
         // Provisional identity: production CRM compatibility must be confirmed before activation.
-        return $this->saveFofoApplication('xclusive', $data, $normalizedMobile, $session);
+        return $this->saveVerifiedApplication('xclusive', $data, $normalizedMobile, $session, fn (): array => $this->xclusiveRow($data));
     }
 
-    private function saveFofoApplication(string $recordType, array $data, string $normalizedMobile, Session $session): bool
+    private function saveVerifiedApplication(string $recordType, array $data, string $normalizedMobile, Session $session, Closure $mapRow): bool
     {
         $storedImage = null;
 
@@ -55,7 +55,7 @@ class SaveFranchiseLeadAction
             $created = $this->saveLead(
                 $recordType,
                 $normalizedMobile,
-                $this->fofoRow($data),
+                $mapRow(),
                 fn (): bool => $this->verifyFofoEmail($data['email'], $session),
                 function (array $row) use ($data, &$storedImage): array {
                     if ($data['spacearound'] === 'YES') {
@@ -154,7 +154,7 @@ class SaveFranchiseLeadAction
         return true;
     }
 
-    private function fofoRow(array $data): array
+    private function franchiseContactRow(array $data): array
     {
         if ($data['country'] === 'other') {
             $country = trim($data['another_country_name']);
@@ -181,6 +181,12 @@ class SaveFranchiseLeadAction
             'website' => trim((string) ($data['website'] ?? '')),
             'profession' => trim((string) ($data['profession'] ?? '')),
             'dob' => $data['dob'],
+        ];
+    }
+
+    private function fofoRow(array $data): array
+    {
+        return array_merge($this->franchiseContactRow($data), [
             'contacted' => $data['contacted'],
             'hearabout' => $data['hearabout'],
             'newbussiness' => trim($data['newbussiness']),
@@ -200,7 +206,32 @@ class SaveFranchiseLeadAction
             'spendfranchise' => $data['spendfranchise'],
             'created_date' => now()->toDateString(),
             'closed_leads' => '0',
-        ];
+        ]);
+    }
+
+    private function xclusiveRow(array $data): array
+    {
+        return array_merge($this->franchiseContactRow($data), [
+            'contacted' => $data['contacted'],
+            'hearabout' => $data['hearabout'],
+            'newbussiness' => trim($data['newbussiness']),
+            'wantstart' => $data['wantstart'],
+            'bussinessowner' => $data['bussinessowner'],
+            'type_of_bussiness' => trim((string) ($data['type_of_bussiness'] ?? '')),
+            'product_service' => trim((string) ($data['product_service'] ?? '')),
+            'bussiness_description' => trim((string) ($data['bussiness_description'] ?? '')),
+            'experienceautomotive' => $data['experienceautomotive'],
+            'experience' => trim((string) ($data['experience'] ?? '')),
+            'existingautomotive' => $data['existingautomotive'],
+            'existingfacility' => trim((string) ($data['existingfacility'] ?? '')),
+            'spacearound' => $data['spacearound'],
+            'elaboratelocation' => trim((string) ($data['elaboratelocation'] ?? '')),
+            'whichcityfranchise' => trim($data['franchiseapply']),
+            'civillitigation' => $data['civillitigation'],
+            'spendfranchise' => $data['spendfranchise'],
+            'created_date' => now()->toDateString(),
+            'closed_leads' => '0',
+        ]);
     }
 
     private function storeFofoImage(UploadedFile $image): string

@@ -152,7 +152,7 @@ class StudioTourTest extends TestCase
                 $this->assertSame('/x-clusive-franchise-form', $link->getAttribute('href'));
                 $this->assertSame(route('xclusive.show', [], false), $link->getAttribute('href'));
             }
-            $this->get($origin.route('xclusive.show', [], false))->assertOk()->assertViewIs('forms.fofo');
+            $this->get($origin.route('xclusive.show', [], false))->assertOk()->assertViewIs('forms.xclusive');
         }
     }
 

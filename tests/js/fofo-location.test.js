@@ -5,6 +5,8 @@ import vm from 'node:vm';
 
 const locationSource = fs.readFileSync(new URL('../../public/assets/js/common/location.js', import.meta.url), 'utf8');
 const fofoSource = fs.readFileSync(new URL('../../public/assets/js/modules/fofo.js', import.meta.url), 'utf8');
+const sharedSource = fs.readFileSync(new URL('../../public/assets/js/common/franchise-form.js', import.meta.url), 'utf8');
+const xclusiveSource = fs.readFileSync(new URL('../../public/assets/js/modules/xclusive.js', import.meta.url), 'utf8');
 const tick = () => new Promise((resolve) => setImmediate(resolve));
 
 function element(name = '') {
@@ -17,7 +19,7 @@ function element(name = '') {
   };
 }
 
-function setup({ restored = {}, get } = {}) {
+function setup({ restored = {}, get, model = 'fofo' } = {}) {
   const calls = [];
   const fields = new Map();
   for (const name of ['country', 'state', 'city', 'dob', 'email', 'phone', 'bussinessowner', 'experienceautomotive', 'existingautomotive', 'spacearound', 'fofo-submit', 'fofo-review', 'fofo-form-status', 'fofo-location-manual', 'fofo-location-selects', 'fofo-business-details', 'fofo-experience-details', 'fofo-facility-details', 'fofo-property-details']) {
@@ -39,7 +41,7 @@ function setup({ restored = {}, get } = {}) {
   }));
   const form = {
     ...element(),
-    dataset: { countriesUrl: '/countries', statesUrl: '/states', citiesUrl: '/cities' },
+    dataset: { franchiseModel: model, countriesUrl: '/countries', statesUrl: '/states', citiesUrl: '/cities' },
     querySelector: (selector) => fields.get(selector),
   };
   const window = {
@@ -69,7 +71,8 @@ function setup({ restored = {}, get } = {}) {
     } },
   });
   vm.runInContext(locationSource, context);
-  vm.runInContext(fofoSource, context);
+  vm.runInContext(sharedSource, context);
+  vm.runInContext(model === 'xclusive' ? xclusiveSource : fofoSource, context);
   return { ...selects, calls, fields };
 }
 
@@ -84,6 +87,15 @@ test('FOFO defaults to India by returned name and loads states without selecting
   assert.equal(view.city.disabled, true);
   assert.deepEqual(view.calls.map((call) => call.url), ['/countries', '/states']);
   assert.equal(view.calls[1].params.country_id, '91');
+});
+
+test('X-Clusive independently initializes the same location behavior through its own entry', async () => {
+  const view = setup({ model: 'xclusive' });
+  await tick();
+  assert.equal(view.country.value, '91');
+  assert.equal(view.state.value, '');
+  assert.equal(view.city.disabled, true);
+  assert.deepEqual(view.calls.map(call => call.url), ['/countries', '/states']);
 });
 
 test('changing states loads their cities and changing country retains the existing cascade', async () => {

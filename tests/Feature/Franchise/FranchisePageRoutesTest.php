@@ -22,6 +22,11 @@ class FranchisePageRoutesTest extends TestCase
 
         $this->get('/franchise-owned-franchise-operated-model')->assertOk()
             ->assertViewIs('forms.fofo')
+            ->assertSee('data-franchise-model="fofo"', false)
+            ->assertSee('assets/js/common/franchise-form.js')
+            ->assertSee('assets/js/modules/fofo.js')
+            ->assertSeeInOrder(['assets/js/common/franchise-form.js', 'assets/js/modules/fofo.js'])
+            ->assertDontSee('assets/js/modules/xclusive.js')
             ->assertSee('data-submit-url="'.url('/franchise/fofo').'"', false)
             ->assertSee('data-email-validation-url="'.url('/email/validate').'"', false);
     }
@@ -32,6 +37,21 @@ class FranchisePageRoutesTest extends TestCase
 
         foreach (['/prime', '/franchise/prime-form', '/fofo', '/franchise/fofo-form'] as $oldUrl) {
             $this->get($oldUrl)->assertNotFound();
+        }
+    }
+
+    public function test_model_scripts_are_ordered_isolated_and_content_versioned(): void
+    {
+        config()->set('database.default', 'unconfigured');
+        foreach (['fofo', 'xclusive'] as $model) {
+            $shared = 'assets/js/common/franchise-form.js';
+            $entry = "assets/js/modules/{$model}.js";
+            $this->get(route("{$model}.show"))->assertOk()
+                ->assertViewIs("forms.{$model}")
+                ->assertSeeInOrder([
+                    asset($shared).'?v='.substr(hash_file('sha256', public_path($shared)), 0, 12),
+                    asset($entry).'?v='.substr(hash_file('sha256', public_path($entry)), 0, 12),
+                ], false);
         }
     }
 

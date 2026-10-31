@@ -20,8 +20,9 @@ class XclusiveController extends Controller
 {
     public function create(): View
     {
-        return view('forms.fofo', [
+        return view('forms.xclusive', [
             'submissionEnabled' => (bool) config('services.xclusive.submission_enabled'),
+            'questionnaireOptions' => config('form_options.xclusive'),
             'formModel' => [
                 'name' => 'X-Clusive',
                 'title' => 'X-Clusive Franchise Application | Detailing Devils',

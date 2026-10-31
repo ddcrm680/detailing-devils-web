@@ -64,4 +64,16 @@ return [
         'spendfranchise' => ['Full Time', 'Part Time', 'Other'],
         'civillitigation' => ['yes', 'no'],
     ],
+    'xclusive' => [
+        'hearabout' => ['Google-Search', 'Youtube', 'Facebook', 'Instagram', 'E-Mailing', 'Referral', 'Other'],
+        'contacted' => ['Telephone', 'Mail', 'Whatsapp'],
+        'wantstart' => [
+            ['value' => 'Immediatly', 'label' => 'Immediately'],
+            ['value' => '2 Months', 'label' => '2 Months'],
+            ['value' => '3 Months', 'label' => '3 Months'],
+        ],
+        'yes_no' => ['NO', 'YES'],
+        'spendfranchise' => ['Full Time', 'Part Time', 'Other'],
+        'civillitigation' => ['yes', 'no'],
+    ],
 ];

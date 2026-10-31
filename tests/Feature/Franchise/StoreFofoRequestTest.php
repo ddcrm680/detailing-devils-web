@@ -3,6 +3,8 @@
 namespace Tests\Feature\Franchise;
 
 use App\Http\Requests\Franchise\StoreFofoRequest;
+use DOMDocument;
+use DOMXPath;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -75,21 +77,35 @@ class StoreFofoRequestTest extends TestCase
 
     public function test_preview_limits_match_crm_validation_and_submission_remains_disabled(): void
     {
-        $this->get(route('fofo.show'))
+        $response = $this->get(route('fofo.show'))
             ->assertOk()
-            ->assertSee('name="phone" type="tel" inputmode="tel" autocomplete="tel" maxlength="32"', false)
             ->assertSee('intl-tel-input@29.1.2/dist/js/intlTelInput.min.js', false)
             ->assertDontSee('India (+91) is selected by default. Choose your country and enter your mobile number.')
-            ->assertSee('id="newbussiness" name="newbussiness" rows="3" maxlength="255"', false)
-            ->assertSee('id="type_of_bussiness" name="type_of_bussiness" maxlength="255"', false)
-            ->assertSee('id="product_service" name="product_service" maxlength="255"', false)
-            ->assertSee('id="bussiness_description" name="bussiness_description" rows="3" maxlength="255"', false)
-            ->assertSee('id="experience" name="experience" rows="3" maxlength="255"', false)
-            ->assertSee('id="existingfacility" name="existingfacility" rows="3" maxlength="255"', false)
-            ->assertSee('id="elaboratelocation" name="elaboratelocation" rows="3" maxlength="255"', false)
             ->assertSee('Up to 255 characters.')
-            ->assertSee('up to 10,000 KB.')
-            ->assertSee('id="fofo-submit" disabled', false);
+            ->assertSee('up to 10,000 KB.');
+
+        $document = new DOMDocument;
+        @$document->loadHTML($response->getContent());
+        $xpath = new DOMXPath($document);
+        $expected = [
+            'phone' => ['type' => 'tel', 'inputmode' => 'tel', 'autocomplete' => 'tel', 'maxlength' => '32'],
+            'newbussiness' => ['rows' => '3', 'maxlength' => '255'],
+            'type_of_bussiness' => ['maxlength' => '255'],
+            'product_service' => ['maxlength' => '255'],
+            'bussiness_description' => ['rows' => '3', 'maxlength' => '255'],
+            'experience' => ['rows' => '3', 'maxlength' => '255'],
+            'existingfacility' => ['rows' => '3', 'maxlength' => '255'],
+            'elaboratelocation' => ['rows' => '3', 'maxlength' => '255'],
+        ];
+        foreach ($expected as $id => $attributes) {
+            $field = $xpath->query('//*[@id="'.$id.'"]')->item(0);
+            $this->assertNotNull($field);
+            $this->assertSame($id, $field->getAttribute('name'));
+            foreach ($attributes as $name => $value) {
+                $this->assertSame($value, $field->getAttribute($name));
+            }
+        }
+        $this->assertSame(1, $xpath->query('//*[@id="fofo-submit"][@disabled]')->length);
     }
 
     public function test_timeline_labels_submit_their_matching_values(): void
