@@ -111,14 +111,48 @@
 
   <!-- 8. CARDS -->
   <section class="cards wrap" id="studios">
-    <a class="card" href="#contact">
-      <figure class="ph"><img src="img/recent-work.webp" alt="Satin blue Dodge Charger SRT outside a Detailing Devils studio" loading="lazy"></figure>
-      <div class="ov"><span class="lbl">Portfolio</span><h3 class="disp">Recent Work</h3><p>Supercars, SUVs and daily drivers, corrected and protected in our studios.</p><span class="go">Explore work →</span></div>
-    </a>
-    <a class="card" href="{{ route('studios.index') }}">
-      <figure class="ph"><img src="img/find-studio.webp" alt="Empty Detailing Devils studio with numbered bays at the entrance of a Detailing Devils studio" loading="lazy"></figure>
-      <div class="ov"><span class="lbl">145+ locations</span><h3 class="disp">Find a Studio</h3><p>There's a Detailing Devils studio in most major Indian cities. Find the one nearest you.</p><span class="go">Find a studio →</span></div>
-    </a>
+      <a class="card" href="#contact">
+          <figure class="ph">
+              <div class="zm">
+                  <img
+                      src="{{ asset('img/recent-work.webp') }}"
+                      alt="Detailing Devils studio with a red supercar and black SUVs lined up outside"
+                      width="1254"
+                      height="1254"
+                      loading="lazy"
+                      data-speed="0"
+                  >
+                  <span class="shine" aria-hidden="true"></span>
+              </div>
+          </figure>
+          <div class="ov">
+              <span class="lbl">Portfolio</span>
+              <h3 class="disp">Recent Work</h3>
+              <p>Supercars, SUVs and daily drivers, corrected and protected in our studios.</p>
+              <span class="go">Explore work &rarr;</span>
+          </div>
+      </a>
+      <a class="card" href="{{ route('studios.index') }}">
+          <figure class="ph">
+              <div class="zm">
+                  <img
+                      src="{{ asset('img/find-studio.webp') }}"
+                      alt="Detailing Devils studio on a city map with a red location pin"
+                      width="1254"
+                      height="1254"
+                      loading="lazy"
+                      data-speed="0"
+                  >
+                  <span class="ping" aria-hidden="true"><i></i><i></i><i></i></span>
+              </div>
+          </figure>
+          <div class="ov">
+              <span class="lbl">145+ locations</span>
+              <h3 class="disp">Find a Studio</h3>
+              <p>There's a Detailing Devils studio in most major Indian cities. Find the one nearest you.</p>
+              <span class="go">Find a studio &rarr;</span>
+          </div>
+      </a>
   </section>
 
   <!-- 8b. LINE-UP -->
