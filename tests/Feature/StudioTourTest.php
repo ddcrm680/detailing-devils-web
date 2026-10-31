@@ -43,7 +43,7 @@ class StudioTourTest extends TestCase
                 ->assertSee('data-frames-base="'.asset($model === 'xclusive' ? 'frames/studio-tour' : 'frames/fofo-tour').'/', false)
                 ->assertSee(route('prime.show'))->assertSee(route('fofo.show'))
                 ->assertSee('href="'.route('xclusive.show', [], false).'"', false)
-                ->assertDontSee('Coming Soon')->assertSee('X-Clusive pricing is provisional');
+                ->assertDontSee('Coming Soon')->assertDontSee('X-Clusive pricing is provisional');
             $this->assertSame($model === 'xclusive' ? 5 : 6, substr_count($page->getContent(), 'class="tour-page__caption"'));
             $xpath = $this->xpath($page->getContent());
             $selected = $xpath->query('//nav[@aria-label="Choose a studio tour"]/a[@aria-current="page"]');
@@ -54,10 +54,7 @@ class StudioTourTest extends TestCase
             $expectedOthers = array_values(array_diff(['prime', 'fofo', 'xclusive'], [$model]));
             foreach ($expectedOthers as $index => $otherModel) {
                 $this->assertSame(route('studios.tour', ['model' => $otherModel]), $otherTours->item($index)->getAttribute('href'));
-                $this->assertStringContainsString(['prime' => '15 Lakh', 'fofo' => '35 Lakh', 'xclusive' => '1.5 Crore'][$otherModel], $otherTours->item($index)->textContent);
-                if ($otherModel === 'xclusive') {
-                    $this->assertStringContainsString('Provisional', $otherTours->item($index)->textContent);
-                }
+                $this->assertStringNotContainsString('Provisional', $otherTours->item($index)->textContent);
             }
             $endLinks = $xpath->query('//*[@id="tour-end"]//a[starts-with(text(), "Apply for")]');
             $this->assertSame(1, $endLinks->length);
@@ -73,7 +70,7 @@ class StudioTourTest extends TestCase
         }
     }
 
-    public function test_model_cards_group_tour_and_application_controls_after_correct_prices(): void
+    public function test_model_cards_preserve_tour_and_application_controls_without_pricing(): void
     {
         config()->set('database.default', 'unconfigured');
         foreach ([null, 'xclusive', 'fofo', 'prime'] as $selected) {
@@ -82,17 +79,12 @@ class StudioTourTest extends TestCase
             $cards = $xpath->query('//article[contains(@class, "tour-page__tier")]');
             foreach (['prime', 'fofo', 'xclusive'] as $index => $model) {
                 $this->assertStringContainsString('Model 0'.($index + 1), $cards->item($index)->textContent);
-                $price = $xpath->query('.//div[@class="tour-page__tier-price"]', $cards->item($index))->item(0);
-                $children = $xpath->query('./*', $price);
-                $this->assertSame(3, $children->length);
-                $this->assertSame('tour-page__amount', $children->item(0)->getAttribute('class'));
-                $this->assertSame('p', $children->item(1)->nodeName);
-                $this->assertSame(['15Lakh', '35Lakh', '1.5Crore'][$index], mb_substr(trim($children->item(0)->textContent), 1));
-                $this->assertStringContainsString(['17.7 lakh', '41.3 lakh', '1.77 Crore'][$index], $children->item(1)->textContent);
-                $controls = $xpath->query('./*', $children->item(2));
+                $this->assertSame(0, $xpath->query('.//div[@class="tour-page__tier-price"]', $cards->item($index))->length);
+                $actions = $xpath->query('./div[@class="tour-page__tier-actions"]', $cards->item($index))->item(0);
+                $controls = $xpath->query('./*', $actions);
                 $this->assertSame($model === $active ? 1 : 2, $controls->length);
                 $primary = $controls->item(0);
-                $this->assertSame(1, $xpath->query('./*[contains(concat(" ", normalize-space(@class), " "), " cta ")]', $children->item(2))->length);
+                $this->assertSame(1, $xpath->query('./*[contains(concat(" ", normalize-space(@class), " "), " cta ")]', $actions)->length);
                 $this->assertSame($model === $active, str_contains(' '.$primary->getAttribute('class').' ', ' red '));
                 if ($model === 'xclusive') {
                     $this->assertStringContainsString('tour-page__tier--flagship', $cards->item($index)->getAttribute('class'));
@@ -114,6 +106,37 @@ class StudioTourTest extends TestCase
                     }
                 }
             }
+        }
+    }
+
+    public function test_tour_prices_and_gst_are_not_exposed_in_public_html_or_enabled_by_query(): void
+    {
+        config()->set('database.default', 'unconfigured');
+
+        foreach (['xclusive', 'fofo', 'prime'] as $model) {
+            $this->get(route('studios.tour', ['model' => $model, 'showTourPricing' => '1']))
+                ->assertOk()
+                ->assertDontSee('tour-page__tier-price', false)
+                ->assertDontSee('tour-page__amount', false)
+                ->assertDontSee('tour-page__fine', false)
+                ->assertDontSee('&#8377;', false)
+                ->assertDontSee('₹', false)
+                ->assertDontSee('GST')
+                ->assertDontSee('15 Lakh')
+                ->assertDontSee('35 Lakh')
+                ->assertDontSee('1.5 Crore');
+        }
+    }
+
+    public function test_original_tour_pricing_can_still_be_rendered_with_trusted_view_data(): void
+    {
+        config()->set('database.default', 'unconfigured');
+        $html = view('studios.tour', ['showTourPricing' => true])->render();
+        $xpath = $this->xpath($html);
+
+        $this->assertSame(3, $xpath->query('//div[@class="tour-page__tier-price"]')->length);
+        foreach (['17.7 lakh', '41.3 lakh', '1.77 Crore', 'X-Clusive pricing is provisional', 'GST at 18%'] as $text) {
+            $this->assertStringContainsString($text, $html);
         }
     }
 

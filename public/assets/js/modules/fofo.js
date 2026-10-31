@@ -324,7 +324,7 @@
   }
 
   async function submitApplication() {
-    if (submitting || submitButton.disabled) return;
+    if (submitting || submitted || submitButton.disabled) return;
     submitting = true;
     try {
       if (!await reviewFields()) return;
@@ -346,6 +346,16 @@
       status.textContent = response.data.message || 'Your application has been received.';
       submitted = true;
       submitButton.disabled = true;
+      if (response.data.created === true) {
+        // Leave the confirmation visible before a clean GET, never a POST retry.
+        window.setTimeout(() => {
+          form.reset();
+          const historyState = { ...window.history.state };
+          delete historyState.fofoPhoneCountry;
+          window.history.replaceState(historyState, '');
+          window.location.reload();
+        }, 5000);
+      }
       window.handleResponseSuccess({ title: 'Application received', message: status.textContent });
     } catch (error) {
       if (submitted) return;

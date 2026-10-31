@@ -47,6 +47,9 @@ function setup(post, { submissionEnabled = false, submitUrl = '/franchise/fofo',
   const review = element();
   const submitButton = element();
   submitButton.disabled = !submissionEnabled;
+  const timers = [];
+  const reloads = [];
+  let resets = 0;
   const fields = new Map([
     ...Object.entries(controls).map(([field, input]) => [`#${field}`, input]),
     ...Object.entries(errors).map(([field, error]) => [`[data-error-for="${field}"]`, error]),
@@ -66,12 +69,15 @@ function setup(post, { submissionEnabled = false, submitUrl = '/franchise/fofo',
     querySelector: (selector) => fields.get(selector),
     querySelectorAll: (selector) => selector === 'input, select, textarea' ? Object.values(controls) : [],
     addEventListener(event, callback) { this.listeners[event] = callback; },
+    reset() { resets++; },
   };
   const window = {
     $: () => form,
     listeners: {},
     addEventListener(event, callback) { this.listeners[event] = callback; },
     history: { state: historyState, replaceState(state) { this.state = state; } },
+    location: { reload() { reloads.push(true); } },
+    setTimeout(callback, delay) { timers.push({ callback, delay }); },
     intlTelInput: phoneLibrary ? (input, options) => {
       assert.equal(input, phone);
       phoneOptions = options;
@@ -103,7 +109,110 @@ function setup(post, { submissionEnabled = false, submitUrl = '/franchise/fofo',
   const change = (target) => form.listeners.change({ target });
   const submit = () => form.listeners.submit({ preventDefault() {} });
   const resizePhone = (width) => { phone.offsetWidth = width; window.listeners.resize?.(); };
-  return { email, feedback, status, review, submitButton, calls, notifications, blur, input, reviewFields, submit, focusout, change, controls, errors, imageChecks, phoneIti, phoneOptions, fields, history: window.history, phoneDropdown, resizePhone };
+  return { email, feedback, status, review, submitButton, calls, notifications, blur, input, reviewFields, submit, focusout, change, controls, errors, imageChecks, phoneIti, phoneOptions, fields, history: window.history, phoneDropdown, resizePhone, timers, reloads, get resets() { return resets; } };
+}
+
+for (const submitUrl of ['/franchise/fofo', '/franchise/xclusive']) {
+  test(`${submitUrl}: only a confirmed new lead refreshes after a visible confirmation`, async () => {
+    let resolveSubmission;
+    const view = setup((url) => url === '/email/validate'
+      ? Promise.resolve({ data: { success: true, result: 'valid' } })
+      : new Promise((resolve) => { resolveSubmission = resolve; }),
+    { submissionEnabled: true, submitUrl, historyState: { fofoPhoneCountry: 'gb', unrelated: 'keep' } });
+    view.input('preview@example.test');
+    view.blur();
+    await tick();
+    view.submit();
+    view.submit();
+    await tick();
+    assert.equal(view.calls.filter((call) => call.url === submitUrl).length, 1);
+    assert.equal(view.timers.length, 0);
+    assert.equal(view.submitButton.disabled, true);
+
+    resolveSubmission({ data: { success: true, created: true, message: 'Your application was received.' } });
+    await tick();
+    assert.equal(view.status.textContent, 'Your application was received.');
+    assert.equal(view.notifications.at(-1).response.message, view.status.textContent);
+    assert.equal(view.reloads.length, 0);
+    assert.equal(view.resets, 0);
+    assert.equal(view.timers.length, 1);
+    assert.equal(view.timers[0].delay, 5000);
+    view.submit();
+    await tick();
+    assert.equal(view.calls.filter((call) => call.url === submitUrl).length, 1);
+
+    view.timers[0].callback();
+    assert.equal(view.resets, 1);
+    assert.equal(view.reloads.length, 1);
+    assert.equal(view.history.state.fofoPhoneCountry, undefined);
+    assert.equal(view.history.state.unrelated, 'keep');
+  });
+
+  test(`${submitUrl}: duplicates and ambiguous successes keep their message without refreshing`, async () => {
+    for (const created of [false, undefined, 'true']) {
+      const view = setup(async (url) => ({ data: url === '/email/validate'
+        ? { success: true, result: 'valid' }
+        : { success: true, created, message: 'We already received your application.' } }),
+      { submissionEnabled: true, submitUrl });
+      view.input('preview@example.test');
+      view.blur();
+      await tick();
+      view.submit();
+      await tick();
+      assert.equal(view.status.textContent, 'We already received your application.');
+      assert.equal(view.notifications.length, 1);
+      assert.equal(view.timers.length, 0);
+      assert.equal(view.resets, 0);
+      assert.equal(view.reloads.length, 0);
+      assert.equal(view.submitButton.disabled, true);
+    }
+  });
+
+  test(`${submitUrl}: validation, server, network and unsuccessful responses never refresh or retry`, async () => {
+    for (const failure of [
+      { response: { status: 422, data: { errors: { email: ['Verify your email again.'] } } } },
+      { response: { status: 503, data: {} } },
+      new Error('network'),
+      null,
+    ]) {
+      const view = setup(async (url) => {
+        if (url === '/email/validate') return { data: { success: true, result: 'valid' } };
+        if (failure) throw failure;
+        return { data: { success: false, created: true, message: 'Not saved.' } };
+      }, { submissionEnabled: true, submitUrl });
+      view.input('preview@example.test');
+      view.blur();
+      await tick();
+      view.submit();
+      await tick();
+      assert.equal(view.email.value, 'preview@example.test');
+      assert.equal(view.submitButton.disabled, false);
+      assert.equal(view.calls.filter((call) => call.url === submitUrl).length, 1);
+      assert.equal(view.timers.length, 0);
+      assert.equal(view.reloads.length, 0);
+      assert.equal(view.resets, 0);
+    }
+  });
+
+  test(`${submitUrl}: missing or failed email verification prevents submission and refresh`, async () => {
+    for (const result of [null, 'invalid', 'unavailable']) {
+      const view = setup(async () => ({ data: { success: false, result } }),
+        { submissionEnabled: true, submitUrl });
+      view.input('preview@example.test');
+      if (result) {
+        view.blur();
+        await tick();
+      }
+      view.submit();
+      await tick();
+      assert.equal(view.calls.filter((call) => call.url === submitUrl).length, 0);
+      assert.match(view.status.textContent, /highlighted fields/);
+      assert.equal(view.submitButton.disabled, false);
+      assert.equal(view.timers.length, 0);
+      assert.equal(view.resets, 0);
+      assert.equal(view.reloads.length, 0);
+    }
+  });
 }
 
 test('validates on blur once and displays a valid result', async () => {

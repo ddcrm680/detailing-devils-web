@@ -6,6 +6,7 @@
         ? $requestedModel : 'xclusive';
     $modelNames = ['xclusive' => 'X-Clusive', 'fofo' => 'FOFO', 'prime' => 'Prime'];
     $modelName = $modelNames[$model];
+    $showTourPricing = $showTourPricing ?? false;
     $isXclusive = $model === 'xclusive';
     $xclusiveApplicationUrl = route('xclusive.show', [], false);
     $applicationUrl = $isXclusive ? $xclusiveApplicationUrl : route($model.'.show');
@@ -84,7 +85,9 @@
                             @continue($otherModel === $model)
                             <a class="tour-page__other-card" href="{{ route('studios.tour', ['model' => $otherModel]) }}">
                                 <b>{{ $modelNames[$otherModel] }}</b>
-                                <span>&#8377;{{ $price }}@if ($otherModel === 'xclusive') <small>Provisional</small>@endif</span>
+                                @if ($showTourPricing)
+                                    <span>&#8377;{{ $price }}@if ($otherModel === 'xclusive') <small>Provisional</small>@endif</span>
+                                @endif
                                 <i>Start Tour <span aria-hidden="true">&rarr;</span></i>
                             </a>
                         @endforeach
@@ -106,15 +109,17 @@
                 <div class="tour-page__tier-kicker"><span class="lbl">Model 01</span><span class="tour-page__tier-tag">Entry</span></div>
                 <h3 class="disp">Prime</h3>
                 <p class="tour-page__tier-line">The quickest way into the Devils network. Tour footage is illustrative.</p>
-                <div class="tour-page__tier-price">
-                    <div class="tour-page__amount">&#8377;15<span>Lakh</span></div>
-                    <p>+ 18% GST &middot; <b>&#8377;17.7 lakh</b> all-in</p>
-                    <div class="tour-page__tier-actions">
-                        <a @class(['cta', 'red' => $model === 'prime']) href="{{ route('prime.show') }}">Apply for Prime <i aria-hidden="true">&rarr;</i></a>
-                        @if ($model !== 'prime')
-                            <a class="tour-page__tier-secondary" href="{{ route('studios.tour', ['model' => 'prime']) }}">Watch Studio Tour <span aria-hidden="true">&rarr;</span></a>
-                        @endif
+                @if ($showTourPricing)
+                    <div class="tour-page__tier-price">
+                        <div class="tour-page__amount">&#8377;15<span>Lakh</span></div>
+                        <p>+ 18% GST &middot; <b>&#8377;17.7 lakh</b> all-in</p>
                     </div>
+                @endif
+                <div class="tour-page__tier-actions">
+                    <a @class(['cta', 'red' => $model === 'prime']) href="{{ route('prime.show') }}">Apply for Prime <i aria-hidden="true">&rarr;</i></a>
+                    @if ($model !== 'prime')
+                        <a class="tour-page__tier-secondary" href="{{ route('studios.tour', ['model' => 'prime']) }}">Watch Studio Tour <span aria-hidden="true">&rarr;</span></a>
+                    @endif
                 </div>
             </article>
             <article class="tour-page__tier">
@@ -122,15 +127,17 @@
                 <div class="tour-page__tier-kicker"><span class="lbl">Model 02</span><span class="tour-page__tier-tag">Owner-run</span></div>
                 <h3 class="disp">FOFO</h3>
                 <p class="tour-page__tier-line">Franchise owned, franchise operated. You run the studio.</p>
-                <div class="tour-page__tier-price">
-                    <div class="tour-page__amount">&#8377;35<span>Lakh</span></div>
-                    <p>+ 18% GST &middot; <b>&#8377;41.3 lakh</b> all-in</p>
-                    <div class="tour-page__tier-actions">
-                        <a @class(['cta', 'red' => $model === 'fofo']) href="{{ route('fofo.show') }}">Apply for FOFO <i aria-hidden="true">&rarr;</i></a>
-                        @if ($model !== 'fofo')
-                            <a class="tour-page__tier-secondary" href="{{ route('studios.tour', ['model' => 'fofo']) }}">Watch Studio Tour <span aria-hidden="true">&rarr;</span></a>
-                        @endif
+                @if ($showTourPricing)
+                    <div class="tour-page__tier-price">
+                        <div class="tour-page__amount">&#8377;35<span>Lakh</span></div>
+                        <p>+ 18% GST &middot; <b>&#8377;41.3 lakh</b> all-in</p>
                     </div>
+                @endif
+                <div class="tour-page__tier-actions">
+                    <a @class(['cta', 'red' => $model === 'fofo']) href="{{ route('fofo.show') }}">Apply for FOFO <i aria-hidden="true">&rarr;</i></a>
+                    @if ($model !== 'fofo')
+                        <a class="tour-page__tier-secondary" href="{{ route('studios.tour', ['model' => 'fofo']) }}">Watch Studio Tour <span aria-hidden="true">&rarr;</span></a>
+                    @endif
                 </div>
             </article>
             <article class="tour-page__tier tour-page__tier--flagship">
@@ -138,21 +145,25 @@
                 <div class="tour-page__tier-kicker"><span class="lbl">Model 03</span><span class="tour-page__tier-tag">Flagship</span></div>
                 <h3 class="disp">X-Clusive</h3>
                 <p class="tour-page__tier-line">The exclusive flagship format for big-city locations.</p>
-                <div class="tour-page__tier-price">
-                    <div class="tour-page__amount">&#8377;1.5<span>Crore</span></div>
-                    <p>+ 18% GST &middot; <b>&#8377;1.77 Crore</b> all-in</p>
-                    <div class="tour-page__tier-actions">
-                        @if ($model === 'xclusive')
-                            <a class="cta red" href="{{ $xclusiveApplicationUrl }}">Apply for X-Clusive <i aria-hidden="true">&rarr;</i></a>
-                        @else
-                            <a class="cta" href="{{ route('studios.tour', ['model' => 'xclusive']) }}">Tour X-Clusive <i aria-hidden="true">&rarr;</i></a>
-                            <a class="tour-page__tier-secondary" href="{{ $xclusiveApplicationUrl }}">Apply for X-Clusive <span aria-hidden="true">&rarr;</span></a>
-                        @endif
+                @if ($showTourPricing)
+                    <div class="tour-page__tier-price">
+                        <div class="tour-page__amount">&#8377;1.5<span>Crore</span></div>
+                        <p>+ 18% GST &middot; <b>&#8377;1.77 Crore</b> all-in</p>
                     </div>
+                @endif
+                <div class="tour-page__tier-actions">
+                    @if ($model === 'xclusive')
+                        <a class="cta red" href="{{ $xclusiveApplicationUrl }}">Apply for X-Clusive <i aria-hidden="true">&rarr;</i></a>
+                    @else
+                        <a class="cta" href="{{ route('studios.tour', ['model' => 'xclusive']) }}">Tour X-Clusive <i aria-hidden="true">&rarr;</i></a>
+                        <a class="tour-page__tier-secondary" href="{{ $xclusiveApplicationUrl }}">Apply for X-Clusive <span aria-hidden="true">&rarr;</span></a>
+                    @endif
                 </div>
             </article>
         </div>
-        <p class="tour-page__fine">X-Clusive pricing is provisional, subject to commercial approval. All prices are exclusive of applicable GST at 18%. All-in figures add GST to the base price. Site size, territory and inclusions for each model are shared on the call.</p>
+        @if ($showTourPricing)
+            <p class="tour-page__fine">X-Clusive pricing is provisional, subject to commercial approval. All prices are exclusive of applicable GST at 18%. All-in figures add GST to the base price. Site size, territory and inclusions for each model are shared on the call.</p>
+        @endif
     </section>
 
     <section class="tour-page__closing" aria-labelledby="tour-closing-title">

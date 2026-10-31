@@ -97,7 +97,7 @@ class EnquirySubmissionTest extends TestCase
 
             return str_contains($body, 'Name: Asha Kumar')
                 && str_contains($body, 'Phone: +919876543210')
-                && $email->getTo()[0]->getAddress() === config('site.email')
+                && $email->getTo()[0]->getAddress() === config('site.support_email')
                 && $email->getSubject() === 'New enquiry: Ceramic Coating — Asha Kumar';
         });
 

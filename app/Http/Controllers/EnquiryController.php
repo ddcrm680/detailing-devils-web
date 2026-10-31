@@ -71,7 +71,7 @@ class EnquiryController extends Controller
                     .'Car: '.($data['car'] ?? '')."\nInterested in: ".($data['interest'] ?? '')."\n"
                     .'Received: '.now()->format('d M Y, h:i A');
                 Mail::raw($body, function ($m) use ($data) {
-                    $m->to(config('site.email'))->subject('New enquiry: '.(($data['interest'] ?? null) ?: 'Website').' — '.$data['name']);
+                    $m->to(config('site.support_email'))->subject('New enquiry: '.(($data['interest'] ?? null) ?: 'Website').' — '.$data['name']);
                 });
             } catch (\Throwable $e) {
                 Log::warning('Enquiry email not sent', ['exception' => $e::class]);
