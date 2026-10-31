@@ -10,7 +10,7 @@
     <base href="{{ url('/') }}/">
 
     {{-- SEO --}}
-    <title>@yield('title', $site['brand'] ?? config('site.brand', 'Detailing Devils'))</title>
+    <title>@yield('title', config('site.seo_title', config('site.brand', 'Detailing Devils')))</title>
     <meta name="description" content="@yield('description', $site['description'] ?? config('site.description', 'Detailing Devils'))">
     @if (config('site.google_site_verification'))
         <meta name="google-site-verification" content="{{ config('site.google_site_verification') }}">
