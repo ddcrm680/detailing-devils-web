@@ -166,8 +166,8 @@
     const animate = (time) => { lenis.raf(time); requestAnimationFrame(animate); };
     requestAnimationFrame(animate);
     addEventListener('dd:menu-toggle', (event) => { event.detail.open ? lenis.stop() : lenis.start(); });
-    page.querySelectorAll('a[href^="#"]').forEach((link) => link.addEventListener('click', (event) => {
-      const target = document.querySelector(link.getAttribute('href'));
+    page.querySelectorAll('a[href^="#"], #tour-replay').forEach((link) => link.addEventListener('click', (event) => {
+      const target = link.id === 'tour-replay' ? tour : document.querySelector(link.getAttribute('href'));
       if (!target) return;
       event.preventDefault();
       lenis.scrollTo(target, { duration: link.id === 'tour-replay' ? 2 : 1.4 });

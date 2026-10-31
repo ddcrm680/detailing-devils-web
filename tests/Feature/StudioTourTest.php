@@ -46,6 +46,18 @@ class StudioTourTest extends TestCase
                 ->assertDontSee('Coming Soon')->assertDontSee('X-Clusive pricing is provisional');
             $this->assertSame($model === 'xclusive' ? 5 : 6, substr_count($page->getContent(), 'class="tour-page__caption"'));
             $xpath = $this->xpath($page->getContent());
+            $this->assertSame(route($model.'.show', [], false), $xpath->query('//header//a[@class="header-cta"]')->item(0)->getAttribute('href'));
+            $closingApply = $xpath->query('//section[contains(@class,"tour-page__closing")]//a[contains(@class,"red")]');
+            $this->assertSame(1, $closingApply->length);
+            $this->assertSame($model === 'xclusive' ? route('xclusive.show', [], false) : route($model.'.show'), $closingApply->item(0)->getAttribute('href'));
+            $alternatives = $xpath->query('//div[@class="tour-page__closing-alternatives"]/a');
+            $this->assertSame(2, $alternatives->length);
+            foreach (array_values(array_diff(['prime', 'fofo', 'xclusive'], [$model])) as $index => $alternative) {
+                $this->assertSame(route($alternative.'.show', [], false), $alternatives->item($index)->getAttribute('href'));
+            }
+            $replay = $xpath->query('//a[@id="tour-replay"]');
+            $this->assertSame(1, $replay->length);
+            $this->assertSame(route('studios.tour', ['model' => $model], false).'#tour', $replay->item(0)->getAttribute('href'));
             $selected = $xpath->query('//nav[@aria-label="Choose a studio tour"]/a[@aria-current="page"]');
             $this->assertSame(1, $selected->length);
             $this->assertSame(route('studios.tour', ['model' => $model]), $selected->item(0)->getAttribute('href'));
@@ -207,14 +219,14 @@ class StudioTourTest extends TestCase
         }
     }
 
-    public function test_tour_header_applies_to_its_models_section(): void
+    public function test_tour_header_applies_to_the_default_xclusive_form(): void
     {
         $xpath = $this->xpath($this->get(route('studios.tour'))->assertOk()->getContent());
         $cta = $xpath->query('//header[@id="hdr"]//div[contains(@class, "left")]/a');
 
         $this->assertSame(1, $cta->length);
         $this->assertSame('Apply Now →', trim($cta->item(0)->textContent));
-        $this->assertSame(route('studios.tour').'#models', $cta->item(0)->getAttribute('href'));
+        $this->assertSame(route('xclusive.show', [], false), $cta->item(0)->getAttribute('href'));
         $this->assertSame(1, $xpath->query('//*[@id="models"]')->length);
     }
 

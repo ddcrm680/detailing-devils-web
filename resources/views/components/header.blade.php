@@ -4,7 +4,12 @@
   <div class="wrap">
     <div class="left">
       @if (request()->routeIs('studios.tour'))
-        <a class="header-cta" href="{{ route('studios.tour') }}#models">Apply Now <i aria-hidden="true">→</i></a>
+        @php
+            $tourModel = request()->query('model');
+            $tourApplicationRoute = is_string($tourModel) && in_array($tourModel, ['prime', 'fofo', 'xclusive'], true)
+                ? $tourModel.'.show' : 'xclusive.show';
+        @endphp
+        <a class="header-cta" href="{{ route($tourApplicationRoute, [], false) }}">Apply Now <i aria-hidden="true">→</i></a>
       @else
         <a class="header-cta" href="{{ route('studios.tour') }}"><span class="header-cta-prefix">Franchise / </span>Studio Tour <i aria-hidden="true">→</i></a>
       @endif

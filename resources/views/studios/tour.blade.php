@@ -169,7 +169,16 @@
     <section class="tour-page__closing" aria-labelledby="tour-closing-title">
         <div class="wrap tour-page__closing-inner">
             <h2 class="disp" id="tour-closing-title">Seen the studio?<br><span class="acc">Claim your city.</span></h2>
-            <div class="tour-page__actions"><a class="cta red" href="{{ route('prime.show') }}">Apply for Prime <i aria-hidden="true">→</i></a><a class="cta" href="{{ route('fofo.show') }}">Apply for FOFO <i aria-hidden="true">→</i></a><a class="cta" href="#tour" id="tour-replay">Replay Tour <i aria-hidden="true">↺</i></a></div>
+            <div class="tour-page__closing-ctas">
+                <a class="cta red" href="{{ $applicationUrl }}">Apply for {{ $modelName }} <i aria-hidden="true">→</i></a>
+                <div class="tour-page__closing-alternatives" aria-label="Other franchise applications">
+                    @foreach (['prime', 'fofo', 'xclusive'] as $otherModel)
+                        @continue($otherModel === $model)
+                        <a class="cta" href="{{ route($otherModel.'.show', [], false) }}">Apply for {{ $modelNames[$otherModel] }} <i aria-hidden="true">→</i></a>
+                    @endforeach
+                </div>
+                <a class="tour-page__closing-replay" href="{{ route('studios.tour', ['model' => $model], false) }}#tour" id="tour-replay">Replay Tour <i aria-hidden="true">↺</i></a>
+            </div>
         </div>
     </section>
 </div>
