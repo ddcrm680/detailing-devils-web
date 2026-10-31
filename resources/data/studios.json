@@ -5,7 +5,7 @@
     "phones": [
       "(+91) 95556 95695"
     ],
-    "map_url": "",
+    "map_url": "https://maps.app.goo.gl/FnrpXALTonf231kL6",
     "state": "Uttar Pradesh",
     "status": "active"
   },
@@ -15,7 +15,7 @@
     "phones": [
       "(+91) 95556 95695"
     ],
-    "map_url": "",
+    "map_url": "https://maps.app.goo.gl/CMbW8cTNSFGFw4r16",
     "state": "Uttar Pradesh",
     "status": "active"
   },
@@ -26,7 +26,7 @@
       "(+91) 88516 39082",
       "(+91) 95556 95695"
     ],
-    "map_url": "",
+    "map_url": "https://maps.app.goo.gl/JjvgbvUewYvYRM2d7",
     "state": "Delhi",
     "status": "active"
   },
@@ -37,7 +37,7 @@
       "(+91) 96259 34169",
       "(+91) 95556 95695"
     ],
-    "map_url": "",
+    "map_url": "https://maps.app.goo.gl/kWpCEAvWcxiZeTu49",
     "state": "Uttar Pradesh",
     "status": "active"
   },
@@ -48,7 +48,7 @@
       "(+91) 91119 97711",
       "(+91) 95556 95695"
     ],
-    "map_url": "",
+    "map_url": "https://maps.app.goo.gl/nm84THGGuzJBV9RS9",
     "state": "Telangana",
     "status": "active"
   },
@@ -59,7 +59,7 @@
       "(+91) 99271 49356",
       "(+91) 95556 95695"
     ],
-    "map_url": "",
+    "map_url": "https://maps.app.goo.gl/XqydbeRdnAbf1Bn58",
     "state": "Uttarakhand",
     "status": "active"
   },
@@ -70,7 +70,7 @@
       "(+91) 88723 17200",
       "(+91) 95556 95695"
     ],
-    "map_url": "",
+    "map_url": "https://maps.app.goo.gl/PLK4QzV6Q6eJhSGz9",
     "state": "Chandigarh",
     "status": "active"
   },
@@ -81,18 +81,18 @@
       "(+91) 86960 10091",
       "(+91) 95556 95695"
     ],
-    "map_url": "",
+    "map_url": "https://maps.app.goo.gl/5AebfZEJRUSNv8gUA",
     "state": "Rajasthan",
     "status": "active"
   },
   {
     "name": "Detailing Devils Ludhiana",
-    "address": "Bindra Motors 512-L, Model Town, Mint Ghumri Chowk, Ludhiana, Punjab, 141001",
+    "address": "Outside Canal View Anvenue, 160, Canal Rd, Model Town Extension, Jawaddi Taksal, Ludhiana, Punjab, 141001",
     "phones": [
-      "(+91) 99999 36492",
+      "(+91) 99884 71310",
       "(+91) 95556 95695"
     ],
-    "map_url": "",
+    "map_url": "https://maps.app.goo.gl/FbcDAudmC6fWR1aAA",
     "state": "Punjab",
     "status": "active"
   },
@@ -103,7 +103,7 @@
       "(+91) 77110 07979",
       "(+91) 95556 95695"
     ],
-    "map_url": "",
+    "map_url": "https://maps.app.goo.gl/rmUsLdoQ7VrCmEF5A",
     "state": "Punjab",
     "status": "active"
   },
@@ -706,5 +706,69 @@
     "map_url": "https://maps.app.goo.gl/CBcJtsaB1BGU3f1S9",
     "state": "Haryana",
     "status": "active"
+  },
+
+    {
+    "name": "Detailing Devils Pune",
+    "address": "New DP road, Bhumkar Wasti Rd, beside Dazzel India Water Supplier, Hinjawadi, Wakad, Pune, Pimpri-Chinchwad, Maharashtra, 411057",
+    "phones": [
+      "(+91) 9185292828",
+      "(+91) 95556 95695"
+    ],
+    "map_url": "https://maps.app.goo.gl/Yro9vBiPWYTZENX1A",
+    "state": "Maharashtra",
+    "status": "active"
+  },
+
+   {
+    "name": "Detailing Devils Rohini",
+    "address": "Plot No. 22, Pocket C-4, Sector 11, Rohini, New Delhi, Delhi, 110085",
+    "phones": [
+      "(+91) 7011473159",
+      "(+91) 95556 95695"
+    ],
+    "map_url": "https://maps.app.goo.gl/JMVBoKFwUhi2BSFY7",
+    "state": "Delhi",
+    "status": "active"
+  },
+
+    {
+    "name": "Detailing Devils Prime Guwahati",
+    "address": "Opp Sarusajai National Stadium Complex, APDCL Ltd., Sawkuchi, NH-37, Lokhra, Guwahati, Assam, 781040",
+    "phones": [
+      "(+91) 7002576374",
+      "(+91) 95556 95695"
+    ],
+    "map_url": "https://maps.app.goo.gl/pfDUzzeLyGKNo1XA7",
+    "state": "Assam",
+    "status": "active"
+  },
+
+     {
+    "name": "Detailing Devils Jhunjhunu",
+    "address": "Manglam Residency, Near, Agrasen Cir - Bagar Rd, Fauz Ka Mohalla, Jhunjhunu, Rajasthan 333001",
+    "phones": [
+      "(+91) 7300363439",
+      "(+91) 95556 95695"
+    ],
+    "map_url": "https://maps.app.goo.gl/XaaCJjd1Wif7SSbv8",
+    "state": "Rajasthan",
+    "status": "active"
+  },
+
+
+       {
+    "name": "Detailing Devils Dwarka Expressway",
+    "address": "Service lane, C-251A & C288A, Dwarka Expy, Choma, Block F, Sector 112, Sector 110, Gurugram, Haryana 122017",
+    "phones": [
+      "(+91) 7005570072",
+      "(+91) 95556 95695"
+    ],
+    "map_url": "https://maps.app.goo.gl/HshG1NnZT4ckfqLYA",
+    "state": "Haryana",
+    "status": "active"
   }
+
+
+
 ]

@@ -45,6 +45,8 @@ class StudioLocatorTest extends TestCase
         config()->set('database.default', 'unconfigured');
         $studios = collect(File::json(resource_path('data/studios.json')))
             ->map(fn ($studio) => array_replace($studio, ['status' => 'active']))->all();
+        // Exercise the fallback even when every supplied studio has a map URL.
+        $studios[0]['map_url'] = '';
         File::partialMock()->shouldReceive('json')->once()->with(resource_path('data/studios.json'))->andReturn($studios);
 
         $page = $this->get('/locate-a-store')->assertOk()
