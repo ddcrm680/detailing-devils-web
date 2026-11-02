@@ -5,6 +5,12 @@
 
     RewriteEngine On
 
+    # Redirect HTTP requests on the production domains only.
+    RewriteCond %{HTTP_HOST} ^(?:www\.)?detailingdevils\.com$ [NC]
+    RewriteCond %{HTTPS} !=on
+    RewriteCond %{THE_REQUEST} \s(/[^?\s]*)
+    RewriteRule ^ https://www.detailingdevils.com%1 [R=301,L,NE]
+
     # Handle Authorization Header
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
