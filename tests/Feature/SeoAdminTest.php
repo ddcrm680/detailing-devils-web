@@ -130,14 +130,14 @@ class SeoAdminTest extends TestCase
             ->assertSee('<title>'.e(config('site.seo_title')).'</title>', false);
     }
 
-    public function test_unprovisioned_and_reader_hosts_cannot_expose_admin(): void
+    public function test_untrusted_hosts_and_invalid_publications_cannot_expose_admin(): void
     {
         $this->app['env'] = 'production';
         config()->set('app.debug', false);
-        $this->get('https://detailing-devils-web.wasmer.app/admin/login')->assertNotFound();
-        $this->app['env'] = 'testing';
+        $this->get('https://untrusted.wasmer.app/admin/login')->assertNotFound();
         DB::table('seo_metadata')->update(['origin' => 'https://other.invalid']);
-        $this->get('/admin/login')->assertNotFound();
+        $this->get('https://www.detailingdevils.com/admin/login')->assertNotFound();
+        $this->get('https://detailing-devils-web.wasmer.app/admin/login')->assertNotFound();
     }
 
     public function test_guest_has_no_edit_publish_image_or_registration_access(): void
@@ -1374,15 +1374,50 @@ class SeoAdminTest extends TestCase
         );
     }
 
-    public function test_production_admin_requires_https_canonical_origin_and_debug_disabled(): void
+    public function test_production_admin_requires_https_trusted_origin_and_debug_disabled(): void
     {
         $this->app['env'] = 'production';
         config()->set('app.debug', false);
-        $this->get('http://www.detailingdevils.com/admin/login')->assertNotFound();
-        $this->get('https://detailing-devils-web.wasmer.app/admin/login')->assertNotFound();
-        $this->get('https://www.detailingdevils.com/admin/login')->assertOk();
+        foreach (['www.detailingdevils.com', 'detailing-devils-web.wasmer.app'] as $host) {
+            $origin = 'https://'.$host;
+            config()->set('app.url', $origin);
+            app('url')->forceRootUrl($origin);
+            $this->get('http://'.$host.'/admin/login')->assertNotFound();
+            $this->get($origin.'/admin/login')->assertOk();
+            $this->get($origin.'/admin/seo')->assertRedirect($origin.'/admin/login');
+        }
+        foreach ([
+            'https://detailingdevils.com',
+            'https://www.staging.detailingdevils.com',
+            'https://www.detailingdevils.com.evil.example',
+            'https://detailing-devils-web.wasmer.app.evil.example',
+            'https://detailing-devils-web.wasmer.app:8443',
+        ] as $origin) {
+            $this->get($origin.'/admin/login')->assertNotFound();
+        }
         config()->set('app.debug', true);
         $this->get('https://www.detailingdevils.com/admin/login')->assertNotFound();
+        $this->get('https://detailing-devils-web.wasmer.app/admin/login')->assertNotFound();
+        $this->assertSame('https://www.detailingdevils.com', config('seo.origin'));
+    }
+
+    public function test_production_admin_login_and_logout_work_on_both_trusted_hosts(): void
+    {
+        $this->app['env'] = 'production';
+        config()->set('app.debug', false);
+        foreach (['https://www.detailingdevils.com', 'https://detailing-devils-web.wasmer.app'] as $origin) {
+            config()->set('app.url', $origin);
+            app('url')->forceRootUrl($origin);
+            $this->visit($origin.'/admin/login')->assertOk();
+            $this->send($origin.'/admin/login', [
+                'email' => 'seo@example.test',
+                'password' => 'Synthetic QA password only!',
+            ])->assertRedirect($origin.'/admin/seo');
+            $this->assertAuthenticatedAs($this->administrator, 'web');
+            $this->visit($origin.'/admin/seo')->assertOk();
+            $this->send($origin.'/admin/logout')->assertRedirect($origin.'/admin/login');
+            $this->assertGuest('web');
+        }
     }
 
     private function assertAdminError(string $key): void

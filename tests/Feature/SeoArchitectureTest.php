@@ -510,7 +510,7 @@ class SeoArchitectureTest extends TestCase
         $this->assertContains('https://www.detailingdevils.com/qa-records/500', $urls);
     }
 
-    public function test_admin_reuses_standard_authentication_and_root_migrations_exclude_its_schema(): void
+    public function test_admin_reuses_standard_authentication_and_root_migrations_include_its_schema(): void
     {
         $this->assertNull(config('database.connections.seo'));
         $this->assertNull(config('auth.guards.seo'));
@@ -521,7 +521,8 @@ class SeoArchitectureTest extends TestCase
             Route::getRoutes()->getByName('admin.seo.publish')->gatherMiddleware()
         );
         $files = app('migrator')->getMigrationFiles(database_path('migrations'));
-        $this->assertArrayNotHasKey('2026_11_02_000001_create_website_seo_store', $files);
+        $this->assertArrayHasKey('2026_11_02_000000_add_role_to_users_table', $files);
+        $this->assertArrayHasKey('2026_11_02_000001_create_website_seo_store', $files);
     }
 
     public function test_relative_self_canonical_override_is_normalized_before_alias_classification(): void

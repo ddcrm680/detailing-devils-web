@@ -16,7 +16,10 @@ final class SeoAdminReady
         if (! app()->environment(['local', 'testing'])) {
             abort_unless(
                 ! config('app.debug') && $request->isSecure()
-                && $request->getSchemeAndHttpHost() === config('seo.origin'),
+                && in_array($request->getSchemeAndHttpHost(), [
+                    'https://www.detailingdevils.com',
+                    'https://detailing-devils-web.wasmer.app',
+                ], true),
                 404
             );
         }
