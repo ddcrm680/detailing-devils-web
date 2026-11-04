@@ -2,7 +2,14 @@
 
 use App\Http\Controllers\EmailValidationController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\SitemapController;
 use Illuminate\Support\Facades\Route;
+
+// Public XML stays stateless even though it is declared in the web route file.
+Route::get('/sitemap.xml', SitemapController::class)->withoutMiddleware('web')->name('sitemap');
+
+// Administration inherits the web middleware once from this route file.
+require __DIR__.'/admin.php';
 
 // Home page
 Route::get('/', HomeController::class)->name('home');

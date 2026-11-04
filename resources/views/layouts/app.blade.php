@@ -10,11 +10,7 @@
     <base href="{{ url('/') }}/">
 
     {{-- SEO --}}
-    <title>@yield('title', config('site.seo_title', config('site.brand', 'Detailing Devils')))</title>
-    <meta name="description" content="@yield('description', $site['description'] ?? config('site.description', 'Detailing Devils'))">
-    @if (config('site.google_site_verification'))
-        <meta name="google-site-verification" content="{{ config('site.google_site_verification') }}">
-    @endif
+    <x-seo-head :metadata="$seo" />
 
     <link rel="icon" href="{{ asset('favicon.webp') }}" type="image/webp">
 

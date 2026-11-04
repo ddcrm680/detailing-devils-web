@@ -29,7 +29,9 @@ class SiteMetadataTest extends TestCase
             '/warranty-terms-condition' => 'Warranty Terms & Conditions | Detailing Devils',
         ] as $path => $title) {
             $document = new \DOMDocument;
-            @$document->loadHTML($this->get($path)->assertOk()->getContent());
+            @$document->loadHTML($this->get($path)
+                ->assertOk()
+                ->getContent());
             $xpath = new \DOMXPath($document);
             $titles = $xpath->query('/html/head/title');
             $this->assertSame(1, $titles->length, $path);
@@ -37,7 +39,7 @@ class SiteMetadataTest extends TestCase
         }
     }
 
-    public function test_app_layout_uses_the_shared_seo_title_then_the_company_name_as_fallback(): void
+    public function test_discovered_app_pages_use_a_page_title_instead_of_homepage_seo_title(): void
     {
         config()->set('database.default', 'unconfigured');
         Route::view('/test-untitled-page', 'layouts.app');
@@ -45,10 +47,15 @@ class SiteMetadataTest extends TestCase
         $withoutSeoTitle = $site;
         unset($withoutSeoTitle['seo_title']);
 
-        foreach ([[$site, $site['seo_title']], [$withoutSeoTitle, 'Detailing Devils']] as [$settings, $title]) {
+        foreach ([
+            [$site, 'Test Untitled Page | Detailing Devils'],
+            [$withoutSeoTitle, 'Test Untitled Page | Detailing Devils'],
+        ] as [$settings, $title]) {
             config()->set('site', $settings);
             $document = new \DOMDocument;
-            @$document->loadHTML($this->get('/test-untitled-page')->assertOk()->getContent());
+            @$document->loadHTML($this->get('/test-untitled-page')
+                ->assertOk()
+                ->getContent());
             $xpath = new \DOMXPath($document);
             $titles = $xpath->query('/html/head/title');
             $this->assertSame(1, $titles->length);
@@ -66,12 +73,17 @@ class SiteMetadataTest extends TestCase
         foreach ([$approvedTitle, 'Independent SEO Title & Search Keywords'] as $title) {
             config()->set('site.seo_title', $title);
             $document = new \DOMDocument;
-            @$document->loadHTML($this->get('/')->assertOk()->getContent());
+            @$document->loadHTML($this->get('/')
+                ->assertOk()
+                ->getContent());
             $xpath = new \DOMXPath($document);
             $this->assertSame($title, $xpath->query('/html/head/title')->item(0)->textContent);
             $verification = $xpath->query('/html/head/meta[@name="google-site-verification"]');
             $this->assertSame(1, $verification->length);
-            $this->assertSame(config('site.google_site_verification'), $verification->item(0)->getAttribute('content'));
+            $this->assertSame(
+                config('site.google_site_verification'),
+                $verification->item(0)->getAttribute('content')
+            );
 
             foreach (['fofo', 'prime', 'xclusive'] as $model) {
                 $html = view('emails.franchise.'.$model.'-applicant', ['name' => 'Synthetic QA'])->render();
@@ -90,7 +102,9 @@ class SiteMetadataTest extends TestCase
 
         foreach ($this->pages() as $page) {
             $document = new \DOMDocument;
-            @$document->loadHTML($this->get($page)->assertOk()->getContent());
+            @$document->loadHTML($this->get($page)
+                ->assertOk()
+                ->getContent());
             $xpath = new \DOMXPath($document);
             $all = $xpath->query('//meta[@name="google-site-verification"]');
             $head = $xpath->query('/html/head/meta[@name="google-site-verification"]');
@@ -110,7 +124,9 @@ class SiteMetadataTest extends TestCase
         config()->set('site.google_site_verification', null);
 
         foreach ($this->pages() as $page) {
-            $this->get($page)->assertOk()->assertDontSee('name="google-site-verification"', false);
+            $this->get($page)
+                ->assertOk()
+                ->assertDontSee('name="google-site-verification"', false);
         }
     }
 

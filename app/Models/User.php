@@ -14,6 +14,8 @@ use Illuminate\Notifications\Notifiable;
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
+    public const SEO_ROLES = ['super_admin', 'admin', 'seo_admin'];
+
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
 
@@ -28,5 +30,11 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    public function canManageSeo(): bool
+    {
+        // Role is deliberately absent from Fillable and has no privileged default.
+        return in_array($this->role, self::SEO_ROLES, true);
     }
 }
