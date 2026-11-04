@@ -82,8 +82,8 @@ class SeoAdminTest extends TestCase
         DB::purge('sqlite');
         foreach ([
             '0001_01_01_000000_create_users_table.php',
-            'seo/2026_11_02_000000_add_role_to_users_table.php',
-            'seo/2026_11_02_000001_create_website_seo_store.php',
+            '2026_11_02_000000_add_role_to_users_table.php',
+            '2026_11_02_000001_create_website_seo_store.php',
         ] as $migration) {
             (require database_path('migrations/'.$migration))->up();
         }

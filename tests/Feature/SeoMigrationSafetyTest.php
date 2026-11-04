@@ -3,6 +3,10 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use App\Services\Seo\Admin\SeoPublicationCodec;
+use App\Services\Seo\SeoResolver;
+use App\Services\Seo\SeoSitemap;
+use App\Services\Seo\SeoSnapshot;
 use Illuminate\Database\QueryException;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
@@ -68,7 +72,110 @@ class SeoMigrationSafetyTest extends TestCase
         $pending = array_diff(array_keys($normal), app('migration.repository')->getRan());
         $this->assertArrayHasKey('0001_01_01_000000_create_users_table', $normal);
         $this->assertNotContains('0001_01_01_000000_create_users_table', $pending);
+        foreach (array_slice($this->paths(), 1) as $path) {
+            $filename = basename($path);
+            $oldName = app('migrator')->getMigrationName(database_path('migrations/seo/'.$filename));
+            $newName = app('migrator')->getMigrationName(base_path($path));
+            $this->assertSame($oldName, $newName);
+            $this->assertArrayHasKey($newName, $normal);
+            $this->assertContains($oldName, app('migration.repository')->getRan());
+            $this->assertNotContains($newName, $pending);
+        }
         $this->assertSame($before, $this->businessSnapshot());
+    }
+
+    public function test_normal_migration_applies_only_missing_seo_migrations_to_an_existing_laravel_install(): void
+    {
+        $this->artisan('migrate', [
+            '--path' => [
+                'database/migrations/0001_01_01_000000_create_users_table.php',
+                'database/migrations/0001_01_01_000001_create_cache_table.php',
+                'database/migrations/0001_01_01_000002_create_jobs_table.php',
+            ],
+            '--force' => true,
+        ])->assertSuccessful();
+        $frameworkLedger = DB::table('migrations')->orderBy('id')->get()->toJson();
+        $userId = DB::table('users')->insertGetId([
+            'name' => 'Synthetic Unassigned User',
+            'email' => 'unassigned@example.test',
+            'password' => 'synthetic-hash',
+        ]);
+        DB::table('sessions')->insert([
+            'id' => 'isolated-preserved-session',
+            'user_id' => $userId,
+            'payload' => 'Synthetic session fixture',
+            'last_activity' => 1,
+        ]);
+        $userBefore = (array) DB::table('users')->where('id', $userId)->first();
+        $sessionBefore = DB::table('sessions')->get()->toJson();
+        $files = app('migrator')->getMigrationFiles([database_path('migrations')]);
+        $pending = array_values(array_diff(array_keys($files), app('migration.repository')->getRan()));
+        $this->assertSame([
+            '2026_11_02_000000_add_role_to_users_table',
+            '2026_11_02_000001_create_website_seo_store',
+        ], $pending);
+
+        $this->artisan('migrate', ['--force' => true])->assertSuccessful();
+
+        $this->assertSame(5, DB::table('migrations')->count());
+        $this->assertSame(
+            $frameworkLedger,
+            DB::table('migrations')->where('batch', 1)->orderBy('id')->get()->toJson()
+        );
+        $userAfter = (array) DB::table('users')->where('id', $userId)->first();
+        $this->assertNull($userAfter['role']);
+        unset($userAfter['role']);
+        $this->assertSame($userBefore, $userAfter);
+        $this->assertSame(1, DB::table('users')->count());
+        $this->assertSame($sessionBefore, DB::table('sessions')->get()->toJson());
+        $this->assertTrue(Schema::hasTable('seo_metadata'));
+        $this->assertTrue(Schema::hasTable('seo_revisions'));
+
+        $ledgerBefore = DB::table('migrations')->orderBy('id')->get()->toJson();
+        $this->artisan('migrate', ['--force' => true])->assertSuccessful();
+        $this->assertSame($ledgerBefore, DB::table('migrations')->orderBy('id')->get()->toJson());
+        $this->assertSame($sessionBefore, DB::table('sessions')->get()->toJson());
+    }
+
+    public function test_existing_snapshot_code_initializes_the_sitemap_without_creating_an_administrator(): void
+    {
+        $this->artisan('migrate', ['--force' => true])->assertSuccessful();
+        $this->get('/sitemap.xml')->assertStatus(503);
+        $sitemap = app(SeoSitemap::class);
+        $xml = $sitemap->xml();
+        $this->assertCount(12, $sitemap->urls($xml));
+        $this->assertSame(
+            $sitemap->urls(file_get_contents(resource_path('seo/sitemap.xml'))),
+            $sitemap->urls($xml)
+        );
+        $payload = app(SeoPublicationCodec::class)->encode(new SeoSnapshot);
+        DB::transaction(function () use ($payload, $xml) {
+            if (DB::table('seo_metadata')->exists() || DB::table('seo_revisions')->exists()) {
+                throw new RuntimeException('Initialization requires a fresh SEO store.');
+            }
+            DB::table('seo_metadata')->insert([
+                'id' => 1,
+                'origin' => config('seo.origin'),
+                'version' => 0,
+                'payload' => $payload,
+                'payload_hash' => hash('sha256', $payload),
+                'sitemap_xml' => $xml,
+                'sitemap_hash' => hash('sha256', $xml),
+                'updated_at' => now(),
+            ]);
+        });
+        $this->app->forgetInstance(SeoResolver::class);
+
+        $response = $this->get('/sitemap.xml')
+            ->assertOk()
+            ->assertHeader('Content-Type', 'application/xml; charset=UTF-8');
+        $this->assertFalse($response->headers->has('Set-Cookie'));
+        $this->assertSame($xml, $response->getContent());
+        $this->assertSame(1, DB::table('seo_metadata')->count());
+        $this->assertSame(0, DB::table('seo_revisions')->count());
+        $this->assertSame(0, DB::table('users')->count());
+        $this->assertSame(0, DB::table('sessions')->count());
+        $this->artisan('seo:sitemap', ['--check' => true])->assertSuccessful();
     }
 
     public function test_collision_with_any_target_stops_before_creating_or_altering_tables(): void
@@ -164,7 +271,7 @@ class SeoMigrationSafetyTest extends TestCase
         $before = (array) DB::table('users')
             ->where('id', $id)
             ->first();
-        (require database_path('migrations/seo/2026_11_02_000000_add_role_to_users_table.php'))->up();
+        (require database_path('migrations/2026_11_02_000000_add_role_to_users_table.php'))->up();
         $after = (array) DB::table('users')
             ->where('id', $id)
             ->first();
@@ -175,7 +282,7 @@ class SeoMigrationSafetyTest extends TestCase
             ->find($id)
             ->canManageSeo());
         try {
-            (require database_path('migrations/seo/2026_11_02_000000_add_role_to_users_table.php'))->up();
+            (require database_path('migrations/2026_11_02_000000_add_role_to_users_table.php'))->up();
             $this->fail('An existing role column was overwritten.');
         } catch (RuntimeException $exception) {
             $this->assertStringContainsString('Authorization migration stopped', $exception->getMessage());
@@ -210,19 +317,20 @@ class SeoMigrationSafetyTest extends TestCase
     {
         return [
             'database/migrations/0001_01_01_000000_create_users_table.php',
-            'database/migrations/seo',
+            'database/migrations/2026_11_02_000000_add_role_to_users_table.php',
+            'database/migrations/2026_11_02_000001_create_website_seo_store.php',
         ];
     }
 
     private function createUsers(): void
     {
         (require database_path('migrations/0001_01_01_000000_create_users_table.php'))->up();
-        (require database_path('migrations/seo/2026_11_02_000000_add_role_to_users_table.php'))->up();
+        (require database_path('migrations/2026_11_02_000000_add_role_to_users_table.php'))->up();
     }
 
     private function migration(): object
     {
-        return require database_path('migrations/seo/2026_11_02_000001_create_website_seo_store.php');
+        return require database_path('migrations/2026_11_02_000001_create_website_seo_store.php');
     }
 
     private function businessSnapshot(): array
