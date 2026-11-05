@@ -1,8 +1,5 @@
 @extends('layouts.app')
 
-@section('title', 'Warranty Terms & Conditions | Detailing Devils')
-@section('description', 'Read the Detailing Devils warranty terms and conditions, including coverage, maintenance requirements, exclusions and the warranty claim procedure.')
-
 @push('css')
 <style>
     .legal-page__body h2.warranty-terms__heading {

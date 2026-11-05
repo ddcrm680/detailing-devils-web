@@ -1,7 +1,5 @@
 @extends('layouts.prime')
 
-@section('title', 'Franchise Application | Detailing Devils Prime')
-
 @section('content')
 <section class="hero-section">
     <div class="container">

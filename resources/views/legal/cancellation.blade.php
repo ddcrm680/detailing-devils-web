@@ -1,8 +1,5 @@
 @extends('layouts.app')
 
-@section('title', 'Cancellation Policy | Detailing Devils')
-@section('description', 'Read the Detailing Devils cancellation policy, including cancellation periods, refunds, processed orders and exceptions.')
-
 @section('content')
 <div class="legal-page">
     <header class="legal-page__hero">

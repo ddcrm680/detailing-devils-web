@@ -1,8 +1,5 @@
 @extends('layouts.app')
 
-@section('title', 'Privacy Policy | Detailing Devils')
-@section('description', 'Read the Detailing Devils privacy policy on personal information, log data, communications, cookies and security.')
-
 @section('content')
 <div class="legal-page">
     <header class="legal-page__hero">

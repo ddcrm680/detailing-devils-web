@@ -2,11 +2,79 @@
 
 namespace Tests\Feature;
 
+use App\Contracts\Seo\MetadataRepository;
+use App\Services\Seo\EmptyMetadataRepository;
+use App\Services\Seo\SeoOverride;
+use App\Services\Seo\SeoResolver;
+use App\Services\Seo\SeoSnapshot;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use Tests\TestCase;
 
 class SiteMetadataTest extends TestCase
 {
+    public function test_registered_public_views_use_central_route_metadata_without_duplicate_sections(): void
+    {
+        config()->set('database.default', 'unconfigured');
+        DB::shouldReceive('connection')->never();
+        $this->app->instance(MetadataRepository::class, new EmptyMetadataRepository);
+        $definitions = config('seo.pages');
+        foreach ($definitions as $id => $definition) {
+            if ($id === 'home') {
+                continue;
+            }
+            $title = 'Central title '.$id.' < & QA';
+            $description = 'Central description '.$id.' < & QA';
+            $definitions[$id]['title'] = $title;
+            $definitions[$id]['description'] = $description;
+            config()->set('seo.pages', $definitions);
+            $this->app->forgetInstance(SeoResolver::class);
+            $path = route($definition['route'], $definition['parameters'] ?? [], false);
+            $document = new \DOMDocument;
+            @$document->loadHTML('<?xml encoding="utf-8" ?>'.$this->get($path)->assertOk()->getContent());
+            $xpath = new \DOMXPath($document);
+            $titles = $xpath->query('/html/head/title');
+            $descriptions = $xpath->query('/html/head/meta[@name="description"]');
+            $this->assertSame(1, $titles->length, $path);
+            $this->assertSame(1, $descriptions->length, $path);
+            $this->assertSame($title, $titles->item(0)->textContent, $path);
+            $this->assertSame($description, $descriptions->item(0)->getAttribute('content'), $path);
+        }
+    }
+
+    public function test_published_metadata_still_wins_over_central_page_fallbacks(): void
+    {
+        config()->set('database.default', 'unconfigured');
+        DB::shouldReceive('connection')->never();
+        foreach (config('seo.pages') as $id => $definition) {
+            $title = 'Published title '.$id.' < & QA';
+            $description = 'Published description '.$id.' < & QA';
+            $snapshot = new SeoSnapshot([
+                new SeoOverride($id, ['title' => $title, 'description' => $description], true, true),
+            ]);
+            $this->app->instance(MetadataRepository::class, new class($snapshot) implements MetadataRepository
+            {
+                public function __construct(private SeoSnapshot $fixture) {}
+
+                public function snapshot(): SeoSnapshot
+                {
+                    return $this->fixture;
+                }
+            });
+            $this->app->forgetInstance(SeoResolver::class);
+            $path = route($definition['route'], $definition['parameters'] ?? [], false);
+            $document = new \DOMDocument;
+            @$document->loadHTML('<?xml encoding="utf-8" ?>'.$this->get($path)->assertOk()->getContent());
+            $xpath = new \DOMXPath($document);
+            $this->assertSame($title, $xpath->query('/html/head/title')->item(0)->textContent, $path);
+            $this->assertSame(
+                $description,
+                $xpath->query('/html/head/meta[@name="description"]')->item(0)->getAttribute('content'),
+                $path
+            );
+        }
+    }
+
     public function test_page_titles_keep_their_existing_overrides_when_the_shared_seo_title_changes(): void
     {
         config()->set('database.default', 'unconfigured');

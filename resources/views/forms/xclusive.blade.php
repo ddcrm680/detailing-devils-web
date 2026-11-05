@@ -1,8 +1,5 @@
 @extends('layouts.app')
 
-@section('title', $formModel['title'])
-@section('description', $formModel['description'])
-
 @push('css')
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intl-tel-input@29.1.2/dist/css/intlTelInput.css">
     <link rel="stylesheet" href="{{ asset('assets/css/fofo.css') }}">

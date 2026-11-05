@@ -1,8 +1,5 @@
 @extends('layouts.app')
 
-@section('title', 'Refund and Returns Policy | Detailing Devils')
-@section('description', 'Read the Detailing Devils refund and returns policy, including return eligibility and the return and exchange processes.')
-
 @section('content')
 <div class="legal-page">
     <header class="legal-page__hero">

@@ -1,8 +1,5 @@
 @extends('layouts.app')
 
-@section('title', 'Studio Locator | Detailing Devils')
-@section('description', 'Find a Detailing Devils studio by name, city, address or state, with contact and directions details.')
-
 @push('css')
     <link rel="stylesheet" href="{{ asset('assets/css/studios.css') }}">
 @endpush

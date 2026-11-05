@@ -21,9 +21,6 @@
     ];
 @endphp
 
-@section('title', $modelName.' Studio Tour | Detailing Devils')
-@section('description', 'Walk through a Detailing Devils studio, explore Prime and FOFO franchise models, and choose your application.')
-
 @push('css')
     <link rel="stylesheet" href="{{ asset('assets/css/studio-tour.css') }}">
 @endpush

@@ -1,8 +1,5 @@
 @extends('layouts.app')
 
-@section('title', 'Terms of Use | Detailing Devils')
-@section('description', 'Read the Detailing Devils terms of use for this website, including use of the website, ownership, warranties and liability.')
-
 @section('content')
 <div class="legal-page">
     <header class="legal-page__hero">
