@@ -143,9 +143,9 @@ class SeoMigrationSafetyTest extends TestCase
         $this->get('/sitemap.xml')->assertStatus(503);
         $sitemap = app(SeoSitemap::class);
         $xml = $sitemap->xml();
-        $this->assertCount(12, $sitemap->urls($xml));
+        $this->assertCount(13, $sitemap->urls($xml));
         $this->assertSame(
-            $sitemap->urls(file_get_contents(resource_path('seo/sitemap.xml'))),
+            $sitemap->urls(file_get_contents(base_path('tests/Fixtures/seo/sitemap.xml'))),
             $sitemap->urls($xml)
         );
         $payload = app(SeoPublicationCodec::class)->encode(new SeoSnapshot);

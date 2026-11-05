@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Contracts\Seo\MetadataRepository;
+use App\Http\Controllers\HomeController;
 use App\Services\Seo\Admin\SeoAdminPages;
 use App\Services\Seo\ContentMetadata;
 use App\Services\Seo\EmptyMetadataRepository;
@@ -72,6 +73,96 @@ class SeoRouteDiscoveryTest extends TestCase
         $this->assertContains('https://www.detailingdevils.com/new-studio-guide', $this->urls());
     }
 
+    public function test_invokable_view_controllers_are_discovered_without_configuration_or_execution(): void
+    {
+        config()->set('seo', array_diff_key(config('seo'), ['pages' => true]));
+        $route = Route::get('/invokable-guide', HomeController::class)->name('qa.invokable');
+        Route::get('/private-invokable', HomeController::class)->middleware('auth:web')->name('qa.private');
+        $route->prepareForSerialization();
+        $this->refresh();
+
+        $this->assertSame('home', app(SeoAdminPages::class)->page('home')->id);
+        $page = app(SeoAdminPages::class)->page('qa.invokable');
+        $this->assertSame('Invokable Guide | Detailing Devils', $page->title);
+        $this->assertContains($page->canonical, $this->urls());
+        $this->assertNotContains('https://www.detailingdevils.com/private-invokable', $this->urls());
+        $this->get('/invokable-guide')->assertOk()->assertSee(e($page->title), false);
+        Http::assertNothingSent();
+        Mail::assertNothingSent();
+    }
+
+    public function test_route_policy_preserves_thirteen_identities_and_urls_without_a_configured_page_list(): void
+    {
+        config()->set('seo', array_diff_key(config('seo'), ['pages' => true]));
+        $this->refresh();
+        $pages = app(SeoResolver::class)->inventory();
+        $this->assertCount(13, $pages);
+        $this->assertSame('home', app(SeoAdminPages::class)->page('home')->id);
+        $this->assertSame(
+            'https://www.detailingdevils.com/studio-tour?model=fofo',
+            app(SeoAdminPages::class)->page('studios.tour.fofo')->canonical
+        );
+        $this->assertSame(
+            'https://www.detailingdevils.com/studio-tour?model=prime',
+            app(SeoAdminPages::class)->page('studios.tour.prime')->canonical
+        );
+        $warranty = app(SeoAdminPages::class)->page('legal.warranty-terms');
+        $this->assertTrue($warranty->sitemap);
+        $this->assertSame('index, follow', $warranty->robots);
+        $sitemap = app(SeoSitemap::class);
+        $expected = $sitemap->urls(file_get_contents(base_path('tests/Fixtures/seo/sitemap.xml')));
+        $actual = $this->urls();
+        sort($expected);
+        sort($actual);
+        $this->assertSame($expected, $actual);
+        $this->get('/sitemap.xml')->assertOk()->assertHeader('Content-Type', 'application/xml; charset=UTF-8');
+    }
+
+    public function test_query_variants_are_selected_only_from_the_route_policy(): void
+    {
+        Route::view('/query-guide', 'layouts.app')
+            ->defaults('_seo', ['variants' => ['alternate' => ['edition' => 'alternate']]])
+            ->name('qa.query-guide');
+        $this->refresh();
+        foreach ([
+            '?edition=alternate&utm_source=qa' => '?edition=alternate',
+            '?edition=invalid' => '',
+            '?edition[]=alternate' => '',
+        ] as $query => $canonicalQuery) {
+            $this->get('/query-guide'.$query)
+                ->assertOk()
+                ->assertSee(
+                    'rel="canonical" href="https://www.detailingdevils.com/query-guide'.$canonicalQuery.'"',
+                    false
+                );
+        }
+        $this->assertContains('https://www.detailingdevils.com/query-guide?edition=alternate', $this->urls());
+    }
+
+    public function test_invokable_discovery_and_query_policy_survive_laravel_route_compilation(): void
+    {
+        config()->set('seo', array_diff_key(config('seo'), ['pages' => true]));
+        $routes = Route::getRoutes();
+        foreach ($routes as $route) {
+            $route->prepareForSerialization();
+        }
+        app('router')->setCompiledRoutes($routes->compile());
+        $this->app->forgetInstance(SeoResolver::class);
+
+        $this->assertCount(13, app(SeoResolver::class)->inventory());
+        $this->assertSame('home', app(SeoAdminPages::class)->page('home')->id);
+        $this->assertCount(13, $this->urls());
+        foreach (['fofo', 'prime'] as $model) {
+            $this->get('/studio-tour?model='.$model.'&utm_source=qa')
+                ->assertOk()
+                ->assertSee(
+                    'rel="canonical" href="https://www.detailingdevils.com/studio-tour?model='.$model.'"',
+                    false
+                );
+        }
+        $this->assertTrue(app(SeoAdminPages::class)->page('legal.warranty-terms')->sitemap);
+    }
+
     public function test_private_internal_api_redirect_and_non_page_routes_are_never_discovered(): void
     {
         Route::view('/admin/seo/qa', 'layouts.app')->name('qa.admin');
@@ -99,7 +190,7 @@ class SeoRouteDiscoveryTest extends TestCase
         $this->refresh();
         $ids = array_map(fn ($page) => $page->id, app(SeoResolver::class)->inventory());
         $this->assertCount(13, $ids);
-        $this->assertCount(12, $this->urls());
+        $this->assertCount(13, $this->urls());
         $this->assertNotContains('qa.data', $ids);
     }
 
@@ -263,14 +354,14 @@ class SeoRouteDiscoveryTest extends TestCase
         );
         $this->refresh();
         $this->assertContains('https://www.detailingdevils.com/future-studios/verified-studio', $this->urls());
-        $this->assertCount(13, $this->urls());
+        $this->assertCount(14, $this->urls());
         $this->assertStringNotContainsString('{slug}', app(SeoSitemap::class)->xml());
     }
 
     public function test_static_sitemap_generation_adds_and_removes_discovered_urls_without_touching_the_public_file(): void
     {
         $path = tempnam(sys_get_temp_dir(), 'dd-seo-discovery-');
-        $original = hash_file('sha256', resource_path('seo/sitemap.xml'));
+        $this->assertFileDoesNotExist(public_path('sitemap.xml'));
         try {
             Route::view('/new-route-guide', 'layouts.app')->name('qa.new');
             $this->refresh();
@@ -281,7 +372,7 @@ class SeoRouteDiscoveryTest extends TestCase
             $this->artisan('seo:sitemap', ['--output' => $path, '--check' => true])->assertFailed();
             $this->artisan('seo:sitemap', ['--output' => $path])->assertSuccessful();
             $this->assertStringNotContainsString('/new-route-guide</loc>', file_get_contents($path));
-            $this->assertSame($original, hash_file('sha256', resource_path('seo/sitemap.xml')));
+            $this->assertFileDoesNotExist(public_path('sitemap.xml'));
         } finally {
             unlink($path);
         }

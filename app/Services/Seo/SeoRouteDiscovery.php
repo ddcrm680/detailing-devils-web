@@ -115,11 +115,12 @@ final class SeoRouteDiscovery
         foreach (Routes::getRoutes() as $route) {
             $hint = $route->defaults['_seo'] ?? [];
             $declared = is_array($hint) && ($hint['public'] ?? false) === true;
+            $registered = in_array($route->getName(), $registeredRoutes, true);
             if (
-                in_array($route->getName(), [...$registeredRoutes, ...$providedRoutes], true)
+                in_array($route->getName(), $providedRoutes, true)
                 || $route->parameterNames() !== []
-                || ! $this->publicRoute($route, $declared)
-                || (! $declared && ! $this->rendersView($route))
+                || ! $this->publicRoute($route, $registered || $declared)
+                || (! $registered && ! $declared && ! $this->rendersView($route))
             ) {
                 continue;
             }
@@ -131,6 +132,7 @@ final class SeoRouteDiscovery
                     'robots' => config('seo.defaults.robots', 'index, follow'),
                     'sitemap' => true,
                 ],
+                $definitions[$this->id($route)] ?? [],
                 config('seo.route_defaults', [])[$route->getName()] ?? [],
                 is_array($hint)
                 ? array_intersect_key(
@@ -162,7 +164,16 @@ final class SeoRouteDiscovery
             } else {
                 $definition['path'] = '/'.ltrim($route->uri(), '/');
             }
-            $definitions[$this->id($route)] ??= $definition;
+            $id = $this->id($route);
+            $definitions[$id] = $definition;
+            foreach (is_array($hint) ? ($hint['variants'] ?? []) : [] as $suffix => $parameters) {
+                $variantId = $id.'.'.$suffix;
+                $definitions[$variantId] = array_replace(
+                    $definition,
+                    $definitions[$variantId] ?? [],
+                    ['route' => $route->getName(), 'parameters' => $parameters]
+                );
+            }
         }
 
         return $definitions;
@@ -197,9 +208,12 @@ final class SeoRouteDiscovery
                     ]
                 )->getClosure();
             }
-            $reflection = $action instanceof Closure
-                ? new ReflectionFunction($action)
-                : new ReflectionMethod($route->getControllerClass(), $route->getActionMethod());
+            if ($action instanceof Closure) {
+                $reflection = new ReflectionFunction($action);
+            } else {
+                [$controller, $method] = Str::parseCallback($action, '__invoke');
+                $reflection = new ReflectionMethod($controller, $method);
+            }
             $type = $reflection->getReturnType();
 
             return $type instanceof ReflectionNamedType && is_a($type->getName(), View::class, true);

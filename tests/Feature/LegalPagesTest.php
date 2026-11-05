@@ -140,7 +140,7 @@ class LegalPagesTest extends TestCase
             ->assertDontSeeText('Check your warranty from below mentioned link:');
 
         foreach ([
-            'https://www.devilscrm.detailingdevils.com/check-warranty?access=true' => 'Warranty Check',
+            'https://www.devilscrm.detailingdevils.com/check-warranty' => 'Warranty Check',
             'tel:'.config('site.phone_link') => config('site.phone'),
             'mailto:'.config('site.email') => config('site.email'),
         ] as $url => $label) {

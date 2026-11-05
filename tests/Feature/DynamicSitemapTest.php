@@ -33,11 +33,45 @@ class DynamicSitemapTest extends TestCase
         $this->assertStringContainsString('must-revalidate', $response->headers->get('Cache-Control'));
         $sitemap = app(SeoSitemap::class);
         $this->assertSame(
-            $sitemap->urls(file_get_contents(resource_path('seo/sitemap.xml'))),
+            $sitemap->urls(file_get_contents(base_path('tests/Fixtures/seo/sitemap.xml'))),
+            $sitemap->urls($response->getContent())
+        );
+        $this->assertCount(13, $sitemap->urls($response->getContent()));
+        $this->assertContains(
+            'https://www.detailingdevils.com/warranty-terms-condition',
             $sitemap->urls($response->getContent())
         );
         $this->get('/sitemap.xml', ['If-None-Match' => $response->headers->get('ETag')])->assertStatus(304);
         $this->assertSame([], app('router')->gatherRouteMiddleware(Route::getRoutes()->getByName('sitemap')));
+    }
+
+    public function test_published_warranty_policy_can_still_exclude_the_page_from_the_sitemap(): void
+    {
+        foreach ([
+            ['sitemap' => false],
+            ['robots' => 'noindex, follow'],
+            ['canonical' => config('seo.origin').'/', 'sitemap' => false],
+        ] as $fields) {
+            $snapshot = new SeoSnapshot([
+                new SeoOverride('legal.warranty-terms', $fields, true, true),
+            ]);
+            $this->app->instance(MetadataRepository::class, new class($snapshot) implements MetadataRepository
+            {
+                public function __construct(private SeoSnapshot $snapshot) {}
+
+                public function snapshot(): SeoSnapshot
+                {
+                    return $this->snapshot;
+                }
+            });
+            $this->app->forgetInstance(SeoResolver::class);
+            $response = $this->get('/sitemap.xml')->assertOk();
+            $urls = app(SeoSitemap::class)->urls($response->getContent());
+            $this->assertCount(12, $urls);
+            $this->assertNotContains('https://www.detailingdevils.com/warranty-terms-condition', $urls);
+            $page = app(SeoResolver::class)->forPage('legal.warranty-terms');
+            $this->assertSame($fields['robots'] ?? 'index, follow', $page->robots);
+        }
     }
 
     public function test_new_and_noindex_pages_update_the_http_sitemap_without_file_generation(): void

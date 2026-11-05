@@ -75,7 +75,7 @@
 
         <p><strong>Disclaimer :</strong> Always make sure to take your invoice and get your warranty registered online from the studio you are availing the service. Detailing Devils gives no warranty and accepts no responsibility or liability if your warranty is not registered online. In that case under no circumstances will Detailing Devils be held responsible or liable in any way for any warranty claims.</p>
 
-        <p><a href="https://www.devilscrm.detailingdevils.com/check-warranty?access=true" target="_blank" rel="noopener">Warranty Check</a></p>
+        <p><a href="https://www.devilscrm.detailingdevils.com/check-warranty" target="_blank" rel="noopener">Warranty Check</a></p>
 
         <p>If you have any questions about warranty please contact us.</p>
         <h2>Address:</h2>

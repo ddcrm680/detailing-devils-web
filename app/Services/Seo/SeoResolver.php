@@ -50,10 +50,18 @@ final class SeoResolver
 
     public function forRequest(Request $request, ?ContentMetadata $content = null, array $legacy = []): SeoMetadata
     {
-        $id = $request->route() ? app(SeoRouteDiscovery::class)->id($request->route()) : 'unregistered';
-        if ($id === 'studios.tour') {
-            $model = $request->query('model');
-            $id .= is_string($model) && in_array($model, ['fofo', 'prime'], true) ? '.'.$model : '';
+        $route = $request->route();
+        $id = $route ? app(SeoRouteDiscovery::class)->id($route) : 'unregistered';
+        $variants = $route ? ($route->defaults['_seo']['variants'] ?? []) : [];
+        foreach ($variants as $suffix => $parameters) {
+            $matches = $parameters !== [];
+            foreach ($parameters as $name => $value) {
+                $matches = $matches && $request->query($name) === $value;
+            }
+            if ($matches) {
+                $id .= '.'.$suffix;
+                break;
+            }
         }
         if ($content !== null) {
             if ($content->routeName !== $request->route()?->getName()) {

@@ -50,4 +50,8 @@
        <loc>https://www.detailingdevils.com/x-clusive-franchise-form</loc>
        <priority>0.6400</priority>
   </url>
+  <url>
+       <loc>https://www.detailingdevils.com/warranty-terms-condition</loc>
+       <priority>0.5000</priority>
+  </url>
 </urlset>

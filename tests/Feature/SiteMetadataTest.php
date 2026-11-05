@@ -3,7 +3,9 @@
 namespace Tests\Feature;
 
 use App\Contracts\Seo\MetadataRepository;
+use App\Services\Seo\Admin\SeoAdminPages;
 use App\Services\Seo\EmptyMetadataRepository;
+use App\Services\Seo\SeoDiagnostics;
 use App\Services\Seo\SeoOverride;
 use App\Services\Seo\SeoResolver;
 use App\Services\Seo\SeoSnapshot;
@@ -13,6 +15,58 @@ use Tests\TestCase;
 
 class SiteMetadataTest extends TestCase
 {
+    public function test_existing_published_metadata_can_survive_removal_of_the_configured_page_fallbacks(): void
+    {
+        config()->set('database.default', 'unconfigured');
+        DB::shouldReceive('connection')->never();
+        $this->app->instance(MetadataRepository::class, new EmptyMetadataRepository);
+        $baseline = app(SeoResolver::class)->inventory();
+        $fields = app(SeoAdminPages::class);
+        $snapshot = new SeoSnapshot(array_map(
+            fn ($page) => new SeoOverride($page->id, $fields->fields($page), true, true),
+            $baseline
+        ));
+        $this->app->instance(MetadataRepository::class, new class($snapshot) implements MetadataRepository
+        {
+            public function __construct(private SeoSnapshot $snapshot) {}
+
+            public function snapshot(): SeoSnapshot
+            {
+                return $this->snapshot;
+            }
+        });
+        config()->set('seo', array_diff_key(config('seo'), ['pages' => true]));
+        $this->app->forgetInstance(SeoResolver::class);
+        $this->assertCount(13, app(SeoResolver::class)->inventory());
+        foreach ($baseline as $page) {
+            $this->assertSame($fields->fields($page), $fields->fields(app(SeoResolver::class)->forPage($page->id)));
+            $path = substr($page->canonical, strlen(config('seo.origin')));
+            $html = $this->get($path)->assertOk()->getContent();
+            $this->assertSame([], app(SeoDiagnostics::class)->html($html, $page), $page->id);
+        }
+    }
+
+    public function test_existing_page_fallbacks_remain_exact_when_publication_storage_is_unavailable(): void
+    {
+        config()->set('database.default', 'unconfigured');
+        DB::shouldReceive('connection')->never();
+        $this->app->instance(MetadataRepository::class, new EmptyMetadataRepository);
+        $baseline = app(SeoResolver::class)->inventory();
+        $this->app->instance(MetadataRepository::class, new class implements MetadataRepository
+        {
+            public function snapshot(): SeoSnapshot
+            {
+                throw new \RuntimeException('Private synthetic publication failure');
+            }
+        });
+        foreach ($baseline as $page) {
+            $this->app->forgetInstance(SeoResolver::class);
+            $path = substr($page->canonical, strlen(config('seo.origin')));
+            $html = $this->get($path)->assertOk()->assertDontSee('Private synthetic publication failure')->getContent();
+            $this->assertSame([], app(SeoDiagnostics::class)->html($html, $page), $page->id);
+        }
+    }
+
     public function test_registered_public_views_use_central_route_metadata_without_duplicate_sections(): void
     {
         config()->set('database.default', 'unconfigured');

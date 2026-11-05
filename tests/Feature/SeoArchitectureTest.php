@@ -344,17 +344,20 @@ class SeoArchitectureTest extends TestCase
         }
     }
 
-    public function test_sitemap_keeps_exactly_the_approved_twelve_urls_and_no_fabricated_dates(): void
+    public function test_sitemap_keeps_exactly_the_approved_thirteen_urls_and_no_fabricated_dates(): void
     {
         $sitemap = app(SeoSitemap::class);
-        $this->assertCount(12, $sitemap->pages());
+        $this->assertCount(13, $sitemap->pages());
         $this->assertSame(
-            $sitemap->urls(file_get_contents(resource_path('seo/sitemap.xml'))),
+            $sitemap->urls(file_get_contents(base_path('tests/Fixtures/seo/sitemap.xml'))),
             $sitemap->urls($sitemap->xml())
         );
         $this->assertStringNotContainsString('<lastmod>', $sitemap->xml());
         $this->assertStringNotContainsString('model=xclusive', $sitemap->xml());
-        $this->assertStringNotContainsString('warranty-terms', $sitemap->xml());
+        $this->assertContains(
+            'https://www.detailingdevils.com/warranty-terms-condition',
+            $sitemap->urls($sitemap->xml())
+        );
         $this->assertSame('index, follow', app(SeoResolver::class)->forPage('legal.warranty-terms')->robots);
         $this->artisan('seo:sitemap --check')->assertSuccessful();
     }
@@ -367,7 +370,7 @@ class SeoArchitectureTest extends TestCase
             $hash = hash_file('sha256', $path);
             $this->artisan('seo:sitemap', ['--output' => $path, '--check' => true])->assertSuccessful();
             $this->assertSame($hash, hash_file('sha256', $path));
-            $this->assertCount(12, app(SeoSitemap::class)->urls(file_get_contents($path)));
+            $this->assertCount(13, app(SeoSitemap::class)->urls(file_get_contents($path)));
             file_put_contents($path, '<invalid/>');
             $this->artisan('seo:sitemap', ['--output' => $path, '--check' => true])->assertFailed();
         } finally {
@@ -505,8 +508,8 @@ class SeoArchitectureTest extends TestCase
         $this->repository(new SeoSnapshot(content: $records));
         $this->assertCount(513, app(SeoResolver::class)->inventory());
         $urls = app(SeoSitemap::class)->urls(app(SeoSitemap::class)->xml());
-        $this->assertCount(512, $urls);
-        $this->assertCount(512, array_unique($urls));
+        $this->assertCount(513, $urls);
+        $this->assertCount(513, array_unique($urls));
         $this->assertContains('https://www.detailingdevils.com/qa-records/500', $urls);
     }
 

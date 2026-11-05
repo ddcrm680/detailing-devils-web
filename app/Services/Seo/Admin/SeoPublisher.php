@@ -171,7 +171,7 @@ final class SeoPublisher
                         images: $candidate->images
                     )
                 )->published
-                && ! array_key_exists($id, config('seo.pages'))
+                && ! array_key_exists($id, config('seo.pages', []))
             ) {
                 throw ValidationException::withMessages([
                     'publication' => 'Publish the underlying content before publishing its SEO override.',

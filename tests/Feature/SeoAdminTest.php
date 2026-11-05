@@ -47,7 +47,7 @@ class SeoAdminTest extends TestCase
         Mail::fake();
         $this->directory = sys_get_temp_dir().'/dd-seo-admin-'.bin2hex(random_bytes(6));
         mkdir($this->directory, 0700, true);
-        copy(resource_path('seo/sitemap.xml'), $this->directory.'/sitemap.xml');
+        copy(base_path('tests/Fixtures/seo/sitemap.xml'), $this->directory.'/sitemap.xml');
         mkdir($this->directory.'/sessions', 0700);
         config()->set('session.driver', 'file');
         config()->set('session.files', $this->directory.'/sessions');
@@ -78,7 +78,6 @@ class SeoAdminTest extends TestCase
                 'foreign_key_constraints' => true,
             ]
         );
-        config()->set('seo-admin.sitemap_path', $this->directory.'/sitemap.xml');
         DB::purge('sqlite');
         foreach ([
             '0001_01_01_000000_create_users_table.php',
@@ -416,6 +415,65 @@ class SeoAdminTest extends TestCase
             ->assertSuccessful();
     }
 
+    public function test_discovered_pages_can_be_edited_and_published_without_the_configured_page_list(): void
+    {
+        config()->set('seo', array_diff_key(config('seo'), ['pages' => true]));
+        $this->app->forgetInstance(SeoResolver::class);
+        $this->login();
+        $this->visit('/admin/seo/pages/studios.tour.fofo')->assertOk();
+        $fields = $this->fields('studios.tour.fofo');
+        $fields['title'] = 'Synthetic discovered Tour publication';
+        $this->send('/admin/seo/pages/studios.tour.fofo/draft', $fields)->assertRedirect();
+        $draft = $this->latestDraft();
+        $this->publish($draft)->assertRedirect();
+        $this->get('/studio-tour?model=fofo')
+            ->assertOk()
+            ->assertSee('<title>Synthetic discovered Tour publication</title>', false);
+        $this->assertSame(1, $this->version());
+        $this->assertSame(3, DB::table('seo_revisions')->count());
+        $this->assertCount(13, app(SeoSitemap::class)->urls($this->sitemapXml()));
+    }
+
+    public function test_kolkata_timezone_is_compatible_with_revision_and_publication_timestamps(): void
+    {
+        $this->assertSame('Asia/Kolkata', config('app.timezone'));
+        $this->assertSame('Asia/Kolkata', date_default_timezone_get());
+        $originalUserTimestamp = DB::table('users')
+            ->where('id', $this->administrator->id)
+            ->value('created_at');
+        $draftTime = now()->startOfSecond();
+        $expectedDraftTime = $draftTime->format('Y-m-d H:i:s');
+        $expectedPublicationTime = $draftTime->copy()->addMinute()->format('Y-m-d H:i:s');
+        $this->travelTo($draftTime);
+        try {
+            $this->assertSame(19800, now()->getOffset());
+            $this->login();
+            $this->send('/admin/seo/pages/home/draft', $this->fields('home'))->assertRedirect();
+            $draft = $this->latestDraft();
+            $this->assertSame(
+                $expectedDraftTime,
+                DB::table('seo_revisions')->where('id', $draft)->value('created_at')
+            );
+            $this->travel(1)->minutes();
+            $this->publish($draft)->assertRedirect();
+            $this->assertSame(
+                $expectedPublicationTime,
+                DB::table('seo_metadata')->where('id', 1)->value('updated_at')
+            );
+            $this->assertSame(
+                $expectedPublicationTime,
+                DB::table('seo_revisions')->where('kind', 'published')->value('created_at')
+            );
+            $this->assertSame(
+                $originalUserTimestamp,
+                DB::table('users')->where('id', $this->administrator->id)->value('created_at')
+            );
+            $this->visit('/admin/seo/pages/home')->assertOk()->assertSee($expectedDraftTime);
+        } finally {
+            $this->travelBack();
+        }
+    }
+
     public function test_stale_drafts_and_double_publish_never_overwrite_newer_state(): void
     {
         $this->login();
@@ -524,16 +582,53 @@ class SeoAdminTest extends TestCase
 
     public function test_unapproved_sitemap_pages_and_canonical_conflicts_cannot_publish(): void
     {
+        Route::view('/qa-excluded-sitemap', 'layouts.app')
+            ->defaults('_seo', ['sitemap' => false])
+            ->name('qa.excluded-sitemap');
+        Route::getRoutes()->refreshNameLookups();
+        $this->app->forgetInstance(SeoResolver::class);
         $this->login();
-        $fields = $this->fields('legal.warranty-terms');
+        $fields = $this->fields('qa.excluded-sitemap');
         $fields['sitemap'] = true;
-        $this->send('/admin/seo/pages/legal.warranty-terms/draft', $fields)->assertRedirect();
+        $this->send('/admin/seo/pages/qa.excluded-sitemap/draft', $fields)->assertRedirect();
         $this->assertAdminError('sitemap');
         $fields = $this->fields('fofo.show');
         $fields['canonical'] = config('seo.origin').'/';
         $this->send('/admin/seo/pages/fofo.show/draft', $fields)->assertRedirect();
         $this->assertAdminError('sitemap');
         $this->assertSame(0, $this->version());
+    }
+
+    public function test_super_admin_can_restore_warranty_sitemap_inclusion_after_a_published_exclusion(): void
+    {
+        $this->administrator->forceFill(['role' => 'super_admin'])->save();
+        $this->login();
+        $fields = $this->fields('legal.warranty-terms');
+        $this->assertTrue($fields['sitemap']);
+        $fields['sitemap'] = false;
+        $fields['policy_reason'] = 'Synthetic previously approved sitemap exclusion';
+        $this->send('/admin/seo/pages/legal.warranty-terms/draft', $fields)->assertRedirect();
+        $this->publish($this->latestDraft(), policy: true)->assertRedirect();
+        $this->assertSame(1, $this->version());
+        $this->assertStringNotContainsString('/warranty-terms-condition</loc>', $this->sitemapXml());
+
+        $fields = $this->fields('legal.warranty-terms');
+        $fields['sitemap'] = true;
+        $fields['policy_reason'] = 'Synthetic approved Warranty Terms sitemap inclusion';
+        $this->send('/admin/seo/pages/legal.warranty-terms/draft', $fields)->assertRedirect();
+        $draft = $this->latestDraft();
+        $this->publish($draft)->assertRedirect();
+        $this->assertAdminError('publication');
+        $this->assertSame(1, $this->version());
+        $this->publish($draft, policy: true)->assertRedirect();
+        $this->assertSame(2, $this->version());
+        $this->assertContains(
+            'https://www.detailingdevils.com/warranty-terms-condition',
+            app(SeoSitemap::class)->urls($this->sitemapXml())
+        );
+        $this->assertCount(13, app(SeoSitemap::class)->urls($this->sitemapXml()));
+        $this->assertSame('index, follow', app(SeoResolver::class)->forPage('legal.warranty-terms')->robots);
+        $this->assertSame(2, DB::table('seo_revisions')->where('kind', 'published')->count());
     }
 
     public function test_policy_rollback_requires_super_admin_and_confirmation_and_restores_the_sitemap(): void

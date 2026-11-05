@@ -10,8 +10,9 @@ return [
         // No approved social-sharing card yet. Do not substitute an arbitrary photo.
         'image' => null,
     ],
-    // Route parameters are explicitly registered. Tracking parameters never enter canonicals.
-    // Order and priorities preserve the approved twelve-URL sitemap.
+    // Legacy fallback metadata for existing pages only.
+    // New public pages are discovered automatically. Do NOT register new pages here.
+    // This array will be retired after the existing metadata publication transition.
     'pages' => [
         'home' => [
             'route' => 'home',
@@ -103,14 +104,8 @@ return [
             'route' => 'legal.warranty-terms',
             'title' => 'Warranty Terms & Conditions | Detailing Devils',
             'description' => 'Read the Detailing Devils warranty terms and conditions, including coverage, maintenance requirements, exclusions and the warranty claim procedure.',
-            'sitemap' => false,
         ],
     ],
-    // Future content supplies its own title/description; these are not new public pages.
-    'route_defaults' => [],
-    // Future named content routes may set non-editorial defaults here.
-    // Register one adapter per real content source when that source and its routes exist.
-    'content_providers' => [],
     // Public HTML routes are discovered without dispatching requests. Ambiguous actions
     // can declare ->defaults('_seo', ['public' => true]); internal pages can opt out.
     'discovery' => [
