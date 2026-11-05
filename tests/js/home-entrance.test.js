@@ -14,6 +14,7 @@ function setup({ saved = false, readFails = false, writeFails = false, styled = 
     const writes = [];
     const classes = new Set();
     const events = new Map();
+    const listenerOptions = new Map();
     const element = () => ({
         hidden: true,
         dataset: {},
@@ -70,7 +71,10 @@ function setup({ saved = false, readFails = false, writeFails = false, styled = 
             },
         },
         matchMedia: () => ({ matches: reduced }),
-        addEventListener: (name, handler) => events.set(`window:${name}`, handler),
+        addEventListener(name, handler, options) {
+            events.set(`window:${name}`, handler);
+            listenerOptions.set(`window:${name}`, options);
+        },
         removeEventListener: name => events.delete(`window:${name}`),
     };
     const schedule = (handler, delay, interval) => {
@@ -102,7 +106,7 @@ function setup({ saved = false, readFails = false, writeFails = false, styled = 
         }
         now = end;
     };
-    return { entrance, button, typed, quote, percentage, focus, classes, events, storage, writes, timers, advance, run };
+    return { entrance, button, typed, quote, percentage, focus, classes, events, listenerOptions, storage, writes, timers, advance, run };
 }
 
 test('first visit allows immediate ENTER and records exactly one dismissal', () => {
@@ -182,7 +186,7 @@ test('reduced motion shows the quote immediately and removes the entrance withou
 test('keyboard focus stays on ENTER and Escape does not dismiss', () => {
     const state = setup();
     let prevented = false;
-    const handleKey = state.events.get('document:keydown');
+    const handleKey = state.events.get('window:keydown');
     handleKey({ key: 'Tab', preventDefault() { prevented = true; } });
     assert.equal(prevented, true);
     handleKey({ key: 'Escape' });
@@ -193,7 +197,7 @@ test('keyboard focus stays on ENTER and Escape does not dismiss', () => {
 test('keyboard ENTER activates the button from the initially focused entrance', () => {
     const state = setup();
     let prevented = false;
-    state.events.get('document:keydown')({
+    state.events.get('window:keydown')({
         key: 'Enter',
         preventDefault() { prevented = true; },
     });
@@ -207,6 +211,61 @@ test('leaving without ENTER does not register a dismissal handler or marker', ()
     const state = setup();
     assert.equal(state.events.has('window:pagehide'), false);
     assert.equal(state.storage.has(key), false);
+});
+
+test('wheel and touch scrolling are intercepted before window smooth-scroll handlers', () => {
+    const state = setup();
+    for (const type of ['wheel', 'touchmove']) {
+        const options = state.listenerOptions.get(`window:${type}`);
+        assert.equal(options.capture, true);
+        assert.equal(options.passive, false);
+        let prevented = false;
+        let stopped = false;
+        state.events.get(`window:${type}`)({
+            preventDefault() { prevented = true; },
+            stopImmediatePropagation() { stopped = true; },
+        });
+        assert.equal(prevented, true);
+        assert.equal(stopped, true);
+    }
+});
+
+test('scroll keys are blocked while manual ENTER remains available', () => {
+    const state = setup();
+    assert.equal(state.listenerOptions.get('window:keydown'), true);
+    for (const key of ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'PageUp', 'PageDown', 'Home', 'End', ' ', 'Spacebar']) {
+        let prevented = false;
+        let stopped = false;
+        state.events.get('window:keydown')({
+            key,
+            preventDefault() { prevented = true; },
+            stopImmediatePropagation() { stopped = true; },
+        });
+        assert.equal(prevented, true, key);
+        assert.equal(stopped, true, key);
+        assert.equal(state.storage.has('dd.home-entrance.dismissed.v1'), false);
+    }
+});
+
+test('ENTER immediately removes every scroll guard, including when storage cannot be written', () => {
+    const state = setup({ writeFails: true });
+    state.events.get('button:click')();
+    for (const type of ['wheel', 'touchmove', 'keydown']) {
+        assert.equal(state.events.has(`window:${type}`), false);
+    }
+    assert.equal(state.classes.has('home-entrance-active'), false);
+});
+
+test('Space retains native activation when the ENTER button is focused', () => {
+    const state = setup();
+    let prevented = false;
+    state.events.get('window:keydown')({
+        key: ' ',
+        target: state.button,
+        preventDefault() { prevented = true; },
+        stopImmediatePropagation() { assert.fail('Button activation must not be blocked'); },
+    });
+    assert.equal(prevented, false);
 });
 
 test('loading the script twice does not duplicate initialization', () => {

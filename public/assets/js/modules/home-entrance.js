@@ -25,6 +25,7 @@
     const loader = document.getElementById('loader');
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const previousFocus = document.activeElement;
+    const scrollKeys = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'PageUp', 'PageDown', 'Home', 'End', ' ', 'Spacebar']);
     const progressDuration = 4000;
     const started = performance.now();
     let dismissed = false;
@@ -38,9 +39,15 @@
 
     function preventScroll(event) {
         event.preventDefault();
+        event.stopImmediatePropagation();
     }
 
     function handleKey(event) {
+        const activatesButton = (event.key === ' ' || event.key === 'Spacebar') && event.target === button;
+        if (scrollKeys.has(event.key) && !activatesButton) {
+            preventScroll(event);
+            return;
+        }
         if (event.key === 'Enter') {
             event.preventDefault();
             button.click();
@@ -63,8 +70,9 @@
         displayProgress(100);
         entrance.classList.add('home-entrance--leaving');
         document.documentElement.classList.remove('home-entrance-active');
-        entrance.removeEventListener('wheel', preventScroll);
-        document.removeEventListener('keydown', handleKey);
+        window.removeEventListener('wheel', preventScroll, true);
+        window.removeEventListener('touchmove', preventScroll, true);
+        window.removeEventListener('keydown', handleKey, true);
         previousFocus?.focus({ preventScroll: true });
         setTimeout(() => entrance.remove(), reducedMotion ? 0 : 800);
     }
@@ -82,8 +90,10 @@
 
     if (reducedMotion) typed.textContent = quote;
     button.addEventListener('click', dismiss, { once: true });
-    entrance.addEventListener('wheel', preventScroll, { passive: false });
-    document.addEventListener('keydown', handleKey);
+    // Intercept before Lenis; cancelling the native scroll alone does not stop its handler.
+    window.addEventListener('wheel', preventScroll, { passive: false, capture: true });
+    window.addEventListener('touchmove', preventScroll, { passive: false, capture: true });
+    window.addEventListener('keydown', handleKey, true);
     entrance.hidden = false;
     entrance.style.removeProperty('display');
     document.documentElement.classList.add('home-entrance-active');
