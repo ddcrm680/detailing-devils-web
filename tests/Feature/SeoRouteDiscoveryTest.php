@@ -75,7 +75,6 @@ class SeoRouteDiscoveryTest extends TestCase
 
     public function test_invokable_view_controllers_are_discovered_without_configuration_or_execution(): void
     {
-        config()->set('seo', array_diff_key(config('seo'), ['pages' => true]));
         $route = Route::get('/invokable-guide', HomeController::class)->name('qa.invokable');
         Route::get('/private-invokable', HomeController::class)->middleware('auth:web')->name('qa.private');
         $route->prepareForSerialization();
@@ -93,7 +92,6 @@ class SeoRouteDiscoveryTest extends TestCase
 
     public function test_route_policy_preserves_thirteen_identities_and_urls_without_a_configured_page_list(): void
     {
-        config()->set('seo', array_diff_key(config('seo'), ['pages' => true]));
         $this->refresh();
         $pages = app(SeoResolver::class)->inventory();
         $this->assertCount(13, $pages);
@@ -141,7 +139,6 @@ class SeoRouteDiscoveryTest extends TestCase
 
     public function test_invokable_discovery_and_query_policy_survive_laravel_route_compilation(): void
     {
-        config()->set('seo', array_diff_key(config('seo'), ['pages' => true]));
         $routes = Route::getRoutes();
         foreach ($routes as $route) {
             $route->prepareForSerialization();

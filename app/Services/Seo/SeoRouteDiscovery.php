@@ -104,23 +104,14 @@ final class SeoRouteDiscovery
     public function definitions(array $providedRoutes = []): array
     {
         $definitions = [];
-        $registeredRoutes = [];
-        foreach (config('seo.pages', []) as $id => $definition) {
-            $route = Routes::getRoutes()->getByName($definition['route'] ?? $id);
-            if ($route && $this->publicRoute($route, true)) {
-                $definitions[$id] = $definition;
-                $registeredRoutes[] = $route->getName();
-            }
-        }
         foreach (Routes::getRoutes() as $route) {
             $hint = $route->defaults['_seo'] ?? [];
             $declared = is_array($hint) && ($hint['public'] ?? false) === true;
-            $registered = in_array($route->getName(), $registeredRoutes, true);
             if (
                 in_array($route->getName(), $providedRoutes, true)
                 || $route->parameterNames() !== []
-                || ! $this->publicRoute($route, $registered || $declared)
-                || (! $registered && ! $declared && ! $this->rendersView($route))
+                || ! $this->publicRoute($route, $declared)
+                || (! $declared && ! $this->rendersView($route))
             ) {
                 continue;
             }
@@ -132,19 +123,14 @@ final class SeoRouteDiscovery
                     'robots' => config('seo.defaults.robots', 'index, follow'),
                     'sitemap' => true,
                 ],
-                $definitions[$this->id($route)] ?? [],
-                config('seo.route_defaults', [])[$route->getName()] ?? [],
                 is_array($hint)
                 ? array_intersect_key(
                     $hint,
                     array_flip([
                         'title',
                         'description',
-                        'title_config',
-                        'description_config',
                         'robots',
                         'sitemap',
-                        'priority',
                         'og_type',
                         'image',
                         'og_title',
@@ -170,7 +156,6 @@ final class SeoRouteDiscovery
                 $variantId = $id.'.'.$suffix;
                 $definitions[$variantId] = array_replace(
                     $definition,
-                    $definitions[$variantId] ?? [],
                     ['route' => $route->getName(), 'parameters' => $parameters]
                 );
             }

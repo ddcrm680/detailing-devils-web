@@ -112,7 +112,7 @@ class DynamicSitemapTest extends TestCase
             ->assertDontSee('Private synthetic');
         $this->get('/')
             ->assertOk()
-            ->assertSee(e(config('site.seo_title')), false);
+            ->assertSee('<title>Home | Detailing Devils</title>', false);
     }
 
     public function test_default_sitemap_command_never_recreates_a_masking_static_file(): void

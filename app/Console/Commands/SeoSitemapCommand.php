@@ -6,6 +6,8 @@ use App\Services\Seo\Admin\SeoStorage;
 use App\Services\Seo\Admin\SitemapArtifact;
 use App\Services\Seo\SeoResolver;
 use App\Services\Seo\SeoSitemap;
+use DOMDocument;
+use DOMXPath;
 use Illuminate\Console\Command;
 use Throwable;
 
@@ -35,6 +37,17 @@ final class SeoSitemapCommand extends Command
                     throw new \RuntimeException('The stored sitemap predates route or indexing changes. Generate the current sitemap instead.');
                 }
                 $xml = $state->sitemap_xml;
+                $document = new DOMDocument;
+                $document->loadXML($xml, LIBXML_NONET);
+                $xpath = new DOMXPath($document);
+                $xpath->registerNamespace('s', 'http://www.sitemaps.org/schemas/sitemap/0.9');
+                $priorities = $xpath->query('/s:urlset/s:url/s:priority');
+                if ($priorities->length > 0) {
+                    foreach ($priorities as $priority) {
+                        $priority->parentNode->removeChild($priority);
+                    }
+                    $xml = $document->saveXML();
+                }
             }
             $urls = $sitemap->urls($xml);
             if (! $target || $this->option('check')) {

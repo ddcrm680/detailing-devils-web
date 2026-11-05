@@ -100,14 +100,10 @@ final class SeoDiagnostics
                 if (count($ids) < 2) {
                     continue;
                 }
-                $intentional = false;
-                foreach (config('seo.intentional_duplicates.'.$field, []) as $allowed) {
-                    $intentional = $intentional || array_diff($ids, $allowed) === [];
-                }
                 $issues[] = [
-                    'level' => $intentional ? 'info' : 'warning',
+                    'level' => 'warning',
                     'page' => implode(', ', $ids),
-                    'message' => ($intentional ? 'Intentional shared ' : 'Duplicate ').$field.'.',
+                    'message' => 'Duplicate '.$field.'.',
                 ];
             }
         }

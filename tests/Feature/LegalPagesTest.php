@@ -33,7 +33,12 @@ class LegalPagesTest extends TestCase
             $this->assertSame($heading, trim($xpath->query('//main//h1')->item(0)->textContent));
             $this->assertSame(1, $xpath->query('//main//*[self::h2 or self::li][contains(., "'.$firstSection.'")]')->length);
             $this->assertSame(1, $xpath->query('//main//*[self::h2 or self::li][contains(., "'.$lastSection.'")]')->length);
-            $this->assertStringContainsString($heading.' | Detailing Devils', $xpath->query('//html/head/title')->item(0)->textContent);
+            $defaultTitle = match ($route) {
+                'legal.terms' => 'Terms Of Use',
+                'legal.returns' => 'Refund Policy',
+                default => $heading,
+            };
+            $this->assertSame($defaultTitle.' | Detailing Devils', $xpath->query('//html/head/title')->item(0)->textContent);
             $this->assertStringNotContainsString($otherPolicy, $xpath->query('//main')->item(0)->textContent);
         }
 

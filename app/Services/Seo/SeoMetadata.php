@@ -22,7 +22,6 @@ final readonly class SeoMetadata
         public ?string $twitterDescription = null,
         public bool $published = true,
         public bool $sitemap = false,
-        public string $priority = '0.5000',
         public string $locale = 'en',
         public ?DateTimeImmutable $modifiedAt = null,
         public array $structuredData = [],
@@ -54,7 +53,6 @@ final readonly class SeoMetadata
                 true
             )
             || ! in_array($ogType, ['website', 'article'], true)
-            || ! preg_match('/^0\.\d{4}$|^1\.0000$/', $priority)
         ) {
             throw new InvalidArgumentException('Invalid SEO metadata contract.');
         }

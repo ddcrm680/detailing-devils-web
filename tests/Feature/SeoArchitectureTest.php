@@ -90,11 +90,11 @@ class SeoArchitectureTest extends TestCase
         ]));
         $this->assertSame('Published title & identity', app(SeoResolver::class)->forPage('fofo.show')->title);
         $this->assertSame(
-            'Franchise Application | Detailing Devils Prime',
+            'Detailing Devils Prime Form | Detailing Devils',
             app(SeoResolver::class)->forPage('prime.show')->title
         );
         $this->assertSame(
-            'X-Clusive Franchise Application | Detailing Devils',
+            'X Clusive Franchise Form | Detailing Devils',
             app(SeoResolver::class)->forPage('xclusive.show')->title
         );
     }
@@ -137,7 +137,7 @@ class SeoArchitectureTest extends TestCase
             ),
         ]));
         $page = app(SeoResolver::class)->forPage('home');
-        $this->assertSame(config('site.seo_title'), $page->title);
+        $this->assertSame('Home | Detailing Devils', $page->title);
         $this->assertContains('Invalid published override rejected; using base metadata.', $page->warnings);
         $this->get('/')
             ->assertOk()
@@ -158,7 +158,7 @@ class SeoArchitectureTest extends TestCase
         );
         $this->get('/')
             ->assertOk()
-            ->assertSee(e(config('site.seo_title')), false)
+            ->assertSee('<title>Home | Detailing Devils</title>', false)
             ->assertDontSee('Private storage diagnostic');
         $this->get('/nonexistent-seo-test')
             ->assertNotFound()
@@ -192,18 +192,14 @@ class SeoArchitectureTest extends TestCase
 
     public function test_dynamic_content_templates_overrides_and_verified_dates_have_deterministic_precedence(): void
     {
-        Route::view('/qa-articles/{slug}', 'layouts.app')->name('qa.articles.show');
+        Route::view('/qa-articles/{slug}', 'layouts.app')
+            ->defaults('_seo', [
+                'title' => 'Route fallback',
+                'description' => 'Route description',
+                'og_type' => 'website',
+            ])
+            ->name('qa.articles.show');
         Route::getRoutes()->refreshNameLookups();
-        config()->set(
-            'seo.route_defaults',
-            [
-                'qa.articles.show' => [
-                    'title' => 'Route fallback',
-                    'description' => 'Route description',
-                    'og_type' => 'website',
-                ],
-            ]
-        );
         $content = new ContentMetadata(
             'article:42',
             'article',
@@ -353,6 +349,7 @@ class SeoArchitectureTest extends TestCase
             $sitemap->urls($sitemap->xml())
         );
         $this->assertStringNotContainsString('<lastmod>', $sitemap->xml());
+        $this->assertStringNotContainsString('<priority>', $sitemap->xml());
         $this->assertStringNotContainsString('model=xclusive', $sitemap->xml());
         $this->assertContains(
             'https://www.detailingdevils.com/warranty-terms-condition',
@@ -386,10 +383,16 @@ class SeoArchitectureTest extends TestCase
         app(SeoSitemap::class)->urls('<!DOCTYPE urlset [<!ENTITY qa SYSTEM "file:///private">]><urlset/>');
     }
 
-    public function test_diagnostics_report_intentional_duplicates_and_missing_editorial_assets_without_changing_copy(): void
+    public function test_diagnostics_report_duplicate_copy_and_missing_editorial_assets_without_changing_copy(): void
     {
+        $this->repository(new SeoSnapshot([
+            new SeoOverride('home', [
+                'title' => config('site.seo_title'),
+                'description' => config('site.description'),
+            ], true),
+        ]));
         $issues = app(SeoDiagnostics::class)->inspect(app(SeoResolver::class)->inventory());
-        $this->assertContains('Intentional shared description.', array_column($issues, 'message'));
+        $this->assertContains('Duplicate description.', array_column($issues, 'message'));
         $this->assertContains('No approved social-sharing image.', array_column($issues, 'message'));
         $this->assertContains(
             'Long title preserved; editorial review recommended.',
@@ -432,9 +435,10 @@ class SeoArchitectureTest extends TestCase
 
     public function test_missing_content_description_falls_back_to_route_metadata_and_reports_the_gap(): void
     {
-        Route::view('/qa-fallback', 'layouts.app')->name('qa.fallback');
+        Route::view('/qa-fallback', 'layouts.app')
+            ->defaults('_seo', ['description' => 'Approved route description'])
+            ->name('qa.fallback');
         Route::getRoutes()->refreshNameLookups();
-        config()->set('seo.route_defaults', ['qa.fallback' => ['description' => 'Approved route description']]);
         $content = new ContentMetadata('service:fallback', 'service', 'qa.fallback', [], 'Verified title');
         $page = app(SeoResolver::class)->forPage($content->id, $content);
         $this->assertSame('Approved route description', $page->description);
@@ -465,7 +469,17 @@ class SeoArchitectureTest extends TestCase
             published: true,
             sitemap: true
         );
-        $this->repository(new SeoSnapshot(content: [$content]));
+        $duplicate = new ContentMetadata(
+            'service:second-duplicate',
+            'service',
+            'home',
+            [],
+            'Second distinct record',
+            'Verified text',
+            published: true,
+            sitemap: true
+        );
+        $this->repository(new SeoSnapshot(content: [$content, $duplicate]));
         $this->expectException(\RuntimeException::class);
         app(SeoSitemap::class)->xml();
     }

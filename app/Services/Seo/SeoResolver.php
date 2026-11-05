@@ -5,6 +5,7 @@ namespace App\Services\Seo;
 use App\Contracts\Seo\MetadataRepository;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use InvalidArgumentException;
 use Throwable;
 
@@ -38,8 +39,7 @@ final class SeoResolver
             try {
                 $this->snapshot = $this->repository->snapshot();
             } catch (Throwable $exception) {
-                // Public pages keep their code-managed metadata if an optional store fails.
-                $this->repositoryWarnings[] = 'Publication store unavailable; using code-managed metadata.';
+                $this->repositoryWarnings[] = 'Publication store unavailable; using generic page metadata.';
                 Log::warning('SEO publication store unavailable.', ['exception' => $exception::class]);
                 $this->snapshot = new SeoSnapshot;
             }
@@ -48,7 +48,7 @@ final class SeoResolver
         return $this->snapshot;
     }
 
-    public function forRequest(Request $request, ?ContentMetadata $content = null, array $legacy = []): SeoMetadata
+    public function forRequest(Request $request, ?ContentMetadata $content = null): SeoMetadata
     {
         $route = $request->route();
         $id = $route ? app(SeoRouteDiscovery::class)->id($route) : 'unregistered';
@@ -71,36 +71,30 @@ final class SeoResolver
             return $this->forPage($content->id, $content);
         }
 
-        return $this->forPage($id, fallbackPath: $request->getPathInfo(), legacy: $legacy);
+        return $this->forPage($id, fallbackPath: $request->getPathInfo());
     }
 
     public function forPage(
         string $id,
         ?ContentMetadata $content = null,
-        string $fallbackPath = '/',
-        array $legacy = []
+        string $fallbackPath = '/'
     ): SeoMetadata {
-        // Dot-containing stable IDs are literal registry keys, not configuration paths.
         $definition = $this->definitions()[$id]
             ?? ($content
-                ? (config('seo.route_defaults', [])[$content->routeName] ?? [])
+                ? (app('router')->getRoutes()->getByName($content->routeName)?->defaults['_seo'] ?? [])
                 : []);
         $brand = (string) config('site.brand', 'Detailing Devils');
+        $label = $content?->title ?? Str::headline(basename(trim($fallbackPath, '/')) ?: 'Home');
         $data = array_replace(
             [
-                'title' => $brand,
-                'description' => (string) config('site.description', ''),
+                'title' => $label.' | '.$brand,
+                'description' => 'Explore '.$label.' at '.$brand.'.',
                 'canonical' => $this->urls->canonical($fallbackPath),
                 'sitemap' => false,
             ],
             config('seo.defaults', []),
             $definition
         );
-        foreach (['title', 'description'] as $field) {
-            if (isset($definition[$field.'_config'])) {
-                $data[$field] = config($definition[$field.'_config'], $data[$field]);
-            }
-        }
         if ($content === null && isset($definition['route'])) {
             $data['canonical'] = $this->urls->canonical(route(
                 $definition['route'],
@@ -116,7 +110,7 @@ final class SeoResolver
             $nodes = [JsonLd::organization($brand, $home), JsonLd::website($brand, $home)];
         }
         if ($content !== null) {
-            if ($id !== $content->id || isset(config('seo.pages', [])[$id])) {
+            if ($id !== $content->id || isset($this->definitions()[$id])) {
                 throw new InvalidArgumentException('Content needs a unique stable SEO identity.');
             }
             $template = config('seo.templates', [])[$content->type];
@@ -140,8 +134,6 @@ final class SeoResolver
             );
             $nodes = $content->structuredData;
         }
-        // Existing page sections remain compatible; an authorized published override still wins.
-        $data = array_replace($data, array_intersect_key($legacy, array_flip(['title', 'description'])));
         $base = $data;
         $snapshot = $this->snapshot();
         $warnings = $this->repositoryWarnings;
@@ -149,7 +141,7 @@ final class SeoResolver
             $warnings[] = 'Content source requires noindex; SEO overrides cannot enable indexing.';
         }
         if ($definition === [] && $content === null) {
-            $warnings[] = 'Unregistered page: brand fallback; excluded from sitemap.';
+            $warnings[] = 'Unregistered page: generic fallback; excluded from sitemap.';
         }
         $locale = $content?->locale ?? config('seo.locale', 'en');
         $explicitDescription = false;
@@ -209,7 +201,6 @@ final class SeoResolver
             twitterDescription: $data['twitter_description'] ?? null,
             published: $content?->published ?? true,
             sitemap: $data['sitemap'],
-            priority: $data['priority'] ?? '0.5000',
             locale: $locale,
             modifiedAt: $content?->modifiedAt,
             structuredData: $nodes,

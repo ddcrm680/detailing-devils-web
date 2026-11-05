@@ -23,7 +23,7 @@ class StudioLocatorTest extends TestCase
         $this->assertTrue(File::exists(public_path('img/studio-locator.png')));
 
         $page = $this->get(route('studios.index'))->assertOk()
-            ->assertSee('Studio Locator | Detailing Devils')
+            ->assertSee('<title>Locate A Store | Detailing Devils</title>', false)
             ->assertSee('assets/css/studios.css')
             ->assertSee('assets/js/modules/studios.js')
             ->assertSee(count($studios).' locations found')

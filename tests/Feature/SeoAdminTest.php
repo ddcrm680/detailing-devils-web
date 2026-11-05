@@ -108,6 +108,7 @@ class SeoAdminTest extends TestCase
 
     protected function tearDown(): void
     {
+        SeoFixtureContentProvider::$records = [];
         DB::disconnect('sqlite');
         // Only the uniquely allocated test directory is removed; never repository uploads.
         if (
@@ -126,7 +127,7 @@ class SeoAdminTest extends TestCase
         $this->get('/admin/login')->assertNotFound();
         $this->get('/')
             ->assertOk()
-            ->assertSee('<title>'.e(config('site.seo_title')).'</title>', false);
+            ->assertSee('<title>Home | Detailing Devils</title>', false);
     }
 
     public function test_untrusted_hosts_and_invalid_publications_cannot_expose_admin(): void
@@ -417,7 +418,6 @@ class SeoAdminTest extends TestCase
 
     public function test_discovered_pages_can_be_edited_and_published_without_the_configured_page_list(): void
     {
-        config()->set('seo', array_diff_key(config('seo'), ['pages' => true]));
         $this->app->forgetInstance(SeoResolver::class);
         $this->login();
         $this->visit('/admin/seo/pages/studios.tour.fofo')->assertOk();
@@ -685,12 +685,12 @@ class SeoAdminTest extends TestCase
             );
     }
 
-    public function test_empty_publication_preserves_legacy_blade_metadata_without_configuration_switches(): void
+    public function test_empty_publication_uses_generic_route_metadata_without_configuration_switches(): void
     {
         $this->get('/franchise-owned-franchise-operated-model')
             ->assertOk()
             ->assertSee(
-                '<title>FOFO Franchise Application | Detailing Devils</title>',
+                '<title>Franchise Owned Franchise Operated Model | Detailing Devils</title>',
                 false
             );
         $this->assertSame(0, $this->version());
@@ -1026,7 +1026,7 @@ class SeoAdminTest extends TestCase
         config()->set('database.connections.sqlite.database', '/missing/qa-not-a-real-database.sqlite');
         $this->get('/')
             ->assertOk()
-            ->assertSee(e(config('site.seo_title')), false);
+            ->assertSee('<title>Home | Detailing Devils</title>', false);
         $this->get('/missing-private-qa-page')
             ->assertNotFound()
             ->assertDontSee('property="og:title"', false);
@@ -1066,6 +1066,30 @@ class SeoAdminTest extends TestCase
             DB::table('seo_metadata')->value('sitemap_hash'),
             hash_file('sha256', $this->directory.'/sitemap.xml')
         );
+    }
+
+    public function test_historical_export_removes_priorities_without_rewriting_the_stored_publication(): void
+    {
+        $document = new \DOMDocument;
+        $document->loadXML(DB::table('seo_metadata')->value('sitemap_xml'), LIBXML_NONET);
+        foreach ($document->getElementsByTagName('url') as $url) {
+            $url->appendChild($document->createElement('priority', '0.8000'));
+        }
+        $legacyXml = $document->saveXML();
+        $legacyHash = hash('sha256', $legacyXml);
+        DB::table('seo_metadata')->where('id', 1)->update([
+            'sitemap_xml' => $legacyXml,
+            'sitemap_hash' => $legacyHash,
+        ]);
+        $path = $this->directory.'/historical-export.xml';
+        $this->artisan('seo:sitemap', ['--restore-published' => true, '--output' => $path])->assertSuccessful();
+        $export = file_get_contents($path);
+        $this->assertStringNotContainsString('<priority>', $export);
+        $this->assertSame(app(SeoSitemap::class)->urls($legacyXml), app(SeoSitemap::class)->urls($export));
+        $this->assertSame($legacyXml, DB::table('seo_metadata')->value('sitemap_xml'));
+        $this->assertSame($legacyHash, DB::table('seo_metadata')->value('sitemap_hash'));
+        $this->assertSame(0, $this->version());
+        $this->assertSame(0, DB::table('seo_revisions')->count());
     }
 
     public function test_discovered_page_is_listed_editable_and_publishable_after_deployment_sitemap_generation(): void
@@ -1211,21 +1235,25 @@ class SeoAdminTest extends TestCase
         $this->assertStringContainsString('<urlset', $this->sitemapXml());
     }
 
-    public function test_inventory_can_search_five_hundred_registered_pages_without_enquiry_queries(): void
+    public function test_inventory_can_search_five_hundred_provider_pages_without_enquiry_queries(): void
     {
         Route::view('/qa-seo-pages/{id}', 'layouts.app')->name('qa.seo.pages');
         Route::getRoutes()->refreshNameLookups();
-        $definitions = config('seo.pages');
+        $records = [];
         for ($i = 1; $i <= 500; $i++) {
-            $definitions['qa.page.'.$i] = [
-                'route' => 'qa.seo.pages',
-                'parameters' => ['id' => $i],
-                'title' => 'QA page '.$i,
-                'description' => 'Synthetic description '.$i,
-                'sitemap' => false,
-            ];
+            $records[] = new ContentMetadata(
+                'qa.page.'.$i,
+                'service',
+                'qa.seo.pages',
+                ['id' => $i],
+                'QA page '.$i,
+                'Synthetic description '.$i,
+                published: true
+            );
         }
-        config()->set('seo.pages', $definitions);
+        SeoFixtureContentProvider::$records = $records;
+        config()->set('seo.content_providers', [SeoFixtureContentProvider::class]);
+        $this->app->forgetInstance(SeoResolver::class);
         $this->login();
         $this->visit('/admin/seo?q=qa.page.500')
             ->assertOk()
@@ -1388,7 +1416,7 @@ class SeoAdminTest extends TestCase
         DB::table('seo_metadata')->update(['payload' => '{corrupt']);
         $this->get('/')
             ->assertOk()
-            ->assertSee(e(config('site.seo_title')), false)
+            ->assertSee('<title>Home | Detailing Devils</title>', false)
             ->assertDontSee('{corrupt');
         $this->get('/admin/login')->assertNotFound();
     }

@@ -44,7 +44,6 @@ final class SeoSitemap
             foreach ([
                 'loc' => $page->canonical,
                 'lastmod' => $page->modifiedAt?->format(DATE_ATOM),
-                'priority' => $page->priority,
             ] as $name => $value) {
                 if ($value !== null) {
                     $node = $document->createElement($name);
@@ -84,6 +83,8 @@ final class SeoSitemap
             }
             $urls[] = $url;
         }
+
+        sort($urls, SORT_STRING);
 
         return $urls;
     }

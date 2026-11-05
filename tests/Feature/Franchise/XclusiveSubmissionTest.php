@@ -94,7 +94,7 @@ class XclusiveSubmissionTest extends TestCase
         $this->assertContains('throttle:5,1', $route->gatherMiddleware());
 
         $response = $this->get(route('xclusive.show'))->assertOk()->assertViewIs('forms.xclusive')
-            ->assertSee('X-Clusive Franchise Application | Detailing Devils')
+            ->assertSee('<title>X Clusive Franchise Form | Detailing Devils</title>', false)
             ->assertSee('X-Clusive Franchise')
             ->assertSee('data-submit-url="'.route('xclusive.submit').'"', false)
             ->assertSee('data-email-validation-url="'.route('email.validate').'"', false)
