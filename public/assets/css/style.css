@@ -60,7 +60,7 @@ footer .brand .logo{height:40px}
 .burger span b{display:block;width:24px;height:1px;background:var(--text);transition:transform .5s var(--ease)}
 .menu-open .burger span b:first-child{transform:translateY(3px) rotate(45deg)}
 .menu-open .burger span b:last-child{transform:translateY(-3px) rotate(-45deg)}
-@media (max-width:760px){.hdr .ph-no{display:none}.hdr .wrap{grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);height:68px}.hdr .brand .logo{height:30px}.hdr .left .header-cta{font-size:10px;padding:8px 11px;letter-spacing:.1em;white-space:normal}.hdr .left .header-cta-prefix{display:none}.hdr .right{gap:0}}
+@media (max-width:760px){.hdr .ph-no{display:none}.hdr .wrap{grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);height:68px}.hdr .brand .logo{height:30px}.hdr .left .header-cta{font-size:8px;padding:8px 11px;letter-spacing:.1em;white-space:normal}.hdr .left .header-cta-prefix{display:none}.hdr .right{gap:0}}
 @media (max-width:380px){.hdr .brand .logo{height:30px}.hdr .left .header-cta{font-size:9px;padding-inline:6px;gap:6px}}
 
 html.menu-open,body.menu-open{overflow:hidden;overscroll-behavior:none}

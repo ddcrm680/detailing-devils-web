@@ -185,7 +185,7 @@ class StudioTourTest extends TestCase
             $cta = $xpath->query('//header[@id="hdr"]//div[contains(@class, "left")]/a');
 
             $this->assertSame(1, $cta->length, "Expected one header CTA on {$url}.");
-            $this->assertSame('Franchise / Studio Tour →', trim($cta->item(0)->textContent));
+            $this->assertSame('Studio Tour →', trim($cta->item(0)->textContent));
             $this->assertSame(route('studios.tour'), $cta->item(0)->getAttribute('href'));
             $this->assertSame(1, $xpath->query('//header[@id="hdr"]//a[contains(@class, "brand")]')->length);
             $this->assertSame(1, $xpath->query('//header[@id="hdr"]//a[contains(@class, "ph-no")]')->length);
@@ -253,9 +253,7 @@ class StudioTourTest extends TestCase
             $this->assertSame(1, $xpath->query('//footer//a[@href="'.$url.'"]')->length);
         }
         $whatsapp = $xpath->query('//div[@class="whats-btn"]/a');
-        $this->assertSame(1, $whatsapp->length);
-        $this->assertSame('https://api.whatsapp.com/send?phone='.config('site.whatsapp_phone'), $whatsapp->item(0)->getAttribute('href'));
-        $this->assertSame('Chat with Detailing Devils on WhatsApp', $whatsapp->item(0)->getAttribute('aria-label'));
+        $this->assertSame(0, $whatsapp->length);
         $this->assertSame(1, $xpath->query('//form[@id="franchiseForm"]')->length);
         $this->assertSame(1, $xpath->query('//div[@id="otpModal"]')->length);
     }

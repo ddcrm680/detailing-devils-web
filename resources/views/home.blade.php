@@ -31,8 +31,8 @@
     </div>
     <div class="marq" aria-label="Car brands we work on">
       <div class="tr">
-        <span>McLaren</span><span>Mercedes-AMG</span><span>Porsche</span><span>Lamborghini</span><span>Ferrari</span><span>Bentley</span><span>Rolls-Royce</span><span>Land Rover</span><span>BMW M</span><span>Audi Sport</span><span>Aston Martin</span><span>Maserati</span>
-        <span aria-hidden="true">McLaren</span><span aria-hidden="true">Mercedes-AMG</span><span aria-hidden="true">Porsche</span><span aria-hidden="true">Lamborghini</span><span aria-hidden="true">Ferrari</span><span aria-hidden="true">Bentley</span><span aria-hidden="true">Rolls-Royce</span><span aria-hidden="true">Land Rover</span><span aria-hidden="true">BMW M</span><span aria-hidden="true">Audi Sport</span><span aria-hidden="true">Aston Martin</span><span aria-hidden="true">Maserati</span>
+        <span>McLaren</span><span>Mercedes-AMG</span><span>Porsche</span><span>Lamborghini</span><span>Ferrari</span><span>Rolls-Royce</span><span>Land Rover</span><span>BMW </span><span>Audi</span><span>Maserati</span>
+        <span aria-hidden="true">McLaren</span><span aria-hidden="true">Mercedes-AMG</span><span aria-hidden="true">Porsche</span><span aria-hidden="true">Lamborghini</span><span aria-hidden="true">Ferrari</span><span aria-hidden="true">Rolls-Royce</span><span aria-hidden="true">Land Rover</span><span aria-hidden="true">BMW </span><span aria-hidden="true">Audi</span><span aria-hidden="true">Maserati</span>
       </div>
     </div>
     <div class="wrap">
@@ -156,10 +156,17 @@
   </section>
 
   <!-- 8b. LINE-UP -->
-  <section class="lineup" aria-label="The Devils line-up">
-    <h2 class="disp lineup-h">145+ Studios. <span class="acc">One</span> Standard.</h2>
-    <div class="lineup-in"><img id="lineupImg" src="img/five-cars.webp" alt="Two black G-Wagons, a yellow BMW M4, a yellow Porsche 911 and a green McLaren in a dark studio" loading="lazy"></div>
-  </section>
+    <section class="lineup" aria-label="The Devils line-up">
+        <div class="lineup-bg">
+            <img
+                id="lineupImg"
+                src="img/five-cars.webp"
+                alt="Two black G-Wagons, a yellow BMW M4, a yellow Porsche 911 and a green McLaren in a dark studio"
+                loading="lazy"
+            >
+        </div>
+        <h2 class="disp lineup-h">145+ Studios. <span class="acc">One</span> Standard.</h2>
+    </section>
 
   <!-- 9. FRANCHISE -->
   <section class="fr" id="franchise">

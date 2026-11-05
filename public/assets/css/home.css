@@ -96,7 +96,7 @@
 /* ---------- DULL ENDS HERE (top-view drive) ---------- */
 .ends{position:relative;height:260vh;border-top:1px solid var(--line)}
 .ends-stage{position:sticky;top:0;height:100vh;height:100svh;overflow:hidden;display:grid;place-items:center;background:radial-gradient(70% 60% at 50% 50%,#121212 0%,var(--bg) 70%)}
-.lanes{position:absolute;top:-20%;bottom:-20%;left:50%;width:min(88vw,760px);transform:translateX(-50%);pointer-events:none;z-index:1}
+.lanes{position:absolute;top:-20%;bottom:-20%;left:50%;width:min(96vw,1000px);transform:translateX(-50%);pointer-events:none;z-index:1}
 .lanes::before,.lanes::after{content:"";position:absolute;top:0;bottom:0;width:2px;background:repeating-linear-gradient(180deg,rgba(237,234,228,.16) 0 70px,transparent 70px 160px);background-position:0 var(--road,0px)}
 .lanes::before{left:33.3%}.lanes::after{left:66.6%}
 .ends-txt{position:relative;z-index:2;text-align:center;display:grid;justify-items:center;gap:6px;padding-inline:var(--g)}
@@ -104,16 +104,51 @@
 .ends .word::after{content:"";position:absolute;left:-2%;right:-2%;top:52%;height:.05em;background:var(--red);transform:scaleX(var(--strike,1));transform-origin:left}
 .ends .fin h2{font-size:clamp(52px,9vw,140px)}
 .ends .fin p{color:var(--soft);max-width:40ch;margin:18px auto 0}
-.topcars{position:absolute;left:0;right:0;margin-inline:auto;top:0;width:min(88vw,760px);z-index:3;transform:translateY(62vh);filter:drop-shadow(0 50px 50px rgba(0,0,0,.85));will-change:transform;pointer-events:none}
+.topcars{position:absolute;left:0;right:0;margin-inline:auto;top:0;width:min(96vw,1000px);z-index:3;transform:translateY(62vh);filter:drop-shadow(0 50px 50px rgba(0,0,0,.85));will-change:transform;pointer-events:none}
 
 /* ---------- LINE-UP (five cars) ---------- */
-.lineup{position:relative;overflow:hidden;background:var(--bg);padding-block:clamp(70px,9vw,140px) clamp(60px,8vw,120px)}
-.lineup-h{position:relative;z-index:3;text-align:center;font-size:clamp(34px,5.6vw,92px);padding-inline:var(--g);margin-bottom:clamp(-60px,-3vw,-16px)}
-.lineup-in{position:relative;width:min(100%,1700px);margin-inline:auto}
-.lineup-in img{width:100%;height:auto;transform-origin:50% 60%;will-change:transform}
-.lineup-in::before,.lineup-in::after{content:"";position:absolute;inset:-1px;pointer-events:none;z-index:2}
-.lineup-in::before{background:linear-gradient(90deg,var(--bg) 0%,transparent 9%,transparent 91%,var(--bg) 100%)}
-.lineup-in::after{background:linear-gradient(180deg,var(--bg) 0%,transparent 28%,transparent 74%,var(--bg) 100%)}
+.lineup {
+    position: relative;
+    height: 100vh;
+    height: 100svh;
+    clip-path: inset(0 0 0 0);
+    background: #000;
+}
+.lineup-bg {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+}
+.lineup-bg img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: 50% 58%;
+}
+.lineup-bg::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(7,7,7,.92) 0%, rgba(7,7,7,.25) 30%, rgba(7,7,7,0) 50%, rgba(7,7,7,.35) 85%, rgba(7,7,7,.9) 100%);
+}
+.lineup-h {
+    position: relative;
+    z-index: 2;
+    text-align: center;
+    font-size: clamp(34px,5.6vw,92px);
+    padding: calc(76px + 3vh) var(--g) 0;
+    text-shadow: 0 6px 40px rgba(0,0,0,.6);
+}
+@media (max-width:760px) {
+    .lineup {
+        height: 85svh;
+    }
+    .lineup-bg img {
+        object-fit: contain;
+        object-position: 50% 52%;
+    }
+}
 
 /* ---------- HOMEPAGE CARDS ---------- */
 .fr .acc{color:var(--bg)}

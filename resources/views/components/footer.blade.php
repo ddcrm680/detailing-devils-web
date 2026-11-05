@@ -64,10 +64,4 @@
     <div class="giant" aria-hidden="true">Detailing Devils</div>
   </div>
 
-  <div class="whats-btn">
-  <a href="https://api.whatsapp.com/send?phone={{ $site['whatsapp_phone'] }}" target="_blank" rel="noopener noreferrer" aria-label="Chat with Detailing Devils on WhatsApp">
-    <i class="fa-brands fa-whatsapp" aria-hidden="true"></i>
-  </a>
-</div>
-
 </footer>

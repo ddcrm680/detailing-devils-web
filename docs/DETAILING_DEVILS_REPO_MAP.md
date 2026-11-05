@@ -38,7 +38,7 @@ Laravel HTML error views live in `resources/views/errors/`: explicit 403/404/419
 | `resources/views/legal/` | Four policy pages and the unlisted warranty terms page using the shared website layout and existing legal-page CSS |
 | `resources/views/studios/index.blade.php`, `public/assets/css/studios.css`, `public/assets/js/modules/studios.js` | Shared-layout, full-width studio directory with Blade-rendered records, browser search/state and popular-location filtering, phone and Google Maps links. The controller prefers a validated HTTPS Google Maps `map_url` from the JSON source; absent or invalid URLs retain the name/address search fallback. |
 | `resources/views/studios/tour.blade.php`, `public/assets/css/studio-tour.css`, `public/assets/js/modules/studio-tour.js`, `public/frames/studio-tour/` | Shared-layout Studio Tour with scroll-driven AVIF frames and links to the existing Prime and FOFO applications |
-| `resources/views/layouts/prime.blade.php`, `resources/views/forms/prime.blade.php` | Prime's independent five-step application layout and view; the layout reuses the shared website header, menu and footer, including the WhatsApp shortcut. Prime CSS isolates the shared footer from the light form palette. |
+| `resources/views/layouts/prime.blade.php`, `resources/views/forms/prime.blade.php` | Prime's independent five-step application layout and view; the layout reuses the shared website header, menu and footer. The floating WhatsApp shortcut is omitted to match the approved Apache presentation. Prime CSS isolates the shared footer from the light form palette. |
 | `app/Http/Controllers/Franchise/FofoController.php`, `resources/views/forms/fofo.blade.php` | FOFO page and disabled-by-default submission; new leads schedule team/applicant emails and an optional calling callback |
 | `app/Http/Controllers/Franchise/XclusiveController.php`, `app/Http/Requests/Franchise/StoreXclusiveRequest.php` | Dedicated X-Clusive view, questionnaire choices, rules and messages; disabled submissions are rejected before database validation |
 | `resources/views/forms/xclusive.blade.php`, `resources/views/forms/partials/franchise-contact.blade.php`, `franchise-location.blade.php` | Independent X-Clusive questionnaire markup; FOFO and X-Clusive deliberately share only contact and location sections |
@@ -54,7 +54,7 @@ Laravel HTML error views live in `resources/views/errors/`: explicit 403/404/419
 | `resources/views/components/navbar.blade.php` | Full-screen section menu; links return to homepage anchors from other pages |
 | `resources/views/components/footer.blade.php` | Shared contact details and footer navigation |
 | `resources/views/components/notification.blade.php` | Session error notification hook |
-| `resources/views/home.blade.php` | Homepage sections, enquiry form, page CSS/JS stacks and server-to-browser service/frame data |
+| `resources/views/home.blade.php` | Homepage sections, enquiry form, page CSS/JS stacks and server-to-browser service/frame data; approved Apache parity uses the ten-brand marquee, exact live `img/top-cars.webp`, wider overhead-car scene and fixed-background `.lineup-bg` presentation |
 | `public/assets/css/style.css` | Shared design tokens, header, menu, footer and common elements |
 | `public/assets/css/home.css` | Homepage sections, responsive rules and page-specific reduced-motion styles |
 | `public/assets/css/prime.css`, `public/assets/js/modules/prime.js` | Prime wizard styling, client-side validation, OTP modal, and AJAX requests |
