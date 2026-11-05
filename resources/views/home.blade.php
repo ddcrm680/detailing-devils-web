@@ -3,9 +3,14 @@
 @push('css')
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intl-tel-input@29.1.2/dist/css/intlTelInput.css">
     <link rel="stylesheet" href="{{ asset('assets/css/home.css') }}">
+    {{-- Remove these assets, <x-home-entrance /> and its three files to remove the optional intro. --}}
+    <link rel="stylesheet" href="{{ asset('assets/css/home-entrance.css') }}">
 @endpush
 
 @section('content')
+    {{-- Homepage entrance screen: manual ENTER, remembered for returning visitors. --}}
+    <x-home-entrance />
+
 <!-- 1. SCROLL BANNER -->
   <section class="seq" id="seq" aria-label="Intro">
     <div class="stage">
@@ -220,6 +225,7 @@
 
 
 @push('js')
+  <script src="{{ asset('assets/js/modules/home-entrance.js') }}" defer></script>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
