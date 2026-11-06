@@ -18,7 +18,7 @@ class ExampleTest extends TestCase
         $this->assertSame(1, $xpath->query('//*[@id="home-entrance" and @style="display: none"]')->length);
         $this->assertSame(1, $xpath->query('//link[contains(@href, "/assets/css/home-entrance.css")]')->length);
         $this->assertSame(1, $xpath->query('//script[contains(@src, "/assets/js/modules/home-entrance.js") and @defer]')->length);
-        $this->assertSame(11, $xpath->query('//main/section')->length);
+        $this->assertSame(12, $xpath->query('//main/section')->length);
         $this->assertSame(1, $xpath->query('/html/head/title')->length);
         $this->assertSame(1, $xpath->query('/html/head/link[@rel="canonical"]')->length);
         $this->assertSame(1, $xpath->query('//*[@id="form" and @action="'.route('enquiry.store').'"]')->length);
@@ -38,11 +38,17 @@ class ExampleTest extends TestCase
         config()->set('database.default', 'unconfigured');
         $document = new \DOMDocument;
         @$document->loadHTML($this->get('/')->assertOk()->getContent());
-        $links = (new \DOMXPath($document))->query('//*[@class="fr-ctas"]/a');
+        $xpath = new \DOMXPath($document);
+        $links = $xpath->query('//section[@id="franchise"]//*[@class="fr-ctas"]/a');
+        $destinations = [route('prime.show'), route('fofo.show'), route('xclusive.show'), '#contact'];
+        $labels = ['Apply for Prime Franchise', 'Apply for FOFO Franchise', 'Apply for X-Clusive Franchise', 'Franchise Enquiry'];
+
         $this->assertSame(4, $links->length);
-        foreach (['prime.show', 'fofo.show', 'xclusive.show', 'studios.tour'] as $index => $name) {
-            $this->assertSame(route($name), $links->item($index)->getAttribute('href'));
+        foreach ($destinations as $index => $destination) {
+            $this->assertSame($destination, $links->item($index)->getAttribute('href'));
+            $this->assertStringContainsString($labels[$index], $links->item($index)->textContent);
         }
+        $this->assertSame(1, $xpath->query('//section[@id="contact"]//form[@id="form" and @action="'.route('enquiry.store').'"]')->length);
     }
 
     /**

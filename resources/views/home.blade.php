@@ -36,8 +36,8 @@
     </div>
     <div class="marq" aria-label="Car brands we work on">
       <div class="tr">
-        <span>McLaren</span><span>Mercedes-AMG</span><span>Porsche</span><span>Lamborghini</span><span>Ferrari</span><span>Rolls-Royce</span><span>Land Rover</span><span>BMW </span><span>Audi</span><span>Maserati</span>
-        <span aria-hidden="true">McLaren</span><span aria-hidden="true">Mercedes-AMG</span><span aria-hidden="true">Porsche</span><span aria-hidden="true">Lamborghini</span><span aria-hidden="true">Ferrari</span><span aria-hidden="true">Rolls-Royce</span><span aria-hidden="true">Land Rover</span><span aria-hidden="true">BMW </span><span aria-hidden="true">Audi</span><span aria-hidden="true">Maserati</span>
+        <span>McLaren</span><span>Mercedes-AMG</span><span>Porsche</span><span>Lamborghini</span><span>Ferrari</span><span>Bentley</span><span>Rolls-Royce</span><span>Land Rover</span><span>BMW</span><span>Audi</span><span>Aston Martin</span><span>Maserati</span>
+        <span aria-hidden="true">McLaren</span><span aria-hidden="true">Mercedes-AMG</span><span aria-hidden="true">Porsche</span><span aria-hidden="true">Lamborghini</span><span aria-hidden="true">Ferrari</span><span aria-hidden="true">Bentley</span><span aria-hidden="true">Rolls-Royce</span><span aria-hidden="true">Land Rover</span><span aria-hidden="true">BMW</span><span aria-hidden="true">Audi</span><span aria-hidden="true">Aston Martin</span><span aria-hidden="true">Maserati</span>
       </div>
     </div>
     <div class="wrap">
@@ -184,7 +184,7 @@
           <a class="cta" href="{{ route('prime.show') }}">Apply for Prime Franchise<i>↗</i></a>
           <a class="cta" href="{{ route('fofo.show') }}">Apply for FOFO Franchise<i>↗</i></a>
           <a class="cta" href="{{ route('xclusive.show') }}">Apply for X-Clusive Franchise<i>↗</i></a>
-          <a class="cta" href="{{ route('studios.tour') }}">Explore the Studio Tour<i>↗</i></a>
+          <a class="cta" href="#contact">Franchise Enquiry<i>↗</i></a>
         </div>
       </div>
       <ol>
@@ -194,6 +194,62 @@
       </ol>
     </div>
   </section>
+
+    {{-- Studio Tour previews; pricing is intentionally omitted. --}}
+    <section class="stsec wrap" id="studio-tour" aria-labelledby="studio-tour-heading">
+        <div class="sthead">
+            <span class="lbl">Franchise models</span>
+            <h2 class="disp" id="studio-tour-heading">Studio <span class="acc">Tour</span></h2>
+            <p>Walk through each Detailing Devils franchise format. Pick a model to start its scroll tour.</p>
+        </div>
+        <div class="stgrid">
+            <article class="stbox">
+                <span class="ghost" aria-hidden="true">01</span>
+                <div class="k">
+                    <span class="lbl">Model 01</span>
+                    <span class="tag">Entry</span>
+                </div>
+                <h3 class="disp">Prime</h3>
+                <p class="line">The quickest way into the Devils network.</p>
+                <a
+                    class="cta"
+                    href="{{ route('studios.tour', ['model' => 'prime']) }}"
+                    target="_blank"
+                    rel="noopener"
+                >Prime Studio Tour <i aria-hidden="true">→</i></a>
+            </article>
+            <article class="stbox">
+                <span class="ghost" aria-hidden="true">02</span>
+                <div class="k">
+                    <span class="lbl">Model 02</span>
+                    <span class="tag">Owner-run</span>
+                </div>
+                <h3 class="disp">FOFO</h3>
+                <p class="line">Franchise owned, franchise operated. You run the studio.</p>
+                <a
+                    class="cta"
+                    href="{{ route('studios.tour', ['model' => 'fofo']) }}"
+                    target="_blank"
+                    rel="noopener"
+                >FOFO Studio Tour <i aria-hidden="true">→</i></a>
+            </article>
+            <article class="stbox flag">
+                <span class="ghost" aria-hidden="true">03</span>
+                <div class="k">
+                    <span class="lbl">Model 03</span>
+                    <span class="tag">Flagship</span>
+                </div>
+                <h3 class="disp">X-Clusive</h3>
+                <p class="line">The exclusive flagship format for big-city locations.</p>
+                <a
+                    class="cta red"
+                    href="{{ route('studios.tour') }}"
+                    target="_blank"
+                    rel="noopener"
+                >X-Clusive Studio Tour <i aria-hidden="true">→</i></a>
+            </article>
+        </div>
+    </section>
 
   <!-- 10. FINAL CTA -->
   <section class="final" id="contact">

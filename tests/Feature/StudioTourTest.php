@@ -185,7 +185,7 @@ class StudioTourTest extends TestCase
             $cta = $xpath->query('//header[@id="hdr"]//div[contains(@class, "left")]/a');
 
             $this->assertSame(1, $cta->length, "Expected one header CTA on {$url}.");
-            $this->assertSame('Studio Tour →', trim($cta->item(0)->textContent));
+            $this->assertSame($url === '/' ? 'Studio Tour ↗' : 'Studio Tour →', trim($cta->item(0)->textContent));
             $this->assertSame(route('studios.tour'), $cta->item(0)->getAttribute('href'));
             $this->assertSame(1, $xpath->query('//header[@id="hdr"]//a[contains(@class, "brand")]')->length);
             $this->assertSame(1, $xpath->query('//header[@id="hdr"]//a[contains(@class, "ph-no")]')->length);
@@ -205,7 +205,7 @@ class StudioTourTest extends TestCase
         }
 
         $home = $this->xpath($this->get('/')->assertOk()->getContent());
-        $this->assertSame(1, $home->query('//section[@id="franchise"]//a[@href="'.route('studios.tour').'"]')->length);
+        $this->assertSame(1, $home->query('//section[@id="franchise"]//a[@href="#contact"]')->length);
         $serviceLinks = $home->query('//footer//div[h4="Services"]/ul/li/a');
         $this->assertSame(5, $serviceLinks->length);
         foreach (array_slice(config('site.services'), 0, 4) as $index => $service) {

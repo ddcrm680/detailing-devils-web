@@ -1,5 +1,65 @@
 /* Detailing Devils — homepage-only sections and animations */
 
+/* ---------- HOMEPAGE HEADER ---------- */
+html:has(.home-header) {
+    scrollbar-gutter: auto;
+}
+
+.home-header .brand .logo {
+    height: 30px;
+}
+
+.home-header .left .header-cta {
+    font-family: var(--display);
+    font-stretch: 125%;
+    font-weight: 800;
+    font-size: 13px;
+    letter-spacing: .12em;
+    white-space: nowrap;
+}
+
+.home-header .header-cta-prefix,
+.home-header .ph-no i {
+    display: none;
+}
+
+.home-header .ph-no,
+.home-header .burger {
+    font-size: 11px;
+}
+
+@media (max-width: 760px) {
+    .home-header .wrap {
+        grid-template-columns: auto 1fr auto;
+        gap: 12px;
+        height: 76px;
+    }
+
+    .home-header .brand {
+        order: 1;
+        min-width: 0;
+    }
+
+    .home-header .left {
+        order: 2;
+        justify-content: flex-end;
+    }
+
+    .home-header .right {
+        order: 3;
+    }
+
+    .home-header .left .header-cta {
+        font-size: 11px;
+        padding: 8px 12px;
+        letter-spacing: .08em;
+    }
+
+    .home-header + .menu {
+        --menu-header: 76px;
+    }
+}
+
 /* ---------- SCROLL BANNER ---------- */
 .seq{position:relative;height:560vh}
 .stage{position:sticky;top:0;height:100vh;height:100svh;overflow:hidden;background:var(--bg)}
@@ -105,6 +165,121 @@
 .ends .fin h2{font-size:clamp(52px,9vw,140px)}
 .ends .fin p{color:var(--soft);max-width:40ch;margin:18px auto 0}
 .topcars{position:absolute;left:0;right:0;margin-inline:auto;top:0;width:min(96vw,1000px);z-index:3;transform:translateY(62vh);filter:drop-shadow(0 50px 50px rgba(0,0,0,.85));will-change:transform;pointer-events:none}
+
+/* ---------- HOMEPAGE STUDIO TOUR CARDS ---------- */
+.stsec {
+    padding-block: clamp(90px, 10vw, 150px);
+}
+
+.stsec .sthead {
+    text-align: center;
+    margin-bottom: clamp(36px, 4vw, 60px);
+}
+
+.stsec .sthead h2 {
+    font-size: clamp(56px, 11vw, 190px);
+    line-height: .85;
+    margin-top: 14px;
+}
+
+.stsec .sthead p {
+    color: var(--soft);
+    max-width: 46ch;
+    margin: 22px auto 0;
+}
+
+.stsec .stgrid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: clamp(10px, 1.4vw, 20px);
+}
+
+.stsec .stbox {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    padding: clamp(22px, 2.4vw, 34px);
+    background: var(--bg-2);
+    border: 1px solid var(--line);
+    overflow: hidden;
+    min-width: 0;
+    transition: border-color .4s, transform .6s var(--ease);
+}
+
+.stsec .stbox:hover {
+    border-color: #3a3936;
+    transform: translateY(-4px);
+}
+
+.stsec .k {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+
+.stsec .k .lbl {
+    margin: 0;
+}
+
+.stsec .tag {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    color: var(--mute);
+    border: 1px solid var(--line);
+    padding: 5px 9px;
+}
+
+.stsec h3 {
+    font-size: clamp(30px, 3vw, 48px);
+    margin: 24px 0 8px;
+    line-height: .95;
+}
+
+.stsec .line {
+    margin: 0 0 28px;
+    color: var(--soft);
+    font-size: 15px;
+    max-width: 30ch;
+}
+
+.stsec .cta {
+    width: 100%;
+    justify-content: center;
+    margin-top: auto;
+}
+
+.stsec .flag {
+    background: linear-gradient(160deg, #2a0a0d 0%, var(--bg-2) 55%);
+    border-color: rgba(215, 35, 44, .45);
+}
+
+.stsec .flag .tag {
+    color: #fff;
+    border-color: var(--red);
+    background: rgba(215, 35, 44, .2);
+}
+
+.stsec .ghost {
+    position: absolute;
+    right: -.06em;
+    top: .1em;
+    font-family: var(--display);
+    font-stretch: 125%;
+    font-weight: 800;
+    font-size: clamp(110px, 11vw, 180px);
+    line-height: .8;
+    color: rgba(237, 234, 228, .03);
+    pointer-events: none;
+}
+
+@media (max-width: 860px) {
+    .stsec .stgrid {
+        grid-template-columns: 1fr;
+    }
+}
 
 /* ---------- LINE-UP (five cars) ---------- */
 .lineup {

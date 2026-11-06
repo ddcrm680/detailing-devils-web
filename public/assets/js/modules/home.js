@@ -84,7 +84,7 @@
     hbot.style.opacity=1-t;hbot.style.transform=`translateY(${-t*30}px)`;hbot.style.visibility=htop.style.visibility;
     hint.style.opacity=clamp(1-sp/.03,0,1);
     // last frame is reached exactly as the banner releases, so "Our approach to every car" follows straight on
-    driveTick();lineupTick();
+    driveTick();
     requestAnimationFrame(tick);
   }
   /* top-view cars drive up over "Dull Ends Here"; the red line strikes through as they pass */
@@ -97,13 +97,6 @@
     cars.style.transform=`translateY(${lerp(y0,y1,dp)}px)`;
     dull.style.setProperty('--strike',inout(clamp((dp-.28)/.34,0,1)));
     lanes.style.setProperty('--road',(dp*1100)+'px');
-  }
-  /* five-car line-up: settles into place as it scrolls through */
-  const lineup=document.querySelector('.lineup'),lineupImg=document.getElementById('lineupImg');
-  function lineupTick(){
-    const r=lineup.getBoundingClientRect();if(r.bottom<0||r.top>innerHeight)return;
-    const k=clamp((innerHeight-r.top)/(innerHeight+r.height),0,1);
-    lineupImg.style.transform=`translateY(${lerp(6,-6,k)}%) scale(${lerp(1.14,1,ease(clamp(k*1.6,0,1)))})`;
   }
   addEventListener('resize',size);size();requestAnimationFrame(tick);
 
@@ -133,7 +126,7 @@
   }
   // photo parallax inside frames
   document.querySelectorAll('main .ph img').forEach(img=>{
-    if(img.closest('.svc-vis'))return;
+    if(img.closest('.svc-vis')||img.closest('.cards'))return;
     const sp=parseFloat(img.dataset.speed||10);
     gsap.fromTo(img,{yPercent:-sp/2},{yPercent:sp/2,ease:'none',scrollTrigger:{trigger:img.parentElement,start:'top bottom',end:'bottom top',scrub:true}});
   });
@@ -151,6 +144,18 @@
   document.querySelectorAll('main section:not(.seq) h2.disp,.slide h3.disp,.card h3.disp').forEach(h=>{
     const words=splitWords(h);
     gsap.from(words,{yPercent:110,duration:1.1,ease:'expo.out',stagger:.06,scrollTrigger:{trigger:h,start:'top 88%'}});
+  });
+  // Card text follows the heading while the artwork remains stationary.
+  document.querySelectorAll('.card').forEach(card => {
+    gsap.from(card.querySelectorAll('.lbl,.ov p,.go'), {
+      y: 22,
+      opacity: 0,
+      duration: .9,
+      ease: 'power3.out',
+      stagger: .08,
+      delay: .15,
+      scrollTrigger: { trigger: card, start: 'top 80%' },
+    });
   });
   // counters
   document.querySelectorAll('.nums b').forEach(b=>{

@@ -38,7 +38,7 @@ return [
         'line1' => 'For Those Who',
         'line2' => 'Refuse Dull',
         'subline' => "India's car detailing and paint protection studio network",
-        'frames' => 240,                              // number of files in public/frames
+        'frames' => 121,                              // number of files in public/frames
         'frame_pattern' => 'frames/ezgif-frame-%03d.jpg', // file name pattern (%03d = 001, 002 …)
     ],
 
