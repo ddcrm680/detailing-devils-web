@@ -82,6 +82,31 @@ class StudioTourTest extends TestCase
         }
     }
 
+    public function test_tour_menu_image_is_scoped_and_model_selectors_remain_unchanged(): void
+    {
+        config()->set('database.default', 'unconfigured');
+
+        foreach (['xclusive', 'fofo', 'prime'] as $model) {
+            $xpath = $this->xpath($this->get(route('studios.tour', ['model' => $model]))->assertOk()->getContent());
+            $image = $xpath->query('//*[@id="menu"]//figure/img');
+
+            $this->assertSame(1, $image->length);
+            $this->assertSame(asset('img/studio-tour-menu.webp'), $image->item(0)->getAttribute('src'));
+            $this->assertSame('Porsches on lifts in the PPF bays of a Detailing Devils studio', $image->item(0)->getAttribute('alt'));
+            $this->assertSame(3, $xpath->query('//nav[@aria-label="Choose a studio tour"]/a')->length);
+            $this->assertSame(1, $xpath->query('//*[@id="models"]')->length);
+            $this->assertSame(1, $xpath->query('//nav[@aria-label="Choose a studio tour"]/a[@aria-current="page"]')->length);
+        }
+
+        foreach (['/', route('prime.show'), route('fofo.show'), route('xclusive.show'), route('studios.index')] as $url) {
+            $xpath = $this->xpath($this->get($url)->assertOk()->getContent());
+
+            $this->assertSame(asset('img/interior.webp'), $xpath->query('//*[@id="menu"]//figure/img')->item(0)->getAttribute('src'));
+        }
+
+        $this->assertFileExists(public_path('img/studio-tour-menu.webp'));
+    }
+
     public function test_model_cards_preserve_tour_and_application_controls_without_pricing(): void
     {
         config()->set('database.default', 'unconfigured');

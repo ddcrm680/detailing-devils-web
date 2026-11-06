@@ -9,5 +9,11 @@
   <a href="https://www.shop.detailingdevils.com/" target="_blank"><small>07</small><span>Shop</span></a>
     <a href="{{ request()->is('/') ? '#contact' : url('/') . '#contact' }}"><small>08</small><span>Contact</span></a>
   </nav>
-  <figure class="ph"><img src="{{ asset('img/interior.webp') }}" alt="McLaren cockpit with black leather seats and green belts"></figure>
+  <figure class="ph">
+    @if (request()->routeIs('studios.tour'))
+      <img src="{{ asset('img/studio-tour-menu.webp') }}" alt="Porsches on lifts in the PPF bays of a Detailing Devils studio">
+    @else
+      <img src="{{ asset('img/interior.webp') }}" alt="McLaren cockpit with black leather seats and green belts">
+    @endif
+  </figure>
 </div>

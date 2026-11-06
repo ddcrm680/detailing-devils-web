@@ -147,6 +147,8 @@ Deploy the shared JS engine, both entries, both views/partials, controllers, sib
 
 ## Studio Tour model selection
 
+The Tour alone uses `public/img/studio-tour-menu.webp` (the owner's reference studio interior) in the shared menu; other pages retain `interior.webp`.
+
 The existing `studios.tour` route accepts `model=xclusive|fofo|prime`; missing/invalid values use X-Clusive. The single Tour Blade renders model-specific captions and sequence metadata. X-Clusive retains `public/frames/studio-tour/` (330 AVIFs / 660 film frames). FOFO and the explicitly illustrative Prime preview share `public/frames/fofo-tour/` (400 AVIFs / 800 film frames). Model links use full navigation, with V2.1 cleanup and fresh loader state. The shared frame loader and its 96/160 MiB decoded and 40 MiB compressed budgets are unchanged; FOFO traversal can evict compressed frames and require downloads during reversal. Studio Tour prices, GST and the provisional disclaimer remain in Blade source behind the single default-off `$showTourPricing` view flag, including ending recommendation prices; they are omitted from public HTML and cannot be enabled by query parameters. Application routes remain unchanged; X-Clusive application CTAs link to `route('xclusive.show', [], false)` while backend submission and calling permissions remain independently controlled.
 
 ## Wasmer production build memory
