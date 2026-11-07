@@ -365,9 +365,15 @@ class SeoAdminTest extends TestCase
         $result = $this->visit('/admin/seo?q=xclusive')->assertOk();
         $document = new \DOMDocument;
         @$document->loadHTML($result->getContent());
-        $inventory = (new \DOMXPath($document))->evaluate('string(//table/tbody)');
-        $this->assertStringContainsString('xclusive.show', $inventory);
-        $this->assertStringNotContainsString('fofo.show', $inventory);
+        $xpath = new \DOMXPath($document);
+        $inventory = $xpath->query('//table/tbody')->item(0);
+        $this->assertNotNull($inventory);
+        $this->assertCount(1, $xpath->query('./tr', $inventory));
+        $this->assertSame('X-Clusive', trim($xpath->evaluate('string(./tr/th/a)', $inventory)));
+        $editLinks = $xpath->query('.//a[@aria-label="Edit SEO for X-Clusive"]', $inventory);
+        $this->assertCount(1, $editLinks);
+        $this->assertSame(route('admin.seo.edit', 'xclusive.show'), $editLinks->item(0)->getAttribute('href'));
+        $this->assertSame(0, $xpath->query('.//a[@href="'.route('admin.seo.edit', 'fofo.show').'"]', $inventory)->length);
         $fields = $this->fields('fofo.show');
         $fields['title'] = 'Synthetic SEO preview & identity';
         $this->send('/admin/seo/pages/fofo.show/preview', $fields)
