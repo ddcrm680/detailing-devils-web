@@ -93,9 +93,76 @@ html:has(.home-header) {
 /* ---------- INTRO ---------- */
 .intro{padding-block:clamp(28px,4vw,56px) 0;text-align:center}
 .intro h2{font-size:clamp(30px,4.4vw,62px);max-width:18ch;margin:18px auto 0}
-.marq{margin-top:64px;border-block:1px solid var(--line);overflow:hidden;padding-block:26px;-webkit-mask:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent);mask:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent)}
-.marq .tr{display:flex;width:max-content;animation:mq 44s linear infinite}
-.marq span{font-family:var(--display);font-stretch:125%;font-weight:600;font-size:20px;letter-spacing:.2em;text-transform:uppercase;color:#4d4b47;padding-inline:36px;white-space:nowrap}
+.marq {
+    margin-top: clamp(32px, 4vw, 48px);
+    overflow: hidden;
+    padding-block: 12px;
+    -webkit-mask: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+    mask: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+}
+
+.marq .tr {
+    display: flex;
+    width: max-content;
+    animation: mq 44s linear infinite;
+}
+
+.marq .brand-group {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.marq .brand {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: clamp(100px, 9vw, 132px);
+    height: clamp(58px, 5vw, 72px);
+    padding-inline: 10px;
+}
+
+.marq img {
+    display: block;
+    width: clamp(58px, 5vw, 72px);
+    height: clamp(58px, 5vw, 72px);
+    max-width: none;
+    object-fit: contain;
+}
+
+.marq .brand-wide img {
+    transform: scale(1.35);
+}
+
+.marq .brand-fine img {
+    transform: scale(1.5);
+}
+
+.marq .brand-tall img {
+    transform: scale(1.15);
+}
+
+.marq .brand-logo-dark {
+    filter: drop-shadow(.5px 0 0 #9c9a96)
+        drop-shadow(-.5px 0 0 #9c9a96)
+        drop-shadow(0 .5px 0 #9c9a96)
+        drop-shadow(0 -.5px 0 #9c9a96);
+}
+
+.marq img[src$="/car-brands/mahindra.webp"] {
+    filter: brightness(0) invert(.9);
+}
+
+.marq:focus-visible {
+    outline: 1px solid var(--red);
+    outline-offset: -1px;
+}
+
+.marq:focus-within .tr {
+    animation-play-state: paused;
+}
+
 @keyframes mq{to{transform:translateX(-50%)}}
 .intro .sub{max-width:52ch;margin:56px auto 0;color:var(--soft)}
 .intro .cta{margin-top:32px}
@@ -473,5 +540,14 @@ form{display:grid;grid-template-columns:1fr 1fr;gap:26px 24px;background:rgba(7,
 
 @media (prefers-reduced-motion:reduce){
   .marq .tr,.line>span,.hint i{animation:none}
+    .marq {
+        overflow-x: auto;
+        -webkit-mask: none;
+        mask: none;
+    }
+
+    .marq .brand-group[aria-hidden="true"] {
+        display: none;
+    }
   .svc-vis .ph{transition:none}
 }

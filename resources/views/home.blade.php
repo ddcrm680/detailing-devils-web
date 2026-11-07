@@ -34,11 +34,65 @@
       <span class="lbl">Trusted with every marque</span>
       <h2 class="disp">Our approach to every <span class="acc">car</span></h2>
     </div>
-    <div class="marq" aria-label="Car brands we work on">
-      <div class="tr">
-        <span>McLaren</span><span>Mercedes-AMG</span><span>Porsche</span><span>Lamborghini</span><span>Ferrari</span><span>Bentley</span><span>Rolls-Royce</span><span>Land Rover</span><span>BMW</span><span>Audi</span><span>Aston Martin</span><span>Maserati</span>
-        <span aria-hidden="true">McLaren</span><span aria-hidden="true">Mercedes-AMG</span><span aria-hidden="true">Porsche</span><span aria-hidden="true">Lamborghini</span><span aria-hidden="true">Ferrari</span><span aria-hidden="true">Bentley</span><span aria-hidden="true">Rolls-Royce</span><span aria-hidden="true">Land Rover</span><span aria-hidden="true">BMW</span><span aria-hidden="true">Audi</span><span aria-hidden="true">Aston Martin</span><span aria-hidden="true">Maserati</span>
-      </div>
+    @php
+        $carBrands = [
+            'chevrolet' => 'Chevrolet',
+            'kia' => 'Kia',
+            'volvo' => 'Volvo',
+            'fiat' => 'Fiat',
+            'volkswagen' => 'Volkswagen',
+            'toyota' => 'Toyota',
+            'skoda' => 'Škoda',
+            'mercedes-benz' => 'Mercedes-Benz',
+            'lexus' => 'Lexus',
+            'mahindra' => 'Mahindra',
+            'jaguar' => 'Jaguar',
+            'porsche' => 'Porsche',
+            'honda' => 'Honda',
+            'ford' => 'Ford',
+            'hyundai' => 'Hyundai',
+            'mitsubishi' => 'Mitsubishi',
+            'nissan' => 'Nissan',
+            'datsun' => 'Datsun',
+            'suzuki' => 'Suzuki',
+            'harley-davidson' => 'Harley-Davidson',
+            'rolls-royce' => 'Rolls-Royce',
+            'land-rover' => 'Land Rover',
+            'kawasaki' => 'Kawasaki',
+            'tvs' => 'TVS',
+        ];
+    @endphp
+    <div class="marq" role="region" aria-label="Vehicle brands we work on" tabindex="0">
+        <div class="tr">
+            @foreach ([false, true] as $duplicate)
+                <div class="brand-group" role="list" aria-hidden="{{ $duplicate ? 'true' : 'false' }}">
+                    @foreach ($carBrands as $slug => $brand)
+                        <span
+                            @class([
+                                'brand',
+                                'brand-wide' => in_array($slug, [
+                                    'chevrolet', 'kia', 'toyota', 'ford', 'hyundai',
+                                    'datsun', 'land-rover', 'kawasaki', 'tvs',
+                                ], true),
+                                'brand-fine' => $slug === 'jaguar',
+                                'brand-tall' => $slug === 'rolls-royce',
+                            ])
+                            role="listitem"
+                        >
+                            <img
+                                @class(['brand-logo-dark' => in_array($slug, ['lexus', 'mahindra', 'jaguar'], true)])
+                                src="{{ asset('img/car-brands/'.$slug.'.webp') }}"
+                                alt="{{ $duplicate ? '' : $brand }}"
+                                width="400"
+                                height="400"
+                                decoding="async"
+                                fetchpriority="low"
+                            >
+                        </span>
+                    @endforeach
+                </div>
+            @endforeach
+        </div>
     </div>
     <div class="wrap">
       <p class="sub">Every step is deliberate and every product has a purpose. We match the finish to your car, how you drive it and the standard you expect.</p>
