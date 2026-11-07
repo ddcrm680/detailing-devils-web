@@ -10,14 +10,13 @@
         <title>@yield('title', 'Administration') | {{ config('site.brand') }}</title>
     @endif
     <link rel="icon" href="{{ asset('favicon.webp') }}" type="image/webp">
+    <link rel="stylesheet" href="{{ asset('assets/vendor/bootstrap-icons.css') }}">
+    <link rel="stylesheet" href="{{ asset('assets/vendor/sweetalert2.min.css') }}">
     <link
         rel="stylesheet"
         href="{{ asset('assets/css/admin.css') }}?v={{ substr(hash_file('sha256', public_path('assets/css/admin.css')), 0, 12) }}"
     >
-    <script
-        type="module"
-        src="{{ asset('assets/js/admin/workspace.js') }}?v={{ substr(hash_file('sha256', public_path('assets/js/admin/workspace.js')), 0, 12) }}"
-    ></script>
+    @stack('styles')
 </head>
 <body class="admin-app {{ auth('web')->check() ? '' : 'is-guest' }}">
     <a class="skip" href="#workspace">Skip to workspace</a>
@@ -42,10 +41,10 @@
                 </nav>
             @endauth
             @if (session('status'))
-                <div class="notice success" role="status">{{ session('status') }}</div>
+                <div class="notice success" role="status" data-admin-notice="success">{{ session('status') }}</div>
             @endif
             @if ($errors->any())
-                <div class="notice error" role="alert" tabindex="-1" data-validation-errors>
+                <div class="notice error" role="alert" tabindex="-1" data-validation-errors data-admin-notice="error">
                     <strong>Please review the following:</strong>
                     <ul>
                         @foreach ($errors->all() as $error)
@@ -58,5 +57,9 @@
         </main>
         @include('admin.partials.footer')
     </div>
+    <script defer src="{{ asset('assets/vendor/sweetalert2.min.js') }}"></script>
+    <script defer src="{{ asset('assets/js/common/loader.js') }}"></script>
+    <script defer src="{{ asset('assets/js/common/notification.js') }}"></script>
+    @stack('scripts')
 </body>
 </html>

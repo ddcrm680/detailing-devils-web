@@ -1299,7 +1299,7 @@ class SeoAdminTest extends TestCase
                 'data-save-state',
                 false
             )
-            ->assertSee('Search preview')
+            ->assertSee('Live Preview')
             ->assertSee(
                 '/assets/css/admin.css?v=',
                 false

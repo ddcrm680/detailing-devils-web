@@ -1,5 +1,7 @@
 @extends('admin.layouts.app')
 
+@include('admin.seo.partials.scripts')
+
 @section('context', 'Metadata preview')
 
 @section('metadata')
@@ -7,7 +9,7 @@
 @endsection
 
 @section('content')
-    <span class="eyebrow">PRIVATE PREVIEW</span>
+    <span class="eyebrow" data-preview-response>PRIVATE PREVIEW</span>
     <h1>Preview page metadata</h1>
     <p class="muted">This document renders the actual shared SEO head. Search and social networks may display different snippets. Preview responses are always noindex.</p>
     <section class="search-preview panel">

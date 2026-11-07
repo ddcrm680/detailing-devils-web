@@ -32,7 +32,7 @@ final class MetadataController extends Controller
             'indexing' => ['nullable', 'in:indexable,noindex'],
             'status' => ['nullable', 'in:draft,published,default'],
             'sitemap' => ['nullable', 'in:included,excluded'],
-            'per_page' => ['nullable', 'in:25,50,100'],
+            'per_page' => ['nullable', 'in:10,25,50,100'],
         ]);
 
         $state = $storage->state();
@@ -108,7 +108,7 @@ final class MetadataController extends Controller
             }
         ));
 
-        $perPage = (int) ($input['per_page'] ?? 25);
+        $perPage = (int) ($input['per_page'] ?? 10);
         $lastPage = max(1, (int) ceil(count($filtered) / $perPage));
         $number = min((int) ($input['page'] ?? 1), $lastPage);
 

@@ -54,7 +54,7 @@
 
     {{-- Vendor JavaScript --}}
     <script src="{{ asset('assets/vendor/axios.min.js') }}"></script>
-    <script src="{{ asset('assets/vendor/sweetalert2.all.min.js') }}"></script>
+    <script src="{{ asset('assets/vendor/sweetalert2.min.js') }}"></script>
 
     {{-- Bootstrap JS - Exclude Homepage --}}
     @if (!request()->is('/'))
