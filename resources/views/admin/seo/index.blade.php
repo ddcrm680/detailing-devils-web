@@ -208,8 +208,8 @@
         <details class="upload-fallback" data-upload-fallback @if ($errors->hasAny(['label', 'image_file', 'approve_image'])) open @endif>
             <summary>Upload Image</summary>
             <div data-upload-content>
-                <h2 id="upload-title">Upload Image</h2>
-                <p class="muted small" id="upload-help">JPEG or PNG &middot; Up to 5 MB &middot; 200&ndash;2400 px per side. Ideal: 1200 &times; 630.</p>
+                <h2 id="upload-title">Upload New Image</h2>
+                <p class="muted small" id="upload-help">Use this image as your page's preview when shared online.<br>JPEG or PNG &middot; Up to 5 MB &middot; 200&ndash;2400 px per side. Ideal: 1200 &times; 630.</p>
                 @if ($errors->hasAny(['label', 'image_file', 'approve_image']))
                     <div class="notice error" role="alert" tabindex="-1" data-upload-validation>
                         <strong>Review your image details and select the file again.</strong>
@@ -231,20 +231,20 @@
                 >
                     @csrf
                     <div class="field">
-                        <label for="label">Image label</label>
-                        <input id="label" name="label" required maxlength="120" value="{{ old('label') }}" @if ($errors->has('label')) aria-invalid="true" aria-describedby="label-error" @endif>
+                        <label for="label">Image Name</label>
+                        <input id="label" name="label" required maxlength="120" placeholder="e.g. Studio Tour Cover Image" value="{{ old('label') }}" @if ($errors->has('label')) aria-invalid="true" aria-describedby="label-error" @endif>
                         @error('label')
                             <span class="invalid-feedback" id="label-error" data-error-for="label">{{ $message }}</span>
                         @enderror
                     </div>
                     <div class="field">
-                        <label for="image_file">Sharing image</label>
+                        <label for="image_file">Choose Image</label>
                         <input id="image_file" name="image_file" type="file" accept="image/jpeg,image/png" required @if ($errors->has('image_file')) aria-invalid="true" aria-describedby="image-file-error" @endif>
                         @error('image_file')
                             <span class="invalid-feedback" id="image-file-error" data-error-for="image_file">{{ $message }}</span>
                         @enderror
                     </div>
-                    <label class="check"><input type="checkbox" name="approve_image" value="1" required @checked(old('approve_image')) @if ($errors->has('approve_image')) aria-invalid="true" aria-describedby="approval-error" @endif> I approve this image for public social sharing.</label>
+                    <label class="check"><input type="checkbox" name="approve_image" value="1" required @checked(old('approve_image')) @if ($errors->has('approve_image')) aria-invalid="true" aria-describedby="approval-error" @endif> I confirm this image is approved for website and social media use.</label>
                     @error('approve_image')
                         <span class="invalid-feedback" id="approval-error" data-error-for="approve_image">{{ $message }}</span>
                     @enderror

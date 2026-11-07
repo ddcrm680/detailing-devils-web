@@ -93,6 +93,8 @@ class AdminUiTest extends TestCase
             $this->assertSame(1, $xpath->query('//form[@data-confirm="restore"]')->length);
             $this->assertSame(1, $xpath->query('.//input[@name="acknowledge_warnings"][@required]', $xpath->query('//*[@id="publish-controls"]')->item(0))->length);
             $this->assertSame($role === 'super_admin' ? 2 : 0, $xpath->query('//input[@name="approve_policy"]')->length);
+            $this->assertSame(1, $xpath->query('//a[@data-open-panel="publish-panel"][@class="button"]')->length);
+            $this->assertSame(0, $xpath->query('//button[contains(@class, "publish-unavailable")]')->length);
             foreach (['social-settings', 'advanced-settings', 'version-history'] as $id) {
                 $this->assertSame(1, $xpath->query('//details[@id="'.$id.'"][not(@open)]')->length);
             }
@@ -146,6 +148,12 @@ class AdminUiTest extends TestCase
         $this->assertSame(1, $xpath->query('//*[@data-upload-fallback]//form[@action="'.route('admin.seo.images.upload').'#image-library"][@enctype="multipart/form-data"]')->length);
         $this->assertSame(1, $xpath->query('//*[@data-upload-form]//input[@name="approve_image"][@required]')->length);
         $this->assertSame(1, $xpath->query('//*[@data-upload-form]//input[@name="_token"]')->length);
+        $this->assertSame('Upload New Image', $xpath->evaluate('string(//*[@id="upload-title"])'));
+        $this->assertSame('Image Name', $xpath->evaluate('string(//label[@for="label"])'));
+        $this->assertSame('Choose Image', $xpath->evaluate('string(//label[@for="image_file"])'));
+        $this->assertSame('e.g. Studio Tour Cover Image', $xpath->query('//input[@name="label"]')->item(0)->getAttribute('placeholder'));
+        $this->assertSame('I confirm this image is approved for website and social media use.', trim($xpath->evaluate('string(//*[@data-upload-form]/label[@class="check"])')));
+        $this->assertSame('image/jpeg,image/png', $xpath->query('//input[@name="image_file"]')->item(0)->getAttribute('accept'));
     }
 
     public function test_seo_scripts_are_pushed_once_after_shared_dependencies_and_are_not_global(): void
@@ -238,6 +246,10 @@ class AdminUiTest extends TestCase
         $html = view('admin.seo.edit', $data)->render();
         $xpath = $this->xpath($html);
         $this->assertSame(1, $xpath->query('//button[@disabled][contains(text(), "Publish")]')->length);
+        $publish = $xpath->query('//button[contains(@class, "publish-unavailable")][@disabled]')->item(0);
+        $this->assertNotNull($publish);
+        $this->assertSame('Save a draft to enable publishing.', $publish->getAttribute('title'));
+        $this->assertSame('publish-draft-hint', $publish->getAttribute('aria-describedby'));
         $this->assertSame(0, $xpath->query('//*[@id="publish-controls"]')->length);
         $this->assertStringContainsString('Review the description.', $html);
         $this->assertStringContainsString('<noscript>', $html);

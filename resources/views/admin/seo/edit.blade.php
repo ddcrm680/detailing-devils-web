@@ -34,7 +34,7 @@
             @if ($draft)
                 <a class="button" href="#publish-controls" data-open-panel="publish-panel"><i class="bi bi-check-lg" aria-hidden="true"></i> Publish</a>
             @else
-                <button class="button" type="button" disabled title="Save a draft before publishing"><i class="bi bi-check-lg" aria-hidden="true"></i> Publish</button>
+                <button class="button publish-unavailable" type="button" disabled title="Save a draft to enable publishing." aria-describedby="publish-draft-hint"><i class="bi bi-check-lg" aria-hidden="true"></i> Publish</button>
             @endif
         </div>
     </div>
@@ -279,7 +279,7 @@
                     </form>
                 </details>
             @else
-                <p class="small muted draft-hint">Save a draft to enable publishing. Your changes stay private until published.</p>
+                <p class="small muted draft-hint" id="publish-draft-hint">Save a draft to enable publishing. Your changes stay private until published.</p>
             @endif
         </aside>
     </div>

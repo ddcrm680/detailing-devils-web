@@ -532,6 +532,15 @@ input[type="checkbox"] {
     border-color: #c81521;
 }
 
+.button.publish-unavailable:disabled,
+.button.publish-unavailable:disabled:hover {
+    background: #34363b;
+    border-color: #4c4f55;
+    color: #a9aaae;
+    box-shadow: none;
+    cursor: not-allowed;
+}
+
 .button.secondary {
     color: #f0f0f2;
     background: var(--admin-panel);
