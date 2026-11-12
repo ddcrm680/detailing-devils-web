@@ -7,7 +7,11 @@ import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const source = fs.readFileSync(path.join(root, 'public/assets/js/modules/studios.js'), 'utf8');
-const studios = JSON.parse(fs.readFileSync(path.join(root, 'resources/data/studios.json'), 'utf8')).filter(studio => studio.status === 'active');
+const studios = [
+  { name: 'Detailing Devils Fixture South', address: 'Example Road, Malviya Nagar', state: 'Delhi', phones: ['+91 98765 43210'] },
+  { name: 'Detailing Devils Fixture North', address: 'Another Road, Delhi', state: 'Delhi', phones: ['+91 99887 76655'] },
+  { name: 'Detailing Devils Fixture Noida', address: 'Example Road, Noida', state: 'Uttar Pradesh', phones: ['+91 91234 56789'] },
+];
 const countMessage = count => `${count} ${count === 1 ? 'location' : 'locations'} found`;
 const delhiCount = studios.filter(studio => studio.state === 'Delhi').length;
 const noidaCount = studios.filter(studio => `${studio.name} ${studio.address} ${studio.state} ${studio.phones.join(' ')}`.toLowerCase().includes('noida')).length;

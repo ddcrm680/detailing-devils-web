@@ -8,13 +8,11 @@ use App\Models\User;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
-use RuntimeException;
 use Tests\TestCase;
 
 class StudioCmsTest extends TestCase
@@ -176,142 +174,17 @@ class StudioCmsTest extends TestCase
             ->assertViewHas('studios', fn ($studios) => $studios->total() === 17);
     }
 
-    public function test_one_time_import_preserves_current_source_and_refuses_to_overwrite_admin_edits(): void
+    public function test_multiple_contact_formats_can_be_saved_without_changing_values(): void
     {
-        $before = hash_file('sha256', resource_path('data/studios.json'));
-        $source = File::json(resource_path('data/studios.json'));
-        $expectedCount = count($source);
-        $expectedPhones = array_sum(array_map(fn ($studio) => count($studio['phones']), $source));
-        $this->artisan('studios:import')
-            ->expectsOutput("Imported {$expectedCount} studios with {$expectedPhones} phone numbers. Existing records were not overwritten.")
-            ->assertSuccessful();
-        $imported = Studio::orderBy('sort_order')->get();
-        $this->assertCount($expectedCount, $imported);
-        $this->assertSame($expectedPhones, $imported->sum(fn ($studio) => count($studio->phones)));
-        $this->assertSame($expectedCount, $imported->pluck('slug')->unique()->count());
-        foreach ($source as $position => $fields) {
-            $studio = $imported[$position];
-            foreach (['name', 'address', 'state', 'phones', 'map_url', 'status'] as $field) {
-                $this->assertSame($fields[$field], $studio->$field, $field);
-            }
-            $this->assertSame($position + 1, $studio->sort_order);
-            $this->assertNull($studio->city);
-            $this->assertNull($studio->country_code);
-            $this->assertNull($studio->latitude);
-            $this->assertNull($studio->longitude);
-        }
-        $imported->first()->update(['name' => 'Admin edited name', 'slug' => 'admin-slug', 'status' => 'inactive']);
-        $snapshot = Studio::orderBy('id')->get()->toJson();
-        $this->artisan('studios:import')
-            ->expectsOutput('Studio import refused: the studios table already contains records.')
-            ->assertFailed();
-        $this->assertSame($snapshot, Studio::orderBy('id')->get()->toJson());
-        $this->assertSame($before, hash_file('sha256', resource_path('data/studios.json')));
-    }
-
-    public function test_import_refuses_any_preexisting_record_even_when_it_is_unrelated_to_the_source(): void
-    {
-        Studio::create($this->fields());
-        $before = Studio::get()->toJson();
-        $this->artisan('studios:import')
-            ->expectsOutput('Studio import refused: the studios table already contains records.')
-            ->assertFailed();
-        $this->assertSame($before, Studio::get()->toJson());
-    }
-
-    private function importSource(): array
-    {
-        return [
-            array_intersect_key($this->fields(['name' => 'Studio North!', 'status' => 'active']), array_flip([
-                'name', 'address', 'state', 'phones', 'map_url', 'status',
-            ])),
-            array_intersect_key($this->fields([
-                'name' => 'Studio North?', 'address' => 'Another verified address',
-                'status' => 'inactive', 'phones' => ['(+91) 91234 56789'],
-            ]), array_flip(['name', 'address', 'state', 'phones', 'map_url', 'status'])),
-        ];
-    }
-
-    public function test_import_accepts_different_source_counts_and_visibility_and_generates_stable_unique_slugs(): void
-    {
-        $source = $this->importSource();
-        File::partialMock()->shouldReceive('json')
-            ->once()->with(resource_path('data/studios.json'))->andReturn($source);
-        $this->artisan('studios:import')->assertSuccessful();
-        $rows = Studio::orderBy('sort_order')->get();
-        $this->assertCount(count($source), $rows);
-        $this->assertSame(['studio-north', 'studio-north-2'], $rows->pluck('slug')->all());
-        $this->assertSame(array_column($source, 'status'), $rows->pluck('status')->all());
-        $this->assertSame(array_column($source, 'phones'), $rows->pluck('phones')->all());
-        $this->assertSame([1, 2], $rows->pluck('sort_order')->all());
-    }
-
-    public function test_invalid_source_fields_contacts_and_map_urls_never_create_partial_records(): void
-    {
-        $source = $this->importSource();
-        $cases = [
-            ['name' => ''],
-            ['phones' => ['123']],
-            ['map_url' => 'https://untrusted.example/maps'],
-            ['status' => 'unknown'],
-            ['unsupported_field' => 'Must not be silently discarded'],
-        ];
-        $invalidSources = [];
-        foreach ($cases as $case) {
-            $invalid = $source;
-            $invalid[1] = array_replace($invalid[1], $case);
-            $invalidSources[] = $invalid;
-        }
-        File::partialMock()->shouldReceive('json')
-            ->times(count($cases))->with(resource_path('data/studios.json'))
-            ->andReturnValues($invalidSources);
-        foreach ($cases as $case) {
-            $this->artisan('studios:import')->assertFailed();
-            $this->assertSame(0, Studio::count());
-        }
-    }
-
-    public function test_duplicate_source_identities_roll_back_prior_insertions(): void
-    {
-        $source = $this->importSource();
-        $source[] = $source[0];
-        File::partialMock()->shouldReceive('json')
-            ->once()->with(resource_path('data/studios.json'))->andReturn($source);
-        $this->artisan('studios:import')->assertFailed();
-        $this->assertSame(0, Studio::count());
-    }
-
-    public function test_insertion_failure_rolls_back_prior_insertions(): void
-    {
-        $source = $this->importSource();
-        File::partialMock()->shouldReceive('json')
-            ->once()->with(resource_path('data/studios.json'))->andReturn($source);
-        $insertions = 0;
-        Studio::creating(function () use (&$insertions) {
-            if (++$insertions === 2) {
-                throw new RuntimeException('Synthetic insertion failure.');
-            }
-        });
-        try {
-            $this->artisan('studios:import')->assertFailed();
-            $this->assertSame(2, $insertions);
-            $this->assertSame(0, Studio::count());
-        } finally {
-            Studio::flushEventListeners();
-        }
-    }
-
-    public function test_all_imported_contact_formats_can_be_saved_without_changing_values(): void
-    {
-        $this->artisan('studios:import')->assertSuccessful();
+        $studio = Studio::create($this->fields([
+            'phones' => ['(+91) 98765 43210', '+91-99887-76655', '919123456789'],
+        ]));
         $this->actingAs($this->actor());
-        foreach (Studio::all() as $studio) {
-            $this->put('/admin/studios/'.$studio->id, $studio->only([
-                'name', 'slug', 'address', 'city', 'state', 'country_code', 'phones',
-                'map_url', 'latitude', 'longitude', 'status', 'sort_order',
-            ]))->assertSessionHasNoErrors();
-            $this->assertSame($studio->phones, $studio->fresh()->phones);
-        }
+        $this->put('/admin/studios/'.$studio->id, $studio->only([
+            'name', 'slug', 'address', 'city', 'state', 'country_code', 'phones',
+            'map_url', 'latitude', 'longitude', 'status', 'sort_order',
+        ]))->assertSessionHasNoErrors();
+        $this->assertSame($studio->phones, $studio->fresh()->phones);
     }
 
     public function test_gallery_upload_cover_order_alt_and_removal_are_scoped_and_files_retained(): void

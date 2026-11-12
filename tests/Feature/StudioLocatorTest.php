@@ -43,14 +43,33 @@ class StudioLocatorTest extends TestCase
         ], $fields));
     }
 
-    private function approvedReference(): array
+    private function studioFixtures(): array
     {
-        return json_decode(file_get_contents(resource_path('data/studios.json')), true, flags: JSON_THROW_ON_ERROR);
+        return [
+            [
+                'name' => 'Fixture Delhi - South', 'address' => 'Plot No - 7, Example Road',
+                'state' => 'Delhi', 'status' => 'active',
+                'phones' => ['(+91) 98765 43210', '(+91) 99887 76655'],
+                'map_url' => 'https://maps.app.goo.gl/FixtureDelhi',
+            ],
+            [
+                'name' => 'Fixture Noida', 'address' => 'Example Road, Noida',
+                'state' => 'Uttar Pradesh', 'status' => 'active',
+                'phones' => ['+91 91234 56789'],
+                'map_url' => 'https://maps.google.com/?q=FixtureNoida',
+            ],
+            [
+                'name' => 'Fixture Chandigarh', 'address' => 'Example Road, Chandigarh',
+                'state' => 'Chandigarh', 'status' => 'active',
+                'phones' => ['(+91) 95556 95695'],
+                'map_url' => 'https://www.google.com/maps/place/FixtureChandigarh',
+            ],
+        ];
     }
 
-    public function test_locator_preserves_all_approved_records_contacts_order_and_card_markup(): void
+    public function test_locator_preserves_database_records_contacts_order_and_card_markup(): void
     {
-        $studios = $this->approvedReference();
+        $studios = $this->studioFixtures();
         foreach ($studios as $position => $studio) {
             $this->createStudio($studio + ['sort_order' => $position + 1]);
         }
@@ -105,9 +124,8 @@ class StudioLocatorTest extends TestCase
 
     public function test_locator_preserves_multiple_contacts_states_and_map_search_links(): void
     {
-        $studios = collect($this->approvedReference())
-            ->map(fn ($studio) => array_replace($studio, ['status' => 'active']))->all();
-        // Exercise the fallback even when every supplied studio has a map URL.
+        $studios = $this->studioFixtures();
+        // Exercise the search fallback alongside valid stored map links.
         $studios[0]['map_url'] = '';
         foreach ($studios as $position => $studio) {
             $this->createStudio($studio + ['sort_order' => $position + 1]);
@@ -116,18 +134,17 @@ class StudioLocatorTest extends TestCase
         $page = $this->get('/locate-a-store')->assertOk()
             ->assertSee('>Chandigarh</option>', false)
             ->assertSee('>Uttar Pradesh</option>', false)
-            ->assertSee('Detailing Devils Malviya Nagar - Delhi')
-            ->assertSee('Plot No - 7, Calgiri Marg')
-            ->assertDontSee('Detailing Devils Malviya Nagar Delhi')
+            ->assertSee('Fixture Delhi - South')
+            ->assertSee('Plot No - 7, Example Road')
             ->assertSee('https://www.google.com/maps/search/?api=1', false)
             ->assertSee('rel="noopener noreferrer"', false);
 
         $html = $page->getContent();
         $phoneCount = collect($studios)->sum(fn ($studio) => count($studio['phones']));
         $this->assertSame($phoneCount, substr_count($html, 'class="studio-phone"'));
-        $this->assertStringContainsString('tel:+919211796769', $html);
+        $this->assertStringContainsString('tel:+919876543210', $html);
         $this->assertStringContainsString('tel:+919555695695', $html);
-        $this->assertStringContainsString('(+91) 92117 96769', $html);
+        $this->assertStringContainsString('(+91) 98765 43210', $html);
         $this->assertStringContainsString('(+91) 95556 95695', $html);
         $this->assertStringNotContainsString('tbl_studio', $html);
     }

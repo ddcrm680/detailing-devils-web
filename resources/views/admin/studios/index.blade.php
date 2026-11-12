@@ -9,7 +9,7 @@
     <div class="page-heading">
         <div>
             <h1>Studios</h1>
-            <p class="muted">Manage locations and galleries. The public locator still uses its approved JSON list.</p>
+            <p class="muted">Manage studio locations and galleries.</p>
         </div>
         <a class="button" href="{{ route('admin.studios.create') }}"><i class="bi bi-plus-lg" aria-hidden="true"></i> Add New Studio</a>
     </div>
