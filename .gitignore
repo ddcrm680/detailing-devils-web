@@ -19,6 +19,7 @@
 /public/hot
 /public/storage
 /public/uploads/images/
+/public/uploads/studios/
 /storage/*.key
 /storage/pail
 /vendor

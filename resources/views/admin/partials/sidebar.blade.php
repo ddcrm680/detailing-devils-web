@@ -22,6 +22,16 @@
                 </svg>
                 <span>SEO management</span>
             </a>
+            @can('manage-studios')
+                <a
+                    class="sidebar-link {{ request()->routeIs('admin.studios.*') ? 'active' : '' }}"
+                    href="{{ route('admin.studios.index') }}"
+                    @if (request()->routeIs('admin.studios.*')) aria-current="true" @endif
+                >
+                    <i class="bi bi-geo-alt" aria-hidden="true"></i>
+                    <span>Studios</span>
+                </a>
+            @endcan
         </nav>
     </div>
     <div class="sidebar-bottom">

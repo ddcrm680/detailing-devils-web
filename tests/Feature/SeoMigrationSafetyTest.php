@@ -84,7 +84,7 @@ class SeoMigrationSafetyTest extends TestCase
         $this->assertSame($before, $this->businessSnapshot());
     }
 
-    public function test_normal_migration_applies_only_missing_seo_migrations_to_an_existing_laravel_install(): void
+    public function test_normal_migration_applies_pending_features_without_recreating_framework_tables(): void
     {
         $this->artisan('migrate', [
             '--path' => [
@@ -113,11 +113,12 @@ class SeoMigrationSafetyTest extends TestCase
         $this->assertSame([
             '2026_11_02_000000_add_role_to_users_table',
             '2026_11_02_000001_create_website_seo_store',
+            '2026_11_12_000000_create_studio_cms_tables',
         ], $pending);
 
         $this->artisan('migrate', ['--force' => true])->assertSuccessful();
 
-        $this->assertSame(5, DB::table('migrations')->count());
+        $this->assertSame(6, DB::table('migrations')->count());
         $this->assertSame(
             $frameworkLedger,
             DB::table('migrations')->where('batch', 1)->orderBy('id')->get()->toJson()
@@ -130,6 +131,8 @@ class SeoMigrationSafetyTest extends TestCase
         $this->assertSame($sessionBefore, DB::table('sessions')->get()->toJson());
         $this->assertTrue(Schema::hasTable('seo_metadata'));
         $this->assertTrue(Schema::hasTable('seo_revisions'));
+        $this->assertTrue(Schema::hasTable('studios'));
+        $this->assertTrue(Schema::hasTable('studio_images'));
 
         $ledgerBefore = DB::table('migrations')->orderBy('id')->get()->toJson();
         $this->artisan('migrate', ['--force' => true])->assertSuccessful();

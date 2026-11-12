@@ -124,7 +124,7 @@ class SeoAdminTest extends TestCase
     {
         DB::table('seo_metadata')->delete();
         $this->get('/admin/seo')->assertNotFound();
-        $this->get('/admin/login')->assertNotFound();
+        $this->get('/admin/login')->assertOk();
         $this->get('/')
             ->assertOk()
             ->assertSee('<title>Home | Detailing Devils</title>', false);
@@ -136,8 +136,10 @@ class SeoAdminTest extends TestCase
         config()->set('app.debug', false);
         $this->get('https://untrusted.wasmer.app/admin/login')->assertNotFound();
         DB::table('seo_metadata')->update(['origin' => 'https://other.invalid']);
-        $this->get('https://www.detailingdevils.com/admin/login')->assertNotFound();
-        $this->get('https://detailing-devils-web.wasmer.app/admin/login')->assertNotFound();
+        $this->get('https://www.detailingdevils.com/admin/login')->assertOk();
+        $this->get('https://detailing-devils-web.wasmer.app/admin/login')->assertOk();
+        $this->get('https://www.detailingdevils.com/admin/seo')->assertNotFound();
+        $this->get('https://detailing-devils-web.wasmer.app/admin/seo')->assertNotFound();
     }
 
     public function test_guest_has_no_edit_publish_image_or_registration_access(): void
@@ -1417,14 +1419,15 @@ class SeoAdminTest extends TestCase
         $this->assertSame(0, DB::table('seo_metadata')->count());
     }
 
-    public function test_store_integrity_failure_falls_back_and_never_exposes_an_admin_interface(): void
+    public function test_store_integrity_failure_falls_back_and_blocks_seo_but_not_shared_login(): void
     {
         DB::table('seo_metadata')->update(['payload' => '{corrupt']);
         $this->get('/')
             ->assertOk()
             ->assertSee('<title>Home | Detailing Devils</title>', false)
             ->assertDontSee('{corrupt');
-        $this->get('/admin/login')->assertNotFound();
+        $this->get('/admin/login')->assertOk();
+        $this->get('/admin/seo')->assertNotFound();
     }
 
     public function test_obsolete_export_files_cannot_block_or_replace_the_dynamic_sitemap(): void

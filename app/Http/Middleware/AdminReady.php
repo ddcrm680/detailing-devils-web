@@ -1,0 +1,44 @@
+<?php
+
+namespace App\Http\Middleware;
+
+use Closure;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
+use Throwable;
+
+/** Shared Admin readiness/headers; module-specific storage checks stay on their routes. */
+final class AdminReady
+{
+    public function handle(Request $request, Closure $next)
+    {
+        if (! app()->environment(['local', 'testing'])) {
+            abort_unless(
+                ! config('app.debug') && $request->isSecure()
+                && in_array($request->getSchemeAndHttpHost(), [
+                    'https://www.detailingdevils.com',
+                    'https://detailing-devils-web.wasmer.app',
+                ], true),
+                404
+            );
+        }
+        try {
+            abort_unless(Schema::hasColumns('users', ['id', 'email', 'password', 'role']), 404);
+        } catch (Throwable) {
+            abort(404);
+        }
+
+        $response = $next($request);
+        $response->headers->set('Cache-Control', 'private, no-store, max-age=0');
+        $response->headers->set('X-Robots-Tag', 'noindex, nofollow');
+        $response->headers->set('X-Frame-Options', 'SAMEORIGIN');
+        $response->headers->set('X-Content-Type-Options', 'nosniff');
+        $response->headers->set('Referrer-Policy', 'same-origin');
+        $response->headers->set(
+            'Content-Security-Policy',
+            "default-src 'self'; base-uri 'none'; frame-ancestors 'self'; form-action 'self'; object-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:"
+        );
+
+        return $response;
+    }
+}

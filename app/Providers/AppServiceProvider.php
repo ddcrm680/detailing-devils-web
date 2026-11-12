@@ -31,6 +31,8 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Gate::define('manage-seo', fn ($user) => $user instanceof User && $user->canManageSeo());
+        Gate::define('manage-studios', fn ($user) => $user instanceof User
+            && in_array($user->role, ['super_admin', 'admin'], true));
         Gate::define('publish-seo-policy', fn ($user) => $user instanceof User && $user->role === 'super_admin');
         View::composer(['layouts.app', 'layouts.prime'], SeoComposer::class);
     }

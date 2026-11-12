@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\AdminReady;
 use App\Http\Middleware\SeoAdminReady;
 use Illuminate\Contracts\Auth\Middleware\AuthenticatesRequests;
 use Illuminate\Foundation\Application;
@@ -20,6 +21,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         // Check schema readiness before standard auth can query the new users table.
         $middleware->prependToPriorityList(AuthenticatesRequests::class, SeoAdminReady::class);
+        $middleware->prependToPriorityList(SeoAdminReady::class, AdminReady::class);
         $middleware->redirectGuestsTo(fn () => route('admin.login'));
     })
     ->withExceptions(function (Exceptions $exceptions): void {

@@ -31,7 +31,11 @@
                 <nav class="breadcrumbs" aria-label="Breadcrumb">
                     <a href="{{ route('admin.index') }}">Admin</a>
                     <span aria-hidden="true">/</span>
-                    @if (request()->routeIs('admin.seo.index'))
+                    @if (request()->routeIs('admin.studios.*'))
+                        <a href="{{ route('admin.studios.index') }}">Studios</a>
+                        <span aria-hidden="true">/</span>
+                        <span aria-current="page">@yield('context', 'Studio management')</span>
+                    @elseif (request()->routeIs('admin.seo.index'))
                         <span aria-current="page">SEO overview</span>
                     @else
                         <a href="{{ route('admin.seo.index') }}">SEO</a>

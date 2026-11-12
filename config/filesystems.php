@@ -47,6 +47,14 @@ return [
             'report' => false,
         ],
 
+        'studio_images' => [
+            'driver' => 'local',
+            'root' => public_path('uploads/studios'),
+            'url' => rtrim(env('APP_URL', 'http://localhost'), '/').'/uploads/studios',
+            'visibility' => 'public',
+            'throw' => true,
+        ],
+
         'fofo_images' => [
             'driver' => 'local',
             'root' => public_path('uploads/images'),
