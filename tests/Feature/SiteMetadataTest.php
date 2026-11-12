@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Contracts\Seo\MetadataRepository;
+use App\Http\Controllers\StudioController;
 use App\Services\Seo\Admin\SeoAdminPages;
 use App\Services\Seo\Admin\SeoPublicationCodec;
 use App\Services\Seo\SeoDiagnostics;
@@ -26,6 +27,10 @@ class SiteMetadataTest extends TestCase
         Http::preventStrayRequests();
         Mail::fake();
         $this->useSnapshot(new SeoSnapshot);
+        // Isolate page content; this suite verifies SEO rendering without database access.
+        $this->mock(StudioController::class)->shouldReceive('index')->andReturnUsing(
+            fn () => view('studios.index', ['studios' => [], 'availableStates' => collect()])
+        );
     }
 
     public function test_existing_publication_format_preserves_metadata_for_all_discovered_pages(): void

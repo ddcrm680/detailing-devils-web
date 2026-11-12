@@ -405,13 +405,46 @@ class StudioCmsTest extends TestCase
         $this->assertSame(0, $studio->images()->count());
     }
 
-    public function test_public_locator_stays_on_json_and_cms_content_is_escaped(): void
+    public function test_public_and_private_studio_content_is_escaped(): void
     {
         $studio = Studio::create($this->fields(['name' => '<script>CMS-only</script>', 'status' => 'active']));
-        $this->get('/locate-a-store')->assertOk()->assertDontSee('CMS-only');
+        $this->get('/locate-a-store')->assertOk()
+            ->assertSee('&lt;script&gt;CMS-only&lt;/script&gt;', false)
+            ->assertDontSee('<script>CMS-only</script>', false);
         $this->actingAs($this->actor());
         $this->get('/admin/studios/'.$studio->id)->assertOk()
             ->assertSee('&lt;script&gt;CMS-only&lt;/script&gt;', false)
             ->assertDontSee('<script>CMS-only</script>', false);
+    }
+
+    public function test_admin_edits_status_and_order_are_reflected_in_the_public_locator(): void
+    {
+        $this->actingAs($this->actor());
+        $studio = Studio::create($this->fields());
+        Studio::create($this->fields([
+            'name' => 'Other public studio', 'slug' => 'other-public-studio',
+            'status' => 'active', 'sort_order' => 2,
+        ]));
+        $this->get('/locate-a-store')->assertOk()->assertDontSee('Synthetic Studio');
+        $edited = $this->fields([
+            'name' => 'Updated public studio', 'address' => 'Updated Noida address',
+            'state' => 'Uttar Pradesh', 'status' => 'active',
+            'phones' => ['(+91) 99887 76655', '(+91) 98765 43210'],
+            'map_url' => 'https://maps.app.goo.gl/ApprovedLocation', 'sort_order' => 1,
+        ]);
+        $this->put('/admin/studios/'.$studio->id, $edited)->assertSessionHasNoErrors();
+        $this->get('/locate-a-store')->assertOk()->assertSee('Updated public studio')
+            ->assertSee('Updated Noida address')->assertSee('Uttar Pradesh')
+            ->assertSee('https://maps.app.goo.gl/ApprovedLocation', false)
+            ->assertViewHas('studios', fn ($rows) => $rows[0]['phones'] === $edited['phones']);
+        $this->put('/admin/studios/'.$studio->id, array_replace($edited, ['sort_order' => 3]))
+            ->assertSessionHasNoErrors();
+        $this->get('/locate-a-store')->assertOk()->assertViewHas(
+            'studios',
+            fn ($rows) => $rows->pluck('name')->all() === ['Other public studio', 'Updated public studio']
+        );
+        $this->put('/admin/studios/'.$studio->id, array_replace($edited, ['status' => 'inactive']))
+            ->assertSessionHasNoErrors();
+        $this->get('/locate-a-store')->assertOk()->assertDontSee('Updated public studio');
     }
 }

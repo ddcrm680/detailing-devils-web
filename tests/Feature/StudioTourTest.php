@@ -2,12 +2,22 @@
 
 namespace Tests\Feature;
 
+use App\Http\Controllers\StudioController;
 use DOMDocument;
 use DOMXPath;
 use Tests\TestCase;
 
 class StudioTourTest extends TestCase
 {
+    protected function setUp(): void
+    {
+        parent::setUp();
+        // Shared-navigation checks do not require physical studio records.
+        $this->mock(StudioController::class)->shouldReceive('index')->andReturnUsing(
+            fn () => view('studios.index', ['studios' => [], 'availableStates' => collect()])
+        );
+    }
+
     public function test_studio_tour_uses_shared_layout_and_existing_franchise_forms_without_a_database(): void
     {
         config()->set('database.default', 'unconfigured');

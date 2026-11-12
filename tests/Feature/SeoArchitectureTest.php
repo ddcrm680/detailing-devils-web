@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Contracts\Seo\MetadataRepository;
+use App\Http\Controllers\StudioController;
 use App\Services\Seo\ContentMetadata;
 use App\Services\Seo\EmptyMetadataRepository;
 use App\Services\Seo\JsonLd;
@@ -29,6 +30,10 @@ class SeoArchitectureTest extends TestCase
         Mail::fake();
         DB::shouldReceive('connection')->never();
         $this->app->instance(MetadataRepository::class, new EmptyMetadataRepository);
+        // Locator database integration is covered separately; keep SEO checks storage-independent.
+        $this->mock(StudioController::class)->shouldReceive('index')->andReturnUsing(
+            fn () => view('studios.index', ['studios' => [], 'availableStates' => collect()])
+        );
     }
 
     public function test_all_registered_pages_have_one_complete_safe_metadata_head_without_database_access(): void
