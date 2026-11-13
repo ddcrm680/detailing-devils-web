@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Str;
 
 #[Fillable([
     'name', 'slug', 'address', 'city', 'state', 'country_code', 'phones',
@@ -15,6 +16,26 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 class Studio extends Model
 {
     public const STATUSES = ['draft', 'active', 'inactive'];
+
+    protected static function booted(): void
+    {
+        static::creating(function (Studio $studio) {
+            if (! filled($studio->slug)) {
+                $studio->slug = static::generateUniqueSlug($studio->name);
+            }
+        });
+    }
+
+    public static function generateUniqueSlug(string $name): string
+    {
+        $base = rtrim(substr(Str::slug($name) ?: 'studio', 0, 180), '-');
+        $slug = $base;
+        for ($suffix = 2; static::query()->where('slug', $slug)->exists(); $suffix++) {
+            $slug = $base.'-'.$suffix;
+        }
+
+        return $slug;
+    }
 
     protected function casts(): array
     {

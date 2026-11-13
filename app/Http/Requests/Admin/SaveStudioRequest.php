@@ -8,6 +8,26 @@ use Illuminate\Validation\Rule;
 
 class SaveStudioRequest extends FormRequest
 {
+    protected function prepareForValidation(): void
+    {
+        if (! $this->user()?->can('manage-studios')) {
+            return;
+        }
+        $studio = $this->route('studio');
+        if ($studio instanceof Studio) {
+            if ($this->input('slug_mode') !== 'manual') {
+                $this->merge(['slug' => $studio->slug]);
+            }
+
+            return;
+        }
+        if ($this->input('slug_mode') === 'manual'
+            || ($this->input('slug_mode') !== 'auto' && $this->filled('slug'))) {
+            return;
+        }
+        $this->merge(['slug' => null]);
+    }
+
     public function authorize(): bool
     {
         return $this->user()?->can('manage-studios') === true;
@@ -16,9 +36,22 @@ class SaveStudioRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => ['required', 'string', 'max:255'],
+            'name' => [
+                'bail', 'required', 'string', 'max:255',
+                function ($attribute, $value, $fail) {
+                    $normalize = fn (string $name): string => mb_strtolower(preg_replace('/^\s+|\s+$/u', '', $name));
+                    $studio = $this->route('studio');
+                    $duplicate = Studio::query()
+                        ->when($studio instanceof Studio, fn ($query) => $query->whereKeyNot($studio->id))
+                        ->pluck('name')
+                        ->contains(fn ($name) => $normalize($name) === $normalize($value));
+                    if ($duplicate) {
+                        $fail('A studio with this name already exists.');
+                    }
+                },
+            ],
             'slug' => [
-                'required', 'string', 'max:191', 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/',
+                $this->route('studio') ? 'required' : 'nullable', 'string', 'max:191', 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/',
                 Rule::unique('studios', 'slug')->ignore($this->route('studio')),
             ],
             'address' => ['required', 'string', 'max:4000'],
@@ -63,9 +96,20 @@ class SaveStudioRequest extends FormRequest
     public function messages(): array
     {
         return [
+            'slug.unique' => 'This slug is already in use. Please choose another.',
             'slug.regex' => 'Use lowercase letters, numbers and single hyphens for the slug.',
             'phones.*.regex' => 'Enter a phone number with its country code; spaces and brackets are allowed.',
             'country_code.regex' => 'Enter a verified two-letter uppercase country code, or leave it blank.',
+        ];
+    }
+
+    public function attributes(): array
+    {
+        return [
+            'phones.*' => 'phone number',
+            'map_url' => 'Google Maps link',
+            'country_code' => 'country code',
+            'sort_order' => 'display order',
         ];
     }
 }

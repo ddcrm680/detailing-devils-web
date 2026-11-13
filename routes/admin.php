@@ -44,6 +44,8 @@ Route::prefix('admin')
                 });
         });
         Route::middleware(['auth:web', 'can:manage-studios'])->group(function () {
+            Route::get('studio-gallery', [StudioController::class, 'index'])->name('studios.gallery.index');
+            Route::get('studios/{studio}/gallery', [StudioImageController::class, 'show'])->name('studios.gallery.show');
             Route::resource('studios', StudioController::class)->except('destroy');
             Route::scopeBindings()->prefix('studios/{studio}')->name('studios.')->group(function () {
                 Route::post('/images', [StudioImageController::class, 'store'])->name('images.store');

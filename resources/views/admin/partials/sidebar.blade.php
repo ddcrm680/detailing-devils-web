@@ -23,14 +23,17 @@
                 <span>SEO management</span>
             </a>
             @can('manage-studios')
-                <a
-                    class="sidebar-link {{ request()->routeIs('admin.studios.*') ? 'active' : '' }}"
-                    href="{{ route('admin.studios.index') }}"
-                    @if (request()->routeIs('admin.studios.*')) aria-current="true" @endif
-                >
-                    <i class="bi bi-geo-alt" aria-hidden="true"></i>
-                    <span>Studios</span>
-                </a>
+                <span class="sidebar-label">Studios</span>
+                @foreach ([
+                    ['admin.studios.index', 'All Studios', 'bi-geo-alt', request()->routeIs('admin.studios.index', 'admin.studios.edit', 'admin.studios.show')],
+                    ['admin.studios.create', 'Add Studio', 'bi-plus-lg', request()->routeIs('admin.studios.create')],
+                    ['admin.studios.gallery.index', 'Studio Gallery', 'bi-images', request()->routeIs('admin.studios.gallery.*')],
+                ] as [$destination, $label, $icon, $active])
+                    <a class="sidebar-link {{ $active ? 'active' : '' }}" href="{{ route($destination) }}" @if ($active) aria-current="page" @endif>
+                        <i class="bi {{ $icon }}" aria-hidden="true"></i>
+                        <span>{{ $label }}</span>
+                    </a>
+                @endforeach
             @endcan
         </nav>
     </div>

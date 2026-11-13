@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Studio;
 use App\Models\StudioImage;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -12,32 +13,55 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use Illuminate\View\View;
 use RuntimeException;
 use Throwable;
 
 class StudioImageController extends Controller
 {
-    public function store(Request $request, Studio $studio): RedirectResponse
+    public function show(Studio $studio): View
     {
+        return view('admin.studios.gallery-page', ['studio' => $studio->load('images')]);
+    }
+
+    public function store(Request $request, Studio $studio): RedirectResponse|JsonResponse
+    {
+        $files = $request->file('images', []);
+        $fileCount = is_array($files) ? count($files) : 0;
         $input = $request->validate([
-            'images' => ['required', 'array', 'min:1', 'max:10'],
+            'images' => ['required', 'array', 'list', 'min:1', 'max:10'],
             'images.*' => [
                 'required', 'file', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120',
                 'dimensions:min_width=200,min_height=200,max_width=2400,max_height=2400',
             ],
+            'descriptions' => ['sometimes', 'array', 'list', 'size:'.$fileCount],
+            'descriptions.*' => ['nullable', 'string', 'max:255'],
+            'cover_index' => ['nullable', 'integer', 'min:0', 'max:'.max(0, $fileCount - 1)],
+        ], [
+            'images.required' => 'Please select at least one photo.',
+            'images.max' => 'Choose up to 10 photos at a time.',
+            'images.*.image' => 'Please choose a valid image.',
+            'images.*.mimes' => 'Choose JPEG, PNG or WebP photos.',
+            'images.*.max' => 'Each photo must be 5 MB or smaller.',
+            'images.*.dimensions' => 'Each photo must be 200–2400 pixels wide and tall.',
+            'descriptions.size' => 'Please add a description field for each selected photo.',
+            'descriptions.*.max' => 'Photo :position: keep the description within 255 characters.',
+        ], [
+            'descriptions.*' => 'photo description',
+            'cover_index' => 'cover photo',
         ]);
         if (! extension_loaded('gd')) {
-            throw ValidationException::withMessages(['images' => 'Image processing is unavailable on this host.']);
+            throw ValidationException::withMessages(['images' => 'Uploads are temporarily unavailable. Please try again later.']);
         }
 
         $disk = Storage::disk('studio_images');
         $prepared = [];
         try {
-            foreach ($input['images'] as $file) {
+            foreach ($input['images'] as $index => $file) {
                 $dimensions = @getimagesize($file->getRealPath());
                 $decoded = @imagecreatefromstring(file_get_contents($file->getRealPath()));
                 if (! $dimensions || ! $decoded) {
-                    throw ValidationException::withMessages(['images' => 'An image could not be decoded safely.']);
+                    throw ValidationException::withMessages(['images' => 'One photo could not be opened. Please choose another file.']);
                 }
                 $canvas = imagecreatetruecolor($dimensions[0], $dimensions[1]);
                 imagefill($canvas, 0, 0, imagecolorallocate($canvas, 255, 255, 255));
@@ -48,21 +72,27 @@ class StudioImageController extends Controller
                 imagedestroy($canvas);
                 imagedestroy($decoded);
                 $path = $studio->id.'/'.Str::uuid().'.jpg';
-                $prepared[] = ['path' => $path, 'width' => $dimensions[0], 'height' => $dimensions[1]];
+                $prepared[] = [
+                    'path' => $path, 'width' => $dimensions[0], 'height' => $dimensions[1],
+                    'alt_text' => $input['descriptions'][$index] ?? '',
+                ];
                 if (! $disk->put($path, $bytes)) {
                     throw new RuntimeException('Studio image storage failed.');
                 }
             }
 
-            DB::transaction(function () use ($studio, $prepared) {
+            DB::transaction(function () use ($studio, $prepared, $input) {
                 Studio::query()->lockForUpdate()->findOrFail($studio->id);
                 $order = (int) $studio->images()->max('sort_order');
                 $needsCover = ! $studio->images()->where('is_cover', true)->exists();
-                foreach ($prepared as $fields) {
+                $cover = isset($input['cover_index']) ? (int) $input['cover_index'] : ($needsCover ? 0 : null);
+                if ($cover !== null) {
+                    $studio->images()->update(['is_cover' => false]);
+                }
+                foreach ($prepared as $index => $fields) {
                     $image = new StudioImage;
-                    $image->forceFill($fields + ['sort_order' => ++$order, 'is_cover' => $needsCover]);
+                    $image->forceFill($fields + ['sort_order' => ++$order, 'is_cover' => $index === $cover]);
                     $studio->images()->save($image);
-                    $needsCover = false;
                 }
             });
         } catch (Throwable $exception) {
@@ -78,16 +108,41 @@ class StudioImageController extends Controller
                 throw $exception;
             }
             throw ValidationException::withMessages([
-                'images' => 'The upload could not be saved. No gallery changes were made. Please try again.',
+                'images' => 'Photos could not be uploaded. Please try again.',
             ]);
         }
 
-        return back()->with('status', 'Gallery images uploaded. The first image is the cover until you choose another.');
+        if ($request->expectsJson()) {
+            $request->session()->flash('status', 'Photos uploaded successfully.');
+
+            return response()->json(['redirect' => route('admin.studios.gallery.show', $studio)]);
+        }
+
+        return back()->with('status', 'Photos uploaded successfully.');
     }
 
     public function update(Request $request, Studio $studio, StudioImage $image): RedirectResponse
     {
         abort_unless($image->studio_id === $studio->id, 404);
+        if ($request->has('direction')) {
+            $input = $request->validate(['direction' => ['required', 'in:up,down']]);
+            DB::transaction(function () use ($studio, $image, $input) {
+                Studio::query()->lockForUpdate()->findOrFail($studio->id);
+                $images = $studio->images()->get()->all();
+                $position = array_search($image->id, array_column($images, 'id'), true);
+                abort_if($position === false, 404);
+                $target = $position + ($input['direction'] === 'up' ? -1 : 1);
+                if (! isset($images[$target])) {
+                    return;
+                }
+                [$images[$position], $images[$target]] = [$images[$target], $images[$position]];
+                foreach ($images as $order => $photo) {
+                    $photo->forceFill(['sort_order' => $order + 1])->save();
+                }
+            });
+
+            return back()->with('status', 'Photo order updated.');
+        }
         $input = $request->validate([
             'alt_text' => ['nullable', 'string', 'max:255'],
             'sort_order' => ['required', 'integer', 'min:0', 'max:1000000'],
@@ -107,20 +162,50 @@ class StudioImageController extends Controller
             $image->save();
         });
 
-        return back()->with('status', 'Gallery image updated.');
+        return back()->with('status', 'Photo updated.');
     }
 
     public function destroy(Studio $studio, StudioImage $image): RedirectResponse
     {
         abort_unless($image->studio_id === $studio->id, 404);
-        DB::transaction(function () use ($studio, $image) {
-            Studio::query()->lockForUpdate()->findOrFail($studio->id);
-            $studio->images()->whereKey($image->id)->delete();
-            if (! $studio->images()->where('is_cover', true)->exists()) {
-                $studio->images()->first()?->forceFill(['is_cover' => true])->save();
+        $disk = Storage::disk('studio_images');
+        $bytes = null;
+        $path = null;
+        try {
+            DB::transaction(function () use ($studio, $image, $disk, &$bytes, &$path) {
+                Studio::query()->lockForUpdate()->findOrFail($studio->id);
+                $photo = $studio->images()->findOrFail($image->id);
+                $path = $photo->path;
+                if (! preg_match('~^'.$studio->id.'/[a-f0-9-]{36}\.jpg$~D', $path)
+                    || StudioImage::query()->where('path', $path)->whereKeyNot($photo->id)->exists()
+                    || is_link($disk->path((string) $studio->id)) || is_link($disk->path($path))) {
+                    throw new RuntimeException('Unsafe or shared Studio image path.');
+                }
+                if ($disk->exists($path)) {
+                    $bytes = $disk->get($path);
+                }
+                $photo->delete();
+                if (! $studio->images()->where('is_cover', true)->exists()) {
+                    $studio->images()->first()?->forceFill(['is_cover' => true])->save();
+                }
+                if ($bytes !== null && ! $disk->delete($path)) {
+                    throw new RuntimeException('Studio image deletion failed.');
+                }
+            });
+        } catch (Throwable) {
+            if ($bytes !== null && $path !== null) {
+                try {
+                    if (! $disk->exists($path) && ! $disk->put($path, $bytes)) {
+                        throw new RuntimeException('Studio image recovery failed.');
+                    }
+                } catch (Throwable) {
+                    Log::warning('A failed Studio photo removal requires file reconciliation.');
+                }
             }
-        });
 
-        return back()->with('status', 'Image removed from this gallery. Its file is retained for safe recovery and existing references.');
+            throw ValidationException::withMessages(['gallery' => "This photo couldn't be removed. Please try again."]);
+        }
+
+        return back()->with('status', 'Photo removed.');
     }
 }
