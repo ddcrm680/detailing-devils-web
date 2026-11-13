@@ -8,9 +8,20 @@
     $modelName = $modelNames[$model];
     $showTourPricing = $showTourPricing ?? false;
     $isXclusive = $model === 'xclusive';
+    $framesDirectory = match ($model) {
+        'prime' => 'frames/prime-tour',
+        'fofo' => 'frames/fofo-tour',
+        default => 'frames/studio-tour',
+    };
     $xclusiveApplicationUrl = route('xclusive.show', [], false);
     $applicationUrl = $isXclusive ? $xclusiveApplicationUrl : route($model.'.show');
     $otherTourPrices = ['prime' => '15 Lakh', 'fofo' => '35 Lakh', 'xclusive' => '1.5 Crore'];
+    $primeCaptions = [
+        [70, 140, 'Detailing bay', 'Detailing', 'bay', 'One full-size bay under hexagon lighting.'],
+        [240, 300, 'Wash station', 'Wash', 'station', 'Pressure washer and hose reels on the wall.'],
+        [400, 470, 'Glass lounge', 'Glass', 'lounge', 'Customers watch their car through the glass.'],
+        [610, 700, 'Customer lounge', 'Customer', 'lounge', 'Seating, art and a clear view of the bay.'],
+    ];
     $fofoCaptions = [
         [38, 72, 'Foam & wash bay', 'Foam &', 'wash', 'Pre-wash and decontamination in its own glass bay.'],
         [125, 165, 'Dragon PPF bay', 'Dragon', 'PPF', 'A sealed bay for paint protection film.'],
@@ -26,7 +37,7 @@
 @endpush
 
 @section('content')
-<div class="tour-page" data-model="{{ $model }}" data-frame-count="{{ $isXclusive ? 660 : 800 }}" data-frames-base="{{ asset($isXclusive ? 'frames/studio-tour' : 'frames/fofo-tour') }}/">
+<div class="tour-page" data-model="{{ $model }}" data-frame-count="{{ $isXclusive ? 660 : 800 }}" data-frames-base="{{ asset($framesDirectory) }}/">
     <nav class="tour-page__switcher" aria-label="Choose a studio tour">
         @foreach ($modelNames as $key => $name)
             <a href="{{ route('studios.tour', ['model' => $key]) }}" @if ($model === $key) aria-current="page" @endif>{{ $name }}</a>
@@ -34,7 +45,7 @@
     </nav>
     <section class="tour-page__film" id="tour" aria-label="Studio tour">
         <div class="tour-page__stage">
-            <canvas id="tour-canvas" role="img" aria-label="{{ $isXclusive ? 'Walk-through of a Detailing Devils X-Clusive studio: facade, showroom, ceramic coating bay, washing bay, detailing area, PPF bays and the brand wall' : $modelName.' studio tour: wash bay, PPF bay, detailing bay, hall, office and customer lounge' }}"></canvas>
+            <canvas id="tour-canvas" role="img" aria-label="{{ $isXclusive ? 'Walk-through of a Detailing Devils X-Clusive studio: facade, showroom, ceramic coating bay, washing bay, detailing area, PPF bays and the brand wall' : ($model === 'prime' ? 'Prime studio tour: detailing bay, wash station, glass lounge and customer lounge' : $modelName.' studio tour: wash bay, PPF bay, detailing bay, hall, office and customer lounge') }}"></canvas>
             <div class="tour-page__shade" aria-hidden="true"></div>
 
             <div class="tour-page__hero" id="tour-hero">
@@ -48,7 +59,6 @@
                 @else
                     <h1 class="disp">Start <span class="acc">your</span> studio</h1>
                     <p>The quickest way into the Devils network.</p>
-                    <p class="tour-page__preview">Illustrative preview: FOFO footage, not a Prime studio specification.</p>
                 @endif
             </div>
 
@@ -59,7 +69,7 @@
                 <div class="tour-page__caption" data-a="392" data-b="442"><span class="tour-page__number"><b>04</b>Detailing area</span><h2 class="disp">Detailing <span class="acc">area</span></h2><p>Polishing and finishing beside the lit booth.</p></div>
                 <div class="tour-page__caption" data-a="500" data-b="550"><span class="tour-page__number"><b>05</b>PPF bays</span><h2 class="disp">PPF <span class="acc">bays</span></h2><p>Lift bays for film installs, curtained rooms alongside.</p></div>
             @else
-                @foreach ($fofoCaptions as $caption)
+                @foreach ($model === 'prime' ? $primeCaptions : $fofoCaptions as $caption)
                         <div class="tour-page__caption" data-a="{{ $caption[0] }}" data-b="{{ $caption[1] }}"><span class="tour-page__number"><b>{{ sprintf('%02d', $loop->iteration) }}</b>{{ $caption[2] }}</span><h2 class="disp">{{ $caption[3] }} <span class="acc">{{ $caption[4] }}</span></h2><p>{{ $caption[5] }}</p></div>
                 @endforeach
             @endif
@@ -70,7 +80,7 @@
             <div class="tour-page__end" id="tour-end" data-lenis-prevent>
                 <span class="lbl">End of {{ $modelName }} tour</span>
                 <h2 class="disp">Your Studio<br>Is <span class="acc">Next</span></h2>
-                <p>{{ $isXclusive ? 'Your X-Clusive studio journey starts here. Explore the model and apply.' : ($model === 'prime' ? 'Prime illustrative tour complete: FOFO footage, not a Prime studio specification.' : 'Your FOFO studio journey starts here. Explore the model and apply.') }}</p>
+                <p>Your {{ $modelName }} studio journey starts here. Explore the model and apply.</p>
                 <div class="tour-page__actions">
                     <a class="cta red" href="#models">Explore Models <i aria-hidden="true">&darr;</i></a>
                     <a class="cta" href="{{ $applicationUrl }}">Apply for {{ $modelName }} <i aria-hidden="true">&rarr;</i></a>

@@ -50,11 +50,11 @@ class StudioTourTest extends TestCase
             $page = $this->get(route('studios.tour', ['model' => $requested]))->assertOk();
             $page->assertSee('data-model="'.$model.'"', false)
                 ->assertSee('data-frame-count="'.($model === 'xclusive' ? 660 : 800).'"', false)
-                ->assertSee('data-frames-base="'.asset($model === 'xclusive' ? 'frames/studio-tour' : 'frames/fofo-tour').'/', false)
+                ->assertSee('data-frames-base="'.asset(['xclusive' => 'frames/studio-tour', 'fofo' => 'frames/fofo-tour', 'prime' => 'frames/prime-tour'][$model]).'/', false)
                 ->assertSee(route('prime.show'))->assertSee(route('fofo.show'))
                 ->assertSee('href="'.route('xclusive.show', [], false).'"', false)
                 ->assertDontSee('Coming Soon')->assertDontSee('X-Clusive pricing is provisional');
-            $this->assertSame($model === 'xclusive' ? 5 : 6, substr_count($page->getContent(), 'class="tour-page__caption"'));
+            $this->assertSame(['xclusive' => 5, 'fofo' => 6, 'prime' => 4][$model], substr_count($page->getContent(), 'class="tour-page__caption"'));
             $xpath = $this->xpath($page->getContent());
             $this->assertSame(route($model.'.show', [], false), $xpath->query('//header//a[@class="header-cta"]')->item(0)->getAttribute('href'));
             $closingApply = $xpath->query('//section[contains(@class,"tour-page__closing")]//a[contains(@class,"red")]');
@@ -83,12 +83,44 @@ class StudioTourTest extends TestCase
             $this->assertSame($model === 'xclusive' ? route('xclusive.show', [], false) : route($model.'.show'), $endLinks->item(0)->getAttribute('href'));
             $this->assertFalse($endLinks->item(0)->hasAttribute('aria-disabled'));
             if ($model === 'prime') {
-                $page->assertSee('Illustrative preview')->assertSee('not a Prime studio specification');
+                $page->assertDontSee('FOFO footage')->assertDontSee('frames/fofo-tour/');
             }
         }
         $this->assertCount(400, glob(public_path('frames/fofo-tour/*.avif')));
         for ($index = 1; $index <= 400; $index++) {
             $this->assertFileExists(public_path(sprintf('frames/fofo-tour/%03d.avif', $index)));
+        }
+    }
+
+    public function test_prime_has_its_own_complete_sequence_and_reference_scene_captions(): void
+    {
+        config()->set('database.default', 'unconfigured');
+
+        $page = $this->get(route('studios.tour', ['model' => 'prime']))->assertOk()
+            ->assertSee('Prime studio tour: detailing bay, wash station, glass lounge and customer lounge')
+            ->assertDontSee('Illustrative preview')
+            ->assertDontSee('not a Prime studio specification');
+        $xpath = $this->xpath($page->getContent());
+        $captions = $xpath->query('//*[contains(concat(" ", normalize-space(@class), " "), " tour-page__caption ")]');
+        $expected = [
+            [70, 140, 'Detailing bay', 'One full-size bay under hexagon lighting.'],
+            [240, 300, 'Wash station', 'Pressure washer and hose reels on the wall.'],
+            [400, 470, 'Glass lounge', 'Customers watch their car through the glass.'],
+            [610, 700, 'Customer lounge', 'Seating, art and a clear view of the bay.'],
+        ];
+
+        $this->assertSame(4, $captions->length);
+        foreach ($expected as $index => [$start, $finish, $heading, $description]) {
+            $caption = $captions->item($index);
+            $this->assertSame((string) $start, $caption->getAttribute('data-a'));
+            $this->assertSame((string) $finish, $caption->getAttribute('data-b'));
+            $this->assertSame($heading, $xpath->query('./h2', $caption)->item(0)->textContent);
+            $this->assertSame($description, $xpath->query('./p', $caption)->item(0)->textContent);
+        }
+
+        $this->assertCount(400, glob(public_path('frames/prime-tour/*.avif')));
+        for ($index = 1; $index <= 400; $index++) {
+            $this->assertFileExists(public_path(sprintf('frames/prime-tour/%03d.avif', $index)));
         }
     }
 
