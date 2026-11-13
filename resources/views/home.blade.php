@@ -60,6 +60,8 @@
             'land-rover' => 'Land Rover',
             'kawasaki' => 'Kawasaki',
             'tvs' => 'TVS',
+            'audi' => 'Audi',
+            'mclaren' => 'McLaren',
         ];
     @endphp
     <div class="marq" role="region" aria-label="Vehicle brands we work on" tabindex="0">
@@ -72,7 +74,7 @@
                                 'brand',
                                 'brand-wide' => in_array($slug, [
                                     'chevrolet', 'kia', 'toyota', 'ford', 'hyundai',
-                                    'datsun', 'land-rover', 'kawasaki', 'tvs',
+                                    'datsun', 'land-rover', 'kawasaki', 'tvs', 'audi', 'mclaren',
                                 ], true),
                                 'brand-fine' => $slug === 'jaguar',
                                 'brand-tall' => $slug === 'rolls-royce',
