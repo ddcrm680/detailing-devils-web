@@ -484,11 +484,11 @@ test('opt-in photo actions use spinner-only feedback and lock only their card', 
     assert.equal(card.inert, false);
 });
 
-test('ordinary Admin submits retain labelled feedback without card locking', () => {
+test('ordinary Admin submits use spinner-only feedback without card locking', () => {
     const f = submissionFixture();
     f.submit();
     f.tasks.shift()();
-    assert.equal(f.win.loadText, 'Please wait…');
+    assert.equal(f.win.loadText, '');
     assert.equal(f.file.disabled, false);
 });
 
@@ -501,6 +501,7 @@ test('preview feedback uses a same-origin channel without needing an opener and 
     };
     f.submit();
     f.tasks.shift()();
+    assert.equal(f.win.loadText, 'Opening preview…');
     f.win.channelMessage({data: {type: 'unrelated'}});
     assert.equal(f.button.disabled, true);
     f.win.channelMessage({data: {type: 'ready'}});

@@ -94,7 +94,7 @@ export function mountSubmissionFeedback(doc, win) {
             state.buttons = Array.from(scope ? scope.querySelectorAll('button') : form.elements)
                 .filter((control) => scope || control.type === 'submit' || control.hasAttribute('data-upload-cancel'))
                 .map((control) => [control, control.disabled]);
-            win.showLoader?.(button, button?.hasAttribute('data-icon-loading') ? null : (preview ? 'Opening preview…' : 'Please wait…'));
+            win.showLoader?.(button, button?.hasAttribute('data-icon-loading') ? null : (preview ? 'Opening preview…' : ''));
             state.buttons.forEach(([control]) => { control.disabled = true; });
             form.setAttribute('aria-busy', 'true');
             scope?.setAttribute('aria-busy', 'true');
