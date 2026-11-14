@@ -146,6 +146,18 @@ export function mountAdmin(doc = document, win = window) {
     const toggle = $('[data-nav-toggle]', doc);
     const sidebar = $('#admin-sidebar', doc);
     const backdrop = $('[data-menu-backdrop]', doc);
+    if (doc.querySelectorAll) $$('[data-sidebar-group]', doc).forEach((group) => {
+        const summary = $('summary', group);
+        const sync = () => summary.setAttribute('aria-expanded', String(group.open));
+        group.addEventListener('toggle', sync);
+        summary.addEventListener('keydown', (event) => {
+            if (!['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
+            event.preventDefault();
+            group.open = event.key === 'ArrowRight';
+            sync();
+        });
+        sync();
+    });
     const filters = $('[data-filter-panel]', doc);
     if (filters) {
         const desktopFilters = win.matchMedia('(min-width: 1024px)');
@@ -159,6 +171,8 @@ export function mountAdmin(doc = document, win = window) {
     }
     if (toggle && sidebar && backdrop) {
         const mobile = win.matchMedia('(max-width: 900px)');
+        const focusableLinks = () => Array.from($$('a, button, summary', sidebar))
+            .filter((element) => !element.disabled && !element.closest('details:not([open]) .sidebar-submenu') && element.getClientRects().length);
         let open = false;
         const update = () => {
             const expanded = mobile.matches && open;
@@ -172,7 +186,7 @@ export function mountAdmin(doc = document, win = window) {
         toggle.addEventListener('click', () => {
             open = !open;
             update();
-            if (open) $('a', sidebar)?.focus();
+            if (open) focusableLinks()[0]?.focus();
         });
         const close = () => {
             open = false;
@@ -180,12 +194,15 @@ export function mountAdmin(doc = document, win = window) {
             toggle.focus();
         };
         backdrop.addEventListener('click', close);
+        sidebar.addEventListener('click', (event) => {
+            if (mobile.matches && open && !event.defaultPrevented && event.target.closest('a[href]')) close();
+        });
         doc.addEventListener('keydown', (event) => {
             if (event.key === 'Escape' && open) close();
         });
         sidebar.addEventListener('keydown', (event) => {
             if (event.key !== 'Tab' || !mobile.matches || !open) return;
-            const links = Array.from($$('a, button', sidebar));
+            const links = focusableLinks();
             if (event.shiftKey && doc.activeElement === links[0]) {
                 event.preventDefault();
                 links.at(-1)?.focus();

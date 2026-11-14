@@ -119,6 +119,8 @@ test('admin mounting is idempotent and responsive navigation supports Escape and
         link = node();
     sidebar.querySelector = () => link;
     sidebar.querySelectorAll = () => [link];
+    link.getClientRects = () => [{}];
+    link.closest = () => null;
     const doc = {
         body,
         events: {},
@@ -156,9 +158,38 @@ test('admin mounting is idempotent and responsive navigation supports Escape and
     doc.events.keydown({ key: 'Escape' });
     assert.equal(sidebar.inert, true);
     assert.equal(toggle.focused, true);
+    toggle.events.click();
+    sidebar.events.click({ defaultPrevented: false, target: { closest: () => link } });
+    assert.equal(sidebar.inert, true);
+    assert.equal(toggle.attributes['aria-expanded'], 'false');
     media.matches = false;
     media.change();
     assert.equal(sidebar.inert, false);
+});
+
+test('Studio disclosure synchronizes ARIA and supports arrow keys without a second mount', () => {
+    const body = node(), group = node(), summary = node();
+    group.open = true;
+    group.querySelector = () => summary;
+    const doc = {
+        body, querySelector: () => null,
+        querySelectorAll: selector => selector === '[data-sidebar-group]' ? [group] : [],
+    };
+    mountAdmin(doc, { ...sharedDom });
+    assert.equal(summary.getAttribute('aria-expanded'), 'true');
+    let prevented = false;
+    summary.events.keydown({ key: 'ArrowLeft', preventDefault() { prevented = true; } });
+    assert.equal(prevented, true);
+    assert.equal(group.open, false);
+    assert.equal(summary.getAttribute('aria-expanded'), 'false');
+    summary.events.keydown({ key: 'ArrowRight', preventDefault() {} });
+    assert.equal(group.open, true);
+    group.open = false;
+    group.events.toggle();
+    assert.equal(summary.getAttribute('aria-expanded'), 'false');
+    const handler = group.events.toggle;
+    mountAdmin(doc, { ...sharedDom });
+    assert.equal(group.events.toggle, handler);
 });
 
 test('preview retains unsaved warning while saving allows normal server navigation', async () => {

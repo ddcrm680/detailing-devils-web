@@ -319,6 +319,49 @@ class AdminUiTest extends TestCase
         $this->assertSame(0, $get(['indexing' => 'noindex'])['count']);
     }
 
+    public function test_sidebar_hierarchy_tracks_studio_routes_and_preserves_role_visibility(): void
+    {
+        $states = [
+            'admin.studios.index' => 'All Studios',
+            'admin.studios.edit' => 'All Studios',
+            'admin.studios.show' => 'All Studios',
+            'admin.studios.create' => 'Add Studio',
+            'admin.studios.gallery.index' => 'Studio Gallery',
+            'admin.studios.gallery.show' => 'Studio Gallery',
+            'admin.seo.index' => null,
+        ];
+
+        foreach (['super_admin', 'admin', 'seo_admin'] as $role) {
+            $user = new User(['name' => 'Navigation fixture', 'email' => 'navigation@example.test']);
+            $user->forceFill(['id' => 1, 'role' => $role]);
+            $this->actingAs($user);
+            foreach ($states as $route => $active) {
+                $request = Request::create('/admin/navigation-fixture');
+                $request->setRouteResolver(fn () => app('router')->getRoutes()->getByName($route));
+                $this->app->instance('request', $request);
+                $html = view('admin.partials.sidebar')->render();
+                $xpath = $this->xpath($html);
+                $canManageStudios = $role !== 'seo_admin';
+                $this->assertSame($canManageStudios ? 1 : 0, $xpath->query('//details[@data-sidebar-group]')->length);
+                $this->assertSame($canManageStudios ? 3 : 0, $xpath->query('//*[@id="studio-navigation"]/a')->length);
+                $this->assertSame(1, $xpath->query('//a[span="SEO Management"]')->length);
+                $this->assertSame(1, $xpath->query('//a[span="View Website"]')->length);
+                $this->assertStringNotContainsString('Private administration.', $html);
+                if ($canManageStudios) {
+                    $this->assertSame($active ? 1 : 0, $xpath->query('//details[@data-sidebar-group][@open]')->length);
+                    $summary = $xpath->query('//details/summary')->item(0);
+                    $this->assertSame($active ? 'true' : 'false', $summary->getAttribute('aria-expanded'));
+                    $this->assertSame('studio-navigation', $summary->getAttribute('aria-controls'));
+                    $selected = $xpath->query('//*[@id="studio-navigation"]/a[@aria-current="page"]');
+                    $this->assertSame($active ? 1 : 0, $selected->length);
+                    if ($active) {
+                        $this->assertSame($active, trim($selected->item(0)->textContent));
+                    }
+                }
+            }
+        }
+    }
+
     private function xpath(string $html): DOMXPath
     {
         $document = new DOMDocument;
