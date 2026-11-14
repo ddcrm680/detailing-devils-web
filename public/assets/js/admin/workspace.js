@@ -59,6 +59,8 @@ export function mountSubmissionFeedback(doc, win) {
         state.buttons.forEach(([button, disabled]) => { button.disabled = disabled; });
         state.button?.removeAttribute('aria-busy');
         form.removeAttribute('aria-busy');
+        state.scope?.removeAttribute('aria-busy');
+        if (state.scope) state.scope.inert = state.inert;
         active.delete(form);
     };
     win.addEventListener('pageshow', () => Array.from(active.keys()).forEach(reset));
@@ -73,14 +75,15 @@ export function mountSubmissionFeedback(doc, win) {
     doc.addEventListener('submit', (event) => {
         const form = event.target;
         if (form.tagName !== 'FORM' || form.method.toLowerCase() !== 'post' || event.defaultPrevented) return;
-        if (active.has(form)) {
+        const scope = form.dataset.submitScope ? form.closest(form.dataset.submitScope) : null;
+        if (active.has(form) || (scope && Array.from(active.values()).some((state) => state.scope === scope))) {
             event.preventDefault();
             return;
         }
         const button = event.submitter || $('button[type="submit"]', form);
         const preview = (event.submitter?.formTarget || form.target) === '_blank';
         if (preview) connectPreview();
-        const state = { button, buttons: [], preview };
+        const state = { button, buttons: [], preview, scope, inert: scope?.inert };
         active.set(form, state);
         // Keep native form serialization and all fields intact before disabling buttons.
         win.queueMicrotask(() => {
@@ -88,12 +91,14 @@ export function mountSubmissionFeedback(doc, win) {
                 reset(form);
                 return;
             }
-            state.buttons = Array.from(form.elements)
-                .filter((control) => control.type === 'submit' || control.hasAttribute('data-upload-cancel'))
+            state.buttons = Array.from(scope ? scope.querySelectorAll('button') : form.elements)
+                .filter((control) => scope || control.type === 'submit' || control.hasAttribute('data-upload-cancel'))
                 .map((control) => [control, control.disabled]);
-            win.showLoader?.(button, preview ? 'Opening preview…' : 'Please wait…');
+            win.showLoader?.(button, button?.hasAttribute('data-icon-loading') ? null : (preview ? 'Opening preview…' : 'Please wait…'));
             state.buttons.forEach(([control]) => { control.disabled = true; });
             form.setAttribute('aria-busy', 'true');
+            scope?.setAttribute('aria-busy', 'true');
+            if (scope) scope.inert = true;
             button?.setAttribute('aria-busy', 'true');
             if (preview) {
                 state.timer = win.setTimeout(() => {

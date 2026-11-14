@@ -298,32 +298,59 @@ export function mountStudioSlider(doc = document, win = window) {
     const photos = Array.from(doc.querySelectorAll('[data-studio-photo]'));
     if (!stage || photos.length < 2 || !win.Glide) return;
     const motion = win.matchMedia('(prefers-reduced-motion: reduce)');
+    const media = stage.closest('.studio-preview-media');
+    const toggle = media.querySelector('[data-photo-play]');
+    let paused = false;
+    let hovered = false;
+    let suspended = false;
     const glide = new win.Glide(stage, {
-        type: 'slider', perView: 1, gap: 0, autoplay: false,
+        type: 'carousel', perView: 1, gap: 0, autoplay: false, hoverpause: false,
         keyboard: false, perTouch: 1, rewind: true,
-        animationDuration: motion.matches ? 0 : 200,
-        rewindDuration: motion.matches ? 0 : 200,
+        animationDuration: motion.matches ? 0 : 450,
+        animationTimingFunc: 'cubic-bezier(.25,.1,.25,1)',
     });
+    const playback = () => {
+        if (paused || hovered || suspended || motion.matches || doc.hidden || media.contains(doc.activeElement)) glide.pause();
+        else glide.play(4500);
+        toggle.hidden = motion.matches;
+        toggle.setAttribute('aria-label', paused ? 'Play slideshow' : 'Pause slideshow');
+        toggle.title = paused ? 'Play slideshow' : 'Pause slideshow';
+        toggle.querySelector('i').className = paused ? 'bi bi-play-fill' : 'bi bi-pause-fill';
+    };
     const update = () => {
         photos.forEach((photo, index) => photo.setAttribute('aria-pressed', String(index === glide.index)));
-        stage.querySelectorAll('.glide__slide').forEach((slide, index) => slide.setAttribute('aria-hidden', String(index !== glide.index)));
+        stage.querySelectorAll('.glide__slide:not(.glide__slide--clone)').forEach((slide, index) => slide.setAttribute('aria-hidden', String(index !== glide.index)));
+        stage.querySelectorAll('.glide__slide--clone').forEach((slide) => slide.setAttribute('aria-hidden', 'true'));
     };
     glide.on(['mount.after', 'run.after'], update);
     glide.mount();
+    playback();
     photos.forEach((photo, index) => photo.addEventListener('click', () => glide.go(`=${index}`)));
     stage.querySelectorAll('[data-photo-step]').forEach((arrow) => {
         arrow.hidden = false;
         arrow.addEventListener('click', () => glide.go(Number(arrow.dataset.photoStep) > 0 ? '>' : '<'));
     });
-    stage.addEventListener('keydown', (event) => {
+    media.addEventListener('keydown', (event) => {
         if (!['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
         event.preventDefault();
         glide.go(event.key === 'ArrowRight' ? '>' : '<');
     });
-    motion.addEventListener('change', () => glide.update({
-        animationDuration: motion.matches ? 0 : 200,
-        rewindDuration: motion.matches ? 0 : 200,
-    }));
+    toggle.addEventListener('click', () => { paused = !paused; playback(); });
+    media.addEventListener('pointerenter', (event) => {
+        if (event.pointerType === 'touch') return;
+        hovered = true;
+        playback();
+    });
+    media.addEventListener('pointerleave', () => { hovered = false; playback(); });
+    media.addEventListener('focusin', playback);
+    media.addEventListener('focusout', () => win.queueMicrotask(playback));
+    doc.addEventListener('visibilitychange', playback);
+    win.addEventListener('pagehide', () => { suspended = true; playback(); });
+    win.addEventListener('pageshow', () => { suspended = false; playback(); });
+    motion.addEventListener('change', () => {
+        glide.update({ animationDuration: motion.matches ? 0 : 450 });
+        playback();
+    });
 }
 
 export function mountStudios(doc = document, win = window) {

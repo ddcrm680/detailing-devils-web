@@ -649,13 +649,16 @@ class StudioCmsTest extends TestCase
         $this->actingAs($this->actor());
         $studio = Studio::create($this->fields());
         $preview = '/admin/studios/'.$studio->id;
-        $this->get($preview)->assertOk()->assertDontSee('/assets/vendor/glide.min.js', false);
+        $this->get($preview)->assertOk()->assertDontSee('/assets/vendor/glide.min.js', false)->assertDontSee('data-photo-play', false);
         $this->post($preview.'/images', ['images' => [UploadedFile::fake()->image('one.jpg', 400, 300)]])->assertSessionHasNoErrors();
-        $this->get($preview)->assertOk()->assertDontSee('/assets/vendor/glide.min.js', false);
+        $this->get($preview)->assertOk()->assertDontSee('/assets/vendor/glide.min.js', false)->assertDontSee('data-photo-play', false);
         $this->post($preview.'/images', ['images' => [UploadedFile::fake()->image('two.jpg', 400, 300)]])->assertSessionHasNoErrors();
         $this->get($preview)->assertOk()->assertSee('/assets/vendor/glide.min.js', false)
-            ->assertSee('/assets/vendor/glide.core.min.css', false)->assertSee('data-glide-el="track"', false);
+            ->assertSee('/assets/vendor/glide.core.min.css', false)->assertSee('data-glide-el="track"', false)
+            ->assertSee('data-photo-play', false)->assertSee('aria-label="Pause slideshow"', false);
         $this->get($preview.'/gallery')->assertOk()->assertDontSee('/assets/vendor/glide.min.js', false)
-            ->assertSee('data-photo-original', false)->assertSee('data-photo-save', false);
+            ->assertSee('data-photo-original', false)->assertSee('data-photo-save', false)
+            ->assertSee('data-icon-loading', false)->assertSee('data-submit-scope=".studio-gallery-card"', false)
+            ->assertSee('aria-label="Remove Photo"', false);
     }
 }

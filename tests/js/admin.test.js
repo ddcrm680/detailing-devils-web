@@ -415,7 +415,7 @@ function submissionFixture(preview = false) {
     win.queueMicrotask = callback => tasks.push(callback);
     win.setTimeout = callback => { win.timeout = callback; return 1; };
     win.clearTimeout = () => {};
-    win.showLoader = control => { win.loads = (win.loads || 0) + 1; control.disabled = true; };
+    win.showLoader = (control, text) => { win.loads = (win.loads || 0) + 1; win.loadText = text; control.disabled = true; };
     win.hideLoader = control => { win.resets = (win.resets || 0) + 1; control.disabled = false; };
     win.showNotification = notification => notifications.push(notification);
     mountSubmissionFeedback(doc, win);
@@ -454,6 +454,42 @@ test('cancelled submissions never start loading or announce success', () => {
     assert.equal(f.button.disabled, false);
     assert.equal(f.notifications.length, 0);
     assert.equal(f.submit().defaultPrevented, false);
+});
+
+test('opt-in photo actions use spinner-only feedback and lock only their card', () => {
+    const f = submissionFixture();
+    const card = node(), other = node(), arrow = node();
+    arrow.disabled = true;
+    f.form.dataset.submitScope = '.studio-gallery-card';
+    f.form.closest = () => card;
+    card.querySelectorAll = () => [f.button, arrow];
+    f.button.setAttribute('data-icon-loading', '');
+    f.submit();
+    // Native serialization happens before the queued disabling work.
+    assert.equal(f.file.disabled, false);
+    const duplicate = { target: { ...f.form }, submitter: arrow, defaultPrevented: false, preventDefault() { this.defaultPrevented = true; } };
+    f.doc.events.submit(duplicate);
+    assert.equal(duplicate.defaultPrevented, true);
+    f.tasks.shift()();
+    assert.equal(f.win.loadText, null);
+    assert.equal(card.getAttribute('aria-busy'), 'true');
+    assert.equal(f.file.disabled, false);
+    assert.equal(card.inert, true);
+    assert.equal(other.hasAttribute('aria-busy'), false);
+    f.win.events.pageshow();
+    assert.equal(f.button.disabled, false);
+    assert.equal(f.file.disabled, false);
+    assert.equal(arrow.disabled, true);
+    assert.equal(card.hasAttribute('aria-busy'), false);
+    assert.equal(card.inert, false);
+});
+
+test('ordinary Admin submits retain labelled feedback without card locking', () => {
+    const f = submissionFixture();
+    f.submit();
+    f.tasks.shift()();
+    assert.equal(f.win.loadText, 'Please wait…');
+    assert.equal(f.file.disabled, false);
 });
 
 test('preview feedback uses a same-origin channel without needing an opener and has a labelled timeout', () => {

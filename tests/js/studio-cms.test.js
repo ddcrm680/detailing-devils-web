@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 globalThis.window = {};
-const { updatePhoneRows, generatedStudioSlug, photoSnapshot } = await import('../../public/assets/js/admin/studios.js');
+const { updatePhoneRows, generatedStudioSlug, photoSnapshot, mountStudioSlider } = await import('../../public/assets/js/admin/studios.js');
 delete globalThis.window;
 
 function phone(value) {
@@ -71,4 +71,120 @@ test('saved photo snapshots detect metadata changes and ignore equivalent numeri
     assert.notEqual(photoSnapshot(original), photoSnapshot({ ...original, alt_text: 'Reception ' }));
     assert.notEqual(photoSnapshot(original), photoSnapshot({ ...original, sort_order: '' }));
     assert.notEqual(photoSnapshot(original), photoSnapshot({ ...original, is_cover: true }));
+});
+
+function sliderFixture(reduced = false, count = 3) {
+    const node = () => ({
+        events: {}, attributes: {}, dataset: {},
+        addEventListener(type, fn) { this.events[type] = fn; },
+        setAttribute(key, value) { this.attributes[key] = value; },
+    });
+    const stage = node(), media = node(), toggle = node(), icon = node();
+    const photos = Array.from({ length: count }, node);
+    const slides = Array.from({ length: count }, node);
+    const clones = [node(), node()];
+    const arrows = [node(), node()];
+    arrows[0].dataset.photoStep = '-1';
+    arrows[1].dataset.photoStep = '1';
+    stage.closest = () => media;
+    stage.querySelectorAll = selector => selector.includes(':not(') ? slides : selector === '.glide__slide--clone' ? clones : arrows;
+    media.querySelector = () => toggle;
+    media.contains = element => photos.includes(element) || element === stage || element === toggle;
+    toggle.querySelector = () => icon;
+    const doc = Object.assign(node(), {
+        hidden: false, activeElement: null,
+        querySelector: () => stage, querySelectorAll: () => photos,
+    });
+    const motion = Object.assign(node(), { matches: reduced });
+    let instance;
+    const win = Object.assign(node(), {
+        matchMedia: () => motion, queueMicrotask: fn => fn(),
+        Glide: class {
+            constructor(element, options) { instance = this; this.index = 0; this.options = options; this.events = {}; }
+            on(events, fn) { events.forEach(event => { this.events[event] = fn; }); }
+            mount() { this.events['mount.after'](); }
+            play(interval) { this.playing = true; this.interval = interval; }
+            pause() { this.playing = false; }
+            update(options) { Object.assign(this.options, options); }
+            go(direction) {
+                this.index = direction[0] === '=' ? Number(direction.slice(1)) : (this.index + (direction === '>' ? 1 : count - 1)) % count;
+                this.events['run.after']();
+            }
+        },
+    });
+    mountStudioSlider(doc, win);
+    return { instance, doc, win, motion, stage, media, toggle, icon, photos, slides, clones, arrows };
+}
+
+test('preview uses Glide autoplay and pauses for hover, focus and explicit pause', () => {
+    const f = sliderFixture();
+    assert.equal(f.instance.options.type, 'carousel');
+    assert.equal(f.instance.options.animationDuration, 450);
+    assert.equal(f.instance.interval, 4500);
+    assert.equal(f.instance.playing, true);
+    f.media.events.pointerenter({ pointerType: 'mouse' });
+    assert.equal(f.instance.playing, false);
+    f.media.events.pointerleave();
+    assert.equal(f.instance.playing, true);
+    f.media.events.pointerenter({ pointerType: 'touch' });
+    assert.equal(f.instance.playing, true);
+    f.doc.activeElement = f.photos[0];
+    f.media.events.focusin();
+    assert.equal(f.instance.playing, false);
+    f.doc.activeElement = null;
+    f.media.events.focusout();
+    assert.equal(f.instance.playing, true);
+    f.toggle.events.click();
+    assert.equal(f.instance.playing, false);
+    assert.equal(f.toggle.attributes['aria-label'], 'Play slideshow');
+    f.media.events.pointerleave();
+    assert.equal(f.instance.playing, false);
+    f.toggle.events.click();
+    assert.equal(f.instance.playing, true);
+});
+
+test('reduced motion, hidden documents and page history never leave autoplay running', () => {
+    const f = sliderFixture(true);
+    assert.equal(f.instance.playing, false);
+    assert.equal(f.instance.options.animationDuration, 0);
+    assert.equal(f.toggle.hidden, true);
+    f.arrows[1].events.click();
+    assert.equal(f.instance.index, 1);
+    f.motion.matches = false;
+    f.motion.events.change();
+    assert.equal(f.instance.playing, true);
+    assert.equal(f.toggle.hidden, false);
+    f.doc.hidden = true;
+    f.doc.events.visibilitychange();
+    assert.equal(f.instance.playing, false);
+    f.doc.hidden = false;
+    f.doc.events.visibilitychange();
+    assert.equal(f.instance.playing, true);
+    f.win.events.pagehide();
+    assert.equal(f.instance.playing, false);
+    f.win.events.pageshow();
+    assert.equal(f.instance.playing, true);
+    f.toggle.events.click();
+    f.motion.matches = true;
+    f.motion.events.change();
+    f.motion.matches = false;
+    f.motion.events.change();
+    assert.equal(f.instance.playing, false);
+});
+
+test('arrows, thumbnails and scoped keyboard navigation synchronize only original slides', () => {
+    const f = sliderFixture();
+    f.photos[2].events.click();
+    assert.equal(f.photos[2].attributes['aria-pressed'], 'true');
+    assert.equal(f.slides[2].attributes['aria-hidden'], 'false');
+    assert.ok(f.clones.every(clone => clone.attributes['aria-hidden'] === 'true'));
+    let prevented = false;
+    f.media.events.keydown({ key: 'ArrowRight', preventDefault() { prevented = true; } });
+    assert.equal(f.instance.index, 0);
+    assert.equal(prevented, true);
+    f.arrows[0].events.click();
+    assert.equal(f.instance.index, 2);
+    assert.equal(f.doc.events.keydown, undefined);
+    assert.equal(sliderFixture(false, 1).instance, undefined);
+    assert.equal(sliderFixture(false, 0).instance, undefined);
 });

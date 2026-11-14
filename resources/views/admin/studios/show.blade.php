@@ -43,12 +43,17 @@
                         <button class="studio-slider-arrow previous" type="button" data-photo-step="-1" aria-label="Previous photo" title="Previous photo" hidden><i class="bi bi-chevron-left" aria-hidden="true"></i></button>
                         <button class="studio-slider-arrow next" type="button" data-photo-step="1" aria-label="Next photo" title="Next photo" hidden><i class="bi bi-chevron-right" aria-hidden="true"></i></button>
                     </div>
-                    <div class="studio-preview-thumbnails" aria-label="Studio photos">
-                        @foreach ($photos as $image)
-                            <button type="button" data-studio-photo="{{ asset('uploads/studios/'.$image->path) }}" data-photo-alt="{{ $image->alt_text }}" aria-label="View photo {{ $loop->iteration }}" aria-pressed="{{ $image->id === $cover->id ? 'true' : 'false' }}">
-                                <img src="{{ asset('uploads/studios/'.$image->path) }}" alt="" width="64" height="48" loading="lazy">
-                            </button>
-                        @endforeach
+                    <div class="studio-preview-controls">
+                        <div class="studio-preview-thumbnails" aria-label="Studio photos">
+                            @foreach ($photos as $image)
+                                <button type="button" data-studio-photo="{{ asset('uploads/studios/'.$image->path) }}" data-photo-alt="{{ $image->alt_text }}" aria-label="View photo {{ $loop->iteration }}" aria-pressed="{{ $image->id === $cover->id ? 'true' : 'false' }}">
+                                    <img src="{{ asset('uploads/studios/'.$image->path) }}" alt="" width="64" height="48" loading="lazy">
+                                </button>
+                            @endforeach
+                        </div>
+                        @if ($photos->count() > 1)
+                            <button class="button secondary studio-slider-play" type="button" data-photo-play aria-label="Pause slideshow" title="Pause slideshow" hidden><i class="bi bi-pause-fill" aria-hidden="true"></i></button>
+                        @endif
                     </div>
                 @else
                     <div class="studio-preview-empty"><i class="bi bi-images" aria-hidden="true"></i><span>No photos added yet.</span></div>

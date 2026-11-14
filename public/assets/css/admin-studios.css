@@ -457,6 +457,14 @@
     background: #101214;
 }
 
+.studio-gallery-card > img {
+    object-fit: cover;
+}
+
+.studio-gallery-card .form-stack {
+    gap: 6px;
+}
+
 .studio-photo-filename {
     overflow: hidden;
     text-overflow: ellipsis;
@@ -785,7 +793,29 @@
 
 .studio-saved-actions {
     flex-wrap: nowrap;
-    gap: 3px;
+    gap: 4px;
+}
+
+.studio-saved-actions .button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 44px;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    white-space: nowrap;
+    line-height: 1;
+}
+
+.studio-admin .studio-saved-actions .button .spinner-border {
+    margin-inline-end: 0;
+}
+
+.studio-admin .studio-saved-actions .button[aria-busy="true"] {
+    cursor: progress;
+    opacity: 1;
+    color: var(--admin-ink);
 }
 
 .studio-admin .studio-photo-save:disabled {
@@ -806,6 +836,30 @@
     position: relative;
     touch-action: pan-y;
     border-radius: 7px;
+}
+
+.studio-preview-media {
+    min-width: 0;
+}
+
+.studio-preview-controls {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.studio-preview-controls .studio-preview-thumbnails {
+    flex: 1;
+    min-width: 0;
+    margin-top: 0;
+}
+
+.studio-admin .studio-slider-play {
+    flex: 0 0 44px;
+    width: 44px;
+    height: 44px;
+    padding: 0;
 }
 
 .studio-preview-stage:focus-visible {
@@ -842,7 +896,7 @@
     }
 }
 
-.studio-preview-stage:not(.glide--slider) .glide__slide:not(:first-child) {
+.studio-preview-stage:not(.glide--slider):not(.glide--carousel) .glide__slide:not(:first-child) {
     display: none;
 }
 

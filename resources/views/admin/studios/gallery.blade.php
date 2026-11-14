@@ -51,7 +51,7 @@
             @php($imageHasErrors = (string) old('_image') === (string) $image->id)
             <article class="studio-gallery-card">
                 <img src="{{ asset('uploads/studios/'.$image->path) }}" alt="{{ $image->alt_text }}" width="{{ $image->width }}" height="{{ $image->height }}" loading="lazy">
-                <form action="{{ route('admin.studios.images.update', [$studio, $image]) }}" method="post" class="form-stack" id="photo-edit-{{ $image->id }}" data-photo-form data-photo-original="{{ json_encode(['alt_text' => $image->alt_text ?? '', 'sort_order' => $image->sort_order, 'is_cover' => (bool) $image->is_cover]) }}">
+                <form action="{{ route('admin.studios.images.update', [$studio, $image]) }}" method="post" class="form-stack" id="photo-edit-{{ $image->id }}" data-photo-form data-submit-scope=".studio-gallery-card" data-photo-original="{{ json_encode(['alt_text' => $image->alt_text ?? '', 'sort_order' => $image->sort_order, 'is_cover' => (bool) $image->is_cover]) }}">
                     @csrf
                     @method('patch')
                     <div class="field">
@@ -113,19 +113,19 @@
                     @endif
                 </form>
                 <div class="studio-saved-actions">
-                    <button type="submit" form="photo-edit-{{ $image->id }}" data-photo-save="photo-edit-{{ $image->id }}" class="button secondary studio-photo-save" aria-label="Save Changes" title="Save Changes"><i class="bi bi-check2" aria-hidden="true"></i></button>
+                    <button type="submit" form="photo-edit-{{ $image->id }}" data-photo-save="photo-edit-{{ $image->id }}" data-icon-loading class="button secondary studio-photo-save" aria-label="Save Changes" title="Save Changes"><i class="bi bi-check2" aria-hidden="true"></i></button>
                     @foreach (['up' => 'Move Up', 'down' => 'Move Down'] as $direction => $label)
-                        <form action="{{ route('admin.studios.images.update', [$studio, $image]) }}" method="post">
+                        <form action="{{ route('admin.studios.images.update', [$studio, $image]) }}" method="post" data-submit-scope=".studio-gallery-card">
                             @csrf
                             @method('patch')
                             <input type="hidden" name="direction" value="{{ $direction }}">
-                            <button class="button secondary" type="submit" aria-label="{{ $label }}" title="{{ $label }}" @disabled($direction === 'up' ? $loop->parent->first : $loop->parent->last)><i class="bi bi-arrow-{{ $direction }}" aria-hidden="true"></i></button>
+                            <button class="button secondary" type="submit" data-icon-loading aria-label="{{ $label }}" title="{{ $label }}" @disabled($direction === 'up' ? $loop->parent->first : $loop->parent->last)><i class="bi bi-arrow-{{ $direction }}" aria-hidden="true"></i></button>
                         </form>
                     @endforeach
-                    <form action="{{ route('admin.studios.images.destroy', [$studio, $image]) }}" method="post" data-studio-remove>
+                    <form action="{{ route('admin.studios.images.destroy', [$studio, $image]) }}" method="post" data-studio-remove data-submit-scope=".studio-gallery-card">
                         @csrf
                         @method('delete')
-                        <button type="submit" class="button secondary" aria-label="Remove" title="Remove Photo"><i class="bi bi-trash3" aria-hidden="true"></i></button>
+                        <button type="submit" class="button secondary" data-icon-loading aria-label="Remove Photo" title="Remove Photo"><i class="bi bi-trash3" aria-hidden="true"></i></button>
                     </form>
                 </div>
             </article>
