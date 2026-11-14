@@ -1,9 +1,12 @@
 <?php
 
+use App\Services\Seo\StudioMetadataProvider;
+
 // Public URL/indexing policy is deployment-controlled, never taken from request Host.
 return [
     'origin' => 'https://www.detailingdevils.com',
     'locale' => 'en',
+    'content_providers' => [StudioMetadataProvider::class],
     'defaults' => [
         'robots' => 'index, follow',
         'og_type' => 'website',

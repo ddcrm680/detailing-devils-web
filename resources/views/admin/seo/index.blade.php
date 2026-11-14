@@ -127,6 +127,9 @@
                             @php
                                 $pageName = str($page->id)->replace(['.show', '.index', 'legal.', 'studios.'], '')
                                     ->replace(['.', ':'], ' ')->headline()->replace(['Fofo', 'Xclusive'], ['FOFO', 'X-Clusive']);
+                                if (str_starts_with($page->id, 'studio.')) {
+                                    $pageName = str($page->title)->beforeLast(' | ');
+                                }
                             @endphp
                             <tr>
                                 <th scope="row">

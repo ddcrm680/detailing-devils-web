@@ -101,7 +101,9 @@ class StudioLocatorTest extends TestCase
             array_sum(array_map(fn ($studio) => count($studio['phones']), $studios)),
             substr_count($page->getContent(), 'class="studio-phone"')
         );
-        $expected = array_map(fn ($studio) => $studio + ['directions_url' => trim($studio['map_url'])], $studios);
+        $expected = array_map(fn ($studio, $model) => $studio + [
+            'slug' => $model->slug, 'directions_url' => trim($studio['map_url']),
+        ], $studios, $models->all());
         $reference = view('studios.index', [
             'studios' => $expected,
             'availableStates' => collect($studios)->pluck('state')->unique()->sort()->values(),
@@ -287,7 +289,7 @@ class StudioLocatorTest extends TestCase
         $this->assertSame($studio->phones, $page->viewData('studios')[0]['phones']);
         $document = new DOMDocument;
         @$document->loadHTML($page->getContent());
-        $calls = (new DOMXPath($document))->query('//a[@class="studio-action"]');
+        $calls = (new DOMXPath($document))->query('//a[@class="studio-action"][starts-with(@href, "tel:")]');
         $this->assertSame('tel:+919876543210', $calls->item(0)->getAttribute('href'));
     }
 
@@ -315,7 +317,7 @@ class StudioLocatorTest extends TestCase
             ->assertDontSee('SQLSTATE')->assertDontSee('class="studio-card"', false);
     }
 
-    public function test_published_metadata_and_sitemap_remain_independent_of_physical_studio_records(): void
+    public function test_locator_metadata_and_existing_sitemap_entries_reuse_the_seo_repository(): void
     {
         $this->mock(MetadataRepository::class)->shouldReceive('snapshot')->andReturn(new SeoSnapshot([
             new SeoOverride('studios.index', [

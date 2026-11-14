@@ -89,6 +89,7 @@
                                     </div>
                                 </div>
                                 <div class="studio-card__actions">
+                                    <a href="{{ route('studios.show', ['slug' => $studio['slug']]) }}" class="studio-action" aria-label="View {{ $studio['name'] }}">View Studio <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
                                     @if (isset($studio['phones'][0]) && preg_match('/^91[6-9][0-9]{9}$/', preg_replace('/[^0-9]/', '', $studio['phones'][0])))
                                         <a href="tel:+{{ preg_replace('/[^0-9]/', '', $studio['phones'][0]) }}" class="studio-action"><i class="bi bi-telephone" aria-hidden="true"></i> Call</a>
                                     @endif

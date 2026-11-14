@@ -20,6 +20,8 @@ class SeoMigrationSafetyTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        // Keep the scoped SEO installer independent of optional content-module provisioning.
+        config()->set('seo.content_providers', []);
         config()->set('database.default', 'sqlite');
         config()->set('database.connections.sqlite.database', ':memory:');
         DB::purge('sqlite');

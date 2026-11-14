@@ -50,7 +50,7 @@
 .studio-phone:hover,.studio-phone:focus-visible{border-color:#e63842;background:#2b1719;color:#fff}
 .studio-phone:focus-visible{outline:2px solid rgba(230,56,66,.4);outline-offset:2px}
 .studio-phone--unavailable{color:#b4acaa}
-.studio-card__actions{display:flex;align-items:center;justify-content:flex-end;gap:7px}
+.studio-card__actions{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:7px}
 .studio-action{min-height:41px;padding:0 13px;border-color:#696061;border-radius:4px;background:transparent;font-size:10px}
 .studio-action:hover{border-color:#eee;color:#fff}
 .studio-action--red{border-color:var(--red);background:var(--red)}

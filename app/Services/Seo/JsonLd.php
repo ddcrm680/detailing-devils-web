@@ -19,10 +19,53 @@ final readonly class JsonLd
         return self::entity('WebSite', $name, $url);
     }
 
-    public static function localBusiness(string $name, string $url): self
-    {
-        // No invented address, ratings, hours or reviews; an adapter must verify its facts.
-        return self::entity('LocalBusiness', $name, $url);
+    public static function localBusiness(
+        string $name,
+        string $url,
+        array $address = [],
+        array $phones = [],
+        ?array $coordinates = null,
+        ?string $mapUrl = null,
+        array $images = [],
+    ): self {
+        $data = self::entity('LocalBusiness', $name, $url)->data;
+        if ($address !== []) {
+            foreach ($address as $key => $value) {
+                if (! in_array($key, ['streetAddress', 'addressLocality', 'addressRegion', 'addressCountry'], true)
+                    || ! is_string($value) || trim($value) === '') {
+                    throw new InvalidArgumentException('Invalid verified business address.');
+                }
+            }
+            $data['address'] = ['@type' => 'PostalAddress', ...$address];
+        }
+        if ($phones !== []) {
+            foreach ($phones as $phone) {
+                if (! is_string($phone) || ! preg_match('/^[+()0-9 -]+$/', $phone)) {
+                    throw new InvalidArgumentException('Invalid verified business phone.');
+                }
+            }
+            $data['telephone'] = count($phones) === 1 ? reset($phones) : array_values($phones);
+        }
+        if ($coordinates !== null) {
+            if (! isset($coordinates['latitude'], $coordinates['longitude'])
+                || ! is_numeric($coordinates['latitude']) || ! is_numeric($coordinates['longitude'])
+                || abs($coordinates['latitude']) > 90 || abs($coordinates['longitude']) > 180) {
+                throw new InvalidArgumentException('Invalid verified business coordinates.');
+            }
+            $data['geo'] = ['@type' => 'GeoCoordinates', ...$coordinates];
+        }
+        if ($mapUrl !== null) {
+            self::check($name, $mapUrl);
+            $data['hasMap'] = $mapUrl;
+        }
+        if ($images !== []) {
+            foreach ($images as $image) {
+                self::check($name, $image);
+            }
+            $data['image'] = array_values($images);
+        }
+
+        return new self($data);
     }
 
     public static function article(string $headline, string $url, string $description): self

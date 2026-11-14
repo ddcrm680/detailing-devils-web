@@ -44,6 +44,8 @@ class SeoAdminTest extends TestCase
     {
         parent::setUp();
         Http::preventStrayRequests();
+        // This suite provisions only SEO tables; Studio provider integration has its own fixtures.
+        config()->set('seo.content_providers', []);
         Mail::fake();
         $this->directory = sys_get_temp_dir().'/dd-seo-admin-'.bin2hex(random_bytes(6));
         mkdir($this->directory, 0700, true);
