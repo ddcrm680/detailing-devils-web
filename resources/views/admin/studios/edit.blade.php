@@ -85,7 +85,6 @@
                     @foreach ([
                         'city' => ['City (optional)', 100],
                         'state' => ['State *', 100],
-                        'country_code' => ['Country code (optional)', 2],
                     ] as $field => [$label, $limit])
                         <div class="field">
                             <label for="{{ $field }}">{{ $label }}</label>
@@ -97,13 +96,7 @@
                                 @required($field === 'state')
                                 @if ($field === 'state') placeholder="e.g. Rajasthan" @endif
                                 @if ($field === 'city') placeholder="e.g. Jaipur" @endif
-                                @if ($errors->has($field)) aria-invalid="true" @endif
-                                @if ($field === 'country_code')
-                                    placeholder="e.g. IN"
-                                    @if ($errors->has($field)) aria-describedby="country_code-error" @endif
-                                @elseif ($errors->has($field))
-                                    aria-describedby="{{ $field }}-error"
-                                @endif
+                                @if ($errors->has($field)) aria-invalid="true" aria-describedby="{{ $field }}-error" @endif
                             >
                             @error($field)
                                 <span class="invalid-feedback" id="{{ $field }}-error">{{ $message }}</span>
@@ -128,9 +121,32 @@
                 </div>
                 <details
                     class="studio-coordinates"
-                    @if ($errors->hasAny(['latitude', 'longitude']) || $studio->latitude !== null || $studio->longitude !== null) open @endif
+                    @if ($errors->hasAny(['country_code', 'latitude', 'longitude']) || $studio->latitude !== null || $studio->longitude !== null) open @endif
                 >
-                    <summary>Coordinates (optional)</summary>
+                    <summary>Country &amp; coordinates (optional)</summary>
+                    @php
+                        $countries = collect(\Giggsey\Locale\Locale::getAllCountriesForLocale('en'))->sort();
+                        $selectedCountry = old('country_code', $studio->exists ? $studio->country_code : 'IN');
+                    @endphp
+                    <div class="field">
+                        <label for="country_code">Country</label>
+                        <select
+                            id="country_code"
+                            name="country_code"
+                            @if ($errors->has('country_code')) aria-invalid="true" aria-describedby="country_code-error" @endif
+                        >
+                            <option value="" @selected($selectedCountry === null || $selectedCountry === '')>Select country</option>
+                            @if ($selectedCountry && ! $countries->has($selectedCountry))
+                                <option value="{{ $selectedCountry }}" selected>Unknown country</option>
+                            @endif
+                            @foreach ($countries as $code => $country)
+                                <option value="{{ $code }}" @selected($selectedCountry === $code)>{{ $country }}</option>
+                            @endforeach
+                        </select>
+                        @error('country_code')
+                            <span class="invalid-feedback" id="country_code-error">{{ $message }}</span>
+                        @enderror
+                    </div>
                     <div class="studio-field-grid">
                         @foreach (['latitude' => 'Latitude', 'longitude' => 'Longitude'] as $field => $label)
                             <div class="field">

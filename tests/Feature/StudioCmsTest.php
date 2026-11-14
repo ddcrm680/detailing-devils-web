@@ -344,6 +344,56 @@ class StudioCmsTest extends TestCase
         $this->assertSame(0, Studio::count());
     }
 
+    public function test_country_dropdown_defaults_to_india_and_preserves_saved_and_old_selections(): void
+    {
+        $this->actingAs($this->actor());
+        $selectedCountry = function ($response): string {
+            $document = new DOMDocument;
+            @$document->loadHTML($response->getContent());
+            $xpath = new DOMXPath($document);
+            $this->assertSame(1, $xpath->query('//details[@class="studio-coordinates"]//select[@name="country_code"]')->length);
+            $this->assertSame(0, $xpath->query('//input[@name="country_code"]')->length);
+            $this->assertSame('India', $xpath->evaluate('string(//select[@name="country_code"]/option[@value="IN"])'));
+            $this->assertSame('United States', $xpath->evaluate('string(//select[@name="country_code"]/option[@value="US"])'));
+            $this->assertSame(1, $xpath->query('//select[@name="country_code"]/option[@selected]')->length);
+
+            return $xpath->evaluate('string(//select[@name="country_code"]/option[@selected]/@value)');
+        };
+
+        $this->assertSame('IN', $selectedCountry($this->get('/admin/studios/create')->assertOk()));
+        $studio = Studio::create($this->fields());
+        foreach ([null, 'IN', 'FR', 'XX'] as $country) {
+            $studio->update(['country_code' => $country]);
+            $this->assertSame($country ?? '', $selectedCountry($this->get('/admin/studios/'.$studio->id.'/edit')->assertOk()));
+            $this->assertSame($country, $studio->fresh()->country_code);
+        }
+        foreach (['US', '', null] as $country) {
+            $this->withSession(['_old_input' => ['country_code' => $country]]);
+            $this->assertSame($country ?? '', $selectedCountry($this->get('/admin/studios/create')->assertOk()));
+        }
+    }
+
+    public function test_country_selection_keeps_existing_validation_and_nullable_iso_storage(): void
+    {
+        $this->actingAs($this->actor());
+        $studio = Studio::create($this->fields(['country_code' => 'FR']));
+        $response = $this->from('/admin/studios/'.$studio->id.'/edit')->followingRedirects()
+            ->put('/admin/studios/'.$studio->id, $this->fields(['country_code' => 'India']))
+            ->assertOk()->assertSee('country_code-error', false);
+        $document = new DOMDocument;
+        @$document->loadHTML($response->getContent());
+        $xpath = new DOMXPath($document);
+        $this->assertSame('India', $xpath->evaluate('string(//select[@name="country_code"]/option[@selected]/@value)'));
+        $this->assertSame(1, $xpath->query('//select[@name="country_code"][@aria-invalid="true"]')->length);
+        $this->assertSame(1, $xpath->query('//details[@class="studio-coordinates"][@open]')->length);
+        $this->assertSame('FR', $studio->fresh()->country_code);
+        foreach (['US', null] as $country) {
+            $this->put('/admin/studios/'.$studio->id, $this->fields(['country_code' => $country]))
+                ->assertSessionHasNoErrors();
+            $this->assertSame($country, $studio->fresh()->country_code);
+        }
+    }
+
     public function test_rejected_studio_details_show_inline_errors_and_preserve_values_without_saving(): void
     {
         $this->actingAs($this->actor());
