@@ -2,7 +2,9 @@
 
 namespace App\Http\Requests\Admin;
 
+use App\Models\ContentUrl;
 use App\Models\Studio;
+use App\Services\StudioUrls;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -51,8 +53,15 @@ class SaveStudioRequest extends FormRequest
                 },
             ],
             'slug' => [
-                $this->route('studio') ? 'required' : 'nullable', 'string', 'max:191', 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/',
+                'bail', $this->route('studio') ? 'required' : 'nullable', 'string', 'max:191', 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/D',
                 Rule::unique('studios', 'slug')->ignore($this->route('studio')),
+                function ($attribute, $value, $fail) {
+                    $studio = $this->route('studio');
+                    if ((! $studio || $value !== $studio->slug)
+                        && ContentUrl::query()->where('path', StudioUrls::path($value))->exists()) {
+                        $fail('This URL is reserved. Please choose another.');
+                    }
+                },
             ],
             'address' => ['required', 'string', 'max:4000'],
             'city' => ['nullable', 'string', 'max:100'],

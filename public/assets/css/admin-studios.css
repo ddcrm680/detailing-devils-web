@@ -910,3 +910,37 @@
 .studio-preview-stage .glide__slide {
     min-width: 0;
 }
+
+.studio-url-label {
+    display: block;
+    font-weight: 600;
+}
+
+.studio-current-url {
+    display: block;
+    overflow-wrap: anywhere;
+    font-size: 12px;
+    margin: 8px 0;
+}
+
+.studio-url-editor > summary {
+    cursor: pointer;
+    font-size: 12px;
+    padding-block: 8px;
+}
+
+.studio-url-editor > .form-stack {
+    margin-top: 8px;
+    gap: 8px;
+}
+
+.studio-url-prefix {
+    overflow-wrap: anywhere;
+    color: var(--admin-muted);
+    font-size: 11px;
+}
+
+.studio-admin .studio-url-editor button {
+    width: fit-content;
+    min-height: 44px;
+}

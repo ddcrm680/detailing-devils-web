@@ -260,6 +260,46 @@ export function mountStudioSlug(form) {
     update();
 }
 
+export function studioUrlConfirmation(current, prefix, slug) {
+    return { title: 'Change studio URL?', text: `${current} → ${prefix}${slug}` };
+}
+
+export function mountStudioUrl(form, isStudioDirty, win = window) {
+    let accepted = false;
+    let confirming = false;
+    form.addEventListener('submit', async (event) => {
+        if (accepted) return;
+        event.preventDefault();
+        if (confirming || !form.reportValidity()) return;
+        if (isStudioDirty()) {
+            win.showNotification?.({ type: 'warning', title: 'Save studio changes before changing the URL.' });
+            return;
+        }
+        const button = event.submitter;
+        const copy = studioUrlConfirmation(form.dataset.currentUrl, form.dataset.urlPrefix, form.elements.slug.value);
+        confirming = true;
+        try {
+            const confirmed = win.Swal
+                ? (await win.Swal.fire({
+                    titleText: copy.title, text: copy.text, icon: 'question', showCancelButton: true,
+                    confirmButtonText: 'Change URL', cancelButtonText: 'Cancel', focusCancel: true,
+                    buttonsStyling: false, customClass: { confirmButton: 'button', cancelButton: 'button secondary' },
+                })).isConfirmed
+                : win.confirm(`${copy.title} ${copy.text}`);
+            if (!confirmed) return;
+            accepted = true;
+            form.requestSubmit(button);
+            accepted = false;
+        } catch {
+            win.showNotification?.({ type: 'error', title: 'The URL could not be changed. Please try again.' });
+        } finally {
+            confirming = false;
+            if (form.getAttribute('aria-busy') !== 'true') button?.focus();
+        }
+    });
+    win.addEventListener('pageshow', () => { accepted = false; confirming = false; });
+}
+
 export function photoSnapshot(values) {
     const order = String(values.sort_order ?? '');
     return fieldSnapshot([
@@ -441,9 +481,26 @@ export function mountStudios(doc = document, win = window) {
         const restoredInput = form.hasAttribute('data-unsaved-input');
         const isDirty = () => restoredInput || fieldSnapshot(new FormData(form)) !== initial;
         let saving = false;
+        const urlForm = doc.querySelector('[data-studio-url-form]');
+        const isUrlDirty = () => urlForm && (urlForm.elements.slug.value !== '' || urlForm.elements.confirm_url_change.checked);
+        if (urlForm) {
+            mountStudioUrl(urlForm, isDirty, win);
+            urlForm.addEventListener('submit', (event) => {
+                win.queueMicrotask(() => { if (!event.defaultPrevented) saving = true; });
+            });
+            urlForm.addEventListener('reset', (event) => {
+                event.preventDefault();
+                urlForm.elements.slug.value = '';
+                urlForm.elements.confirm_url_change.checked = false;
+                const editor = form.querySelector('.studio-url-editor');
+                editor.open = false;
+                editor.querySelector('summary').focus();
+                update();
+            });
+        }
         const update = () => {
             if (!state) return;
-            const dirty = isDirty();
+            const dirty = isDirty() || isUrlDirty();
             state.hidden = false;
             state.textContent = dirty ? 'Unsaved changes' : 'No unsaved changes';
             state.classList.toggle('is-dirty', dirty);
@@ -451,13 +508,17 @@ export function mountStudios(doc = document, win = window) {
         form.addEventListener('input', update);
         form.addEventListener('change', update);
         form.addEventListener('submit', (event) => {
+            if (isUrlDirty()) {
+                event.preventDefault();
+                win.showNotification?.({ type: 'warning', title: 'Complete or cancel the URL change first.' });
+            }
             win.queueMicrotask(() => {
                 if (!event.defaultPrevented) saving = true;
             });
         });
-        win.addEventListener('pageshow', () => { saving = false; });
+        win.addEventListener('pageshow', () => { saving = false; update(); });
         win.addEventListener('beforeunload', (event) => {
-            if (saving || !isDirty()) return;
+            if (saving || (!isDirty() && !isUrlDirty())) return;
             event.preventDefault();
             event.returnValue = '';
         });

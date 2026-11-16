@@ -30,7 +30,9 @@ class StudioLocatorTest extends TestCase
         ]);
         config()->set('session.driver', 'array');
         DB::purge('sqlite');
+        (require database_path('migrations/0001_01_01_000000_create_users_table.php'))->up();
         (require database_path('migrations/2026_11_12_000000_create_studio_cms_tables.php'))->up();
+        (require database_path('migrations/2026_11_16_000000_create_content_urls.php'))->up();
         $this->app->instance(MetadataRepository::class, new EmptyMetadataRepository);
     }
 

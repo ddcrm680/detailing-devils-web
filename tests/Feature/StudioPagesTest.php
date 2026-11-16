@@ -13,6 +13,7 @@ use App\Services\Seo\SeoOverride;
 use App\Services\Seo\SeoResolver;
 use App\Services\Seo\SeoSitemap;
 use App\Services\Seo\SeoSnapshot;
+use App\Services\StudioUrls;
 use DOMDocument;
 use DOMXPath;
 use Illuminate\Http\UploadedFile;
@@ -43,6 +44,7 @@ class StudioPagesTest extends TestCase
             '2026_11_02_000000_add_role_to_users_table.php',
             '2026_11_02_000001_create_website_seo_store.php',
             '2026_11_12_000000_create_studio_cms_tables.php',
+            '2026_11_16_000000_create_content_urls.php',
         ] as $migration) {
             (require database_path('migrations/'.$migration))->up();
         }
@@ -227,11 +229,12 @@ class StudioPagesTest extends TestCase
         $draft = $publisher->draft($id, $fields, 0, null, $actor);
         $this->assertSame(1, $publisher->publish($draft, 0, true, false, $actor));
         $oldSlug = $studio->slug;
-        $studio->update(['slug' => 'reviewed-jaipur-studio']);
+        app(StudioUrls::class)->change($studio, 'reviewed-jaipur-studio', $oldSlug, $actor);
+        $studio->refresh();
         $this->app->forgetInstance(SeoResolver::class);
         $this->get('/studios/'.$studio->slug)->assertOk()->assertSee('<title>Reviewed studio title</title>', false)
             ->assertSee('rel="canonical" href="'.config('seo.origin').'/studios/'.$studio->slug.'"', false);
-        $this->get('/studios/'.$oldSlug)->assertNotFound();
+        $this->get('/studios/'.$oldSlug)->assertStatus(301)->assertRedirect(config('seo.origin').'/studios/'.$studio->slug);
         $this->assertContains(config('seo.origin').'/studios/'.$studio->slug, $this->sitemap());
         $this->assertNotContains(config('seo.origin').'/studios/'.$oldSlug, $this->sitemap());
         $this->assertSame($studio->name, $studio->fresh()->name);

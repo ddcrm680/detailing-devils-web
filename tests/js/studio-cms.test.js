@@ -2,8 +2,75 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 globalThis.window = {};
-const { updatePhoneRows, generatedStudioSlug, photoSnapshot, mountStudioSlider } = await import('../../public/assets/js/admin/studios.js');
+const { updatePhoneRows, generatedStudioSlug, photoSnapshot, mountStudioSlider, mountStudioUrl, studioUrlConfirmation } = await import('../../public/assets/js/admin/studios.js');
 delete globalThis.window;
+
+function urlFixture({ dirty = false, valid = true, answer = true } = {}) {
+    const events = {};
+    const dialogs = [];
+    const notifications = [];
+    let requests = 0;
+    let focused = 0;
+    const button = { focus() { focused++; } };
+    const form = {
+        dataset: { currentUrl: 'https://www.detailingdevils.com/studios/old', urlPrefix: 'https://www.detailingdevils.com/studios/' },
+        elements: { slug: { value: 'new' } },
+        addEventListener(name, fn) { events[name] = fn; },
+        getAttribute() { return null; },
+        reportValidity() { return valid; },
+        requestSubmit(submitter) {
+            assert.equal(submitter, button);
+            const event = submitEvent();
+            events.submit(event);
+            if (!event.defaultPrevented) requests++;
+        },
+    };
+    const win = {
+        addEventListener() {},
+        Swal: { async fire(options) { dialogs.push(options); return { isConfirmed: answer }; } },
+        showNotification(options) { notifications.push(options); },
+    };
+    const submitEvent = () => ({ submitter: button, defaultPrevented: false, preventDefault() { this.defaultPrevented = true; } });
+    mountStudioUrl(form, () => dirty, win);
+    return { form, win, dialogs, notifications, submit: () => events.submit(submitEvent()), requests: () => requests, focused: () => focused };
+}
+
+test('URL confirmation shows both trusted URLs and submits only after confirmation', async () => {
+    const f = urlFixture();
+    await f.submit();
+    assert.equal(f.requests(), 1);
+    assert.equal(f.dialogs[0].text, studioUrlConfirmation(f.form.dataset.currentUrl, f.form.dataset.urlPrefix, 'new').text);
+    assert.equal(f.dialogs[0].focusCancel, true);
+    assert.equal(f.dialogs[0].html, undefined);
+});
+
+test('cancelled, invalid and unsaved Studio edits prevent URL submission', async () => {
+    for (const options of [{ answer: false }, { valid: false }, { dirty: true }]) {
+        const f = urlFixture(options);
+        await f.submit();
+        assert.equal(f.requests(), 0);
+        if (options.dirty) assert.match(f.notifications[0].title, /Save studio changes/);
+    }
+});
+
+test('URL dialogs prevent duplicate requests and remain retryable after a failed confirmation', async () => {
+    const f = urlFixture();
+    let resolve;
+    f.win.Swal.fire = () => new Promise(done => { resolve = done; });
+    const pending = f.submit();
+    await f.submit();
+    assert.equal(f.requests(), 0);
+    resolve({ isConfirmed: true });
+    await pending;
+    assert.equal(f.requests(), 1);
+    f.win.Swal.fire = async () => { throw new Error('Fixture failure'); };
+    await f.submit();
+    assert.equal(f.requests(), 1);
+    assert.equal(f.notifications.at(-1).type, 'error');
+    f.win.Swal.fire = async () => ({ isConfirmed: true });
+    await f.submit();
+    assert.equal(f.requests(), 2);
+});
 
 function phone(value) {
     const nodes = {

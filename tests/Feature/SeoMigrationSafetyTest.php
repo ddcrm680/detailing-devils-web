@@ -116,11 +116,12 @@ class SeoMigrationSafetyTest extends TestCase
             '2026_11_02_000000_add_role_to_users_table',
             '2026_11_02_000001_create_website_seo_store',
             '2026_11_12_000000_create_studio_cms_tables',
+            '2026_11_16_000000_create_content_urls',
         ], $pending);
 
         $this->artisan('migrate', ['--force' => true])->assertSuccessful();
 
-        $this->assertSame(6, DB::table('migrations')->count());
+        $this->assertSame(7, DB::table('migrations')->count());
         $this->assertSame(
             $frameworkLedger,
             DB::table('migrations')->where('batch', 1)->orderBy('id')->get()->toJson()

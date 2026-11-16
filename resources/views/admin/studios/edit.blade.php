@@ -6,6 +6,9 @@
 @section('context', $studio->exists ? 'Edit studio' : 'Add studio')
 
 @section('content')
+    @php
+        $protectedUrl = $studio->exists && ($studio->url_locked_at || $studio->status === 'active');
+    @endphp
     <div class="studio-admin">
         <div class="page-heading">
             <div>
@@ -38,7 +41,28 @@
                 </div>
                 <div class="studio-field-grid">
                     @foreach (['name' => ['Studio name', 255], 'slug' => ['Slug', 191]] as $field => [$label, $limit])
-                        <div class="field" @if ($field === 'slug') data-slug-editor data-new="{{ $studio->exists ? 'false' : 'true' }}" data-slugs="{{ json_encode($existingSlugs ?? []) }}" @endif>
+                        <div class="field" @if ($field === 'slug' && ! $protectedUrl) data-slug-editor data-new="{{ $studio->exists ? 'false' : 'true' }}" data-slugs="{{ json_encode($existingSlugs ?? []) }}" @endif>
+                            @if ($field === 'slug' && $protectedUrl)
+                                <span class="studio-url-label">Studio URL</span>
+                                <a class="studio-current-url" href="{{ rtrim(config('seo.origin'), '/').route('studios.show', ['slug' => $studio->slug], false) }}" target="_blank" rel="noopener">{{ rtrim(config('seo.origin'), '/').route('studios.show', ['slug' => $studio->slug], false) }}</a>
+                                <input type="hidden" name="slug_mode" value="preserve">
+                                <details class="studio-url-editor" @if ($errors->hasAny(['slug', 'expected_slug', 'confirm_url_change'])) open @endif>
+                                    <summary>Change URL</summary>
+                                    <div class="form-stack">
+                                        <label for="new-studio-slug">New URL</label>
+                                        <div class="studio-url-prefix">{{ rtrim(config('seo.origin'), '/') }}/studios/</div>
+                                        <input id="new-studio-slug" name="slug" form="studio-url-form" required maxlength="191" pattern="[a-z0-9]+(-[a-z0-9]+)*" value="{{ old('expected_slug') ? old('slug') : '' }}" placeholder="e.g. detailing-devils-jaipur" @if ($errors->has('slug')) aria-invalid="true" aria-describedby="studio-url-error" @endif>
+                                        @error('slug')<span class="invalid-feedback" id="studio-url-error">{{ $message }}</span>@enderror
+                                        @error('expected_slug')<span class="invalid-feedback">{{ $message }}</span>@enderror
+                                        <label class="check"><input type="checkbox" name="confirm_url_change" value="1" form="studio-url-form" required> I confirm this URL change.</label>
+                                        @error('confirm_url_change')<span class="invalid-feedback">{{ $message }}</span>@enderror
+                                        <div class="actions">
+                                            <button class="button secondary" type="submit" form="studio-url-form">Change URL</button>
+                                            <button class="button secondary" type="reset" form="studio-url-form">Cancel</button>
+                                        </div>
+                                    </div>
+                                </details>
+                            @else
                             <label for="{{ $field }}">{{ $label }} @if ($field === 'name')<span aria-hidden="true">*</span>@endif</label>
                             <input
                                 id="{{ $field }}"
@@ -60,6 +84,7 @@
                             @error($field)
                                 <span class="invalid-feedback" id="{{ $field }}-error">{{ $message }}</span>
                             @enderror
+                            @endif
                         </div>
                     @endforeach
                 </div>
@@ -244,6 +269,12 @@
                 </div>
             </details>
         </form>
+        @if ($protectedUrl)
+            <form id="studio-url-form" action="{{ route('admin.studios.url.update', $studio) }}" method="post" data-studio-url-form data-current-url="{{ rtrim(config('seo.origin'), '/').route('studios.show', ['slug' => $studio->slug], false) }}" data-url-prefix="{{ rtrim(config('seo.origin'), '/') }}/studios/">
+                @csrf
+                <input type="hidden" name="expected_slug" value="{{ $studio->slug }}">
+            </form>
+        @endif
         @if ($studio->exists)
             <div class="studio-gallery-link"><a class="button secondary" href="{{ route('admin.studios.gallery.show', $studio) }}"><i class="bi bi-images" aria-hidden="true"></i> Manage Gallery</a></div>
         @endif

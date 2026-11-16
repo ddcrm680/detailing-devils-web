@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\StudioUrls;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
@@ -17,6 +18,11 @@ class Studio extends Model
 {
     public const STATUSES = ['draft', 'active', 'inactive'];
 
+    public function save(array $options = []): bool
+    {
+        return app(StudioUrls::class)->save($this, fn () => parent::save($options));
+    }
+
     protected static function booted(): void
     {
         static::creating(function (Studio $studio) {
@@ -30,7 +36,8 @@ class Studio extends Model
     {
         $base = rtrim(substr(Str::slug($name) ?: 'studio', 0, 180), '-');
         $slug = $base;
-        for ($suffix = 2; static::query()->where('slug', $slug)->exists(); $suffix++) {
+        for ($suffix = 2; static::query()->where('slug', $slug)->exists()
+            || ContentUrl::query()->where('path', StudioUrls::path($slug))->exists(); $suffix++) {
             $slug = $base.'-'.$suffix;
         }
 
@@ -40,6 +47,7 @@ class Studio extends Model
     protected function casts(): array
     {
         return [
+            'url_locked_at' => 'datetime',
             'phones' => 'array',
             'latitude' => 'decimal:7',
             'longitude' => 'decimal:7',

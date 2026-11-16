@@ -3,8 +3,11 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\ChangeStudioUrlRequest;
 use App\Http\Requests\Admin\SaveStudioRequest;
+use App\Models\ContentUrl;
 use App\Models\Studio;
+use App\Services\StudioUrls;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -50,7 +53,7 @@ class StudioController extends Controller
     {
         return view('admin.studios.edit', [
             'studio' => new Studio(['phones' => [''], 'status' => 'draft', 'sort_order' => 0]),
-            'existingSlugs' => Studio::query()->pluck('slug'),
+            'existingSlugs' => ContentUrl::query()->where('path', 'like', '/studios/%')->pluck('path')->map(fn ($path) => substr($path, 9)),
         ]);
     }
 
@@ -75,11 +78,22 @@ class StudioController extends Controller
         return view('admin.studios.edit', ['studio' => $studio]);
     }
 
+    public function changeUrl(ChangeStudioUrlRequest $request, Studio $studio, StudioUrls $urls): RedirectResponse
+    {
+        $urls->change($studio, $request->validated('slug'), $request->validated('expected_slug'), $request->user());
+
+        return redirect()->route('admin.studios.edit', $studio)->with('status', 'Studio URL updated.');
+    }
+
     public function update(SaveStudioRequest $request, Studio $studio): RedirectResponse
     {
         DB::transaction(function () use ($request, $studio) {
-            $studio = Studio::query()->lockForUpdate()->findOrFail($studio->id);
-            $studio->update($request->validated());
+            app(StudioUrls::class)->lockPublication();
+            $current = Studio::query()->lockForUpdate()->findOrFail($studio->id);
+            if ($current->slug !== $studio->slug) {
+                throw ValidationException::withMessages(['slug' => 'The studio URL changed. Reload this page and try again.']);
+            }
+            $current->update($request->validated());
         });
 
         return redirect()->route('admin.studios.edit', $studio)->with('status', 'Studio saved.');

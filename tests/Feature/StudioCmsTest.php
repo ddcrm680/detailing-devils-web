@@ -35,6 +35,7 @@ class StudioCmsTest extends TestCase
             '0001_01_01_000000_create_users_table.php',
             '2026_11_02_000000_add_role_to_users_table.php',
             '2026_11_12_000000_create_studio_cms_tables.php',
+            '2026_11_16_000000_create_content_urls.php',
         ] as $migration) {
             (require database_path('migrations/'.$migration))->up();
         }
