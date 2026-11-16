@@ -46,6 +46,22 @@ final class SeoAdminPages
         abort(404);
     }
 
+    /** Friendly source names remain independent of customized SEO titles. */
+    public function displayNames(SeoSnapshot $snapshot, array $inventory): array
+    {
+        $names = [];
+        foreach ($inventory as $page) {
+            $names[$page->id] = (string) str($page->id)
+                ->replace(['.show', '.index', 'legal.', 'studios.'], '')
+                ->replace(['.', ':'], ' ')->headline()->replace(['Fofo', 'Xclusive'], ['FOFO', 'X-Clusive']);
+        }
+        foreach ($snapshot->content as $content) {
+            $names[$content->id] = $content->title;
+        }
+
+        return $names;
+    }
+
     public function fields(SeoMetadata $page): array
     {
         return [

@@ -17,7 +17,11 @@
         <div>
             <div class="heading-line">
                 <h1>Edit Page SEO</h1>
-                <span class="pill {{ $draft ? 'amber' : 'green' }}">{{ $draft ? 'Draft saved' : 'Ready to edit' }}</span>
+                <span class="pill {{ $page->published ? 'green' : '' }}">{{ $page->published ? 'Published' : 'Unpublished' }}</span>
+                @if ($draft)
+                    <span class="pill amber">{{ $page->published ? 'Draft changes' : 'Draft' }}</span>
+                @endif
+                <span class="seo-type">{{ ($customSeo ?? false) ? 'Custom SEO' : 'Automatic SEO' }}</span>
             </div>
             <p class="muted">Update how this page appears in search and when shared.</p>
         </div>
@@ -61,7 +65,7 @@
                         Page Details
                     </h2>
                     <div class="page-context">
-                        <strong>{{ str($page->id)->replace(['.show', '.index', 'legal.', 'studios.'], '')->replace(['.', ':'], ' ')->headline()->replace(['Fofo', 'Xclusive'], ['FOFO', 'X-Clusive']) }}</strong>
+                        <strong>{{ $pageName ?? str($page->title)->beforeLast(' | ') }}</strong>
                         <a href="{{ $page->canonical }}" target="_blank" rel="noopener">{{ $page->canonical }} <span aria-hidden="true">↗</span></a>
                     </div>
                     <div class="field">

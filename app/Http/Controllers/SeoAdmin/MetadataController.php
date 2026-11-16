@@ -9,6 +9,8 @@ use App\Services\Seo\Admin\SeoMedia;
 use App\Services\Seo\Admin\SeoPublisher;
 use App\Services\Seo\Admin\SeoStorage;
 use App\Services\Seo\SeoMetadata;
+use App\Services\Seo\SeoResolver;
+use App\Services\Seo\SeoSitemap;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -30,7 +32,7 @@ final class MetadataController extends Controller
             'q' => ['nullable', 'string', 'max:100'],
             'page' => ['nullable', 'integer', 'min:1', 'max:10000'],
             'indexing' => ['nullable', 'in:indexable,noindex'],
-            'status' => ['nullable', 'in:draft,published,default'],
+            'status' => ['nullable', 'in:draft,published,unpublished,default'],
             'sitemap' => ['nullable', 'in:included,excluded'],
             'per_page' => ['nullable', 'in:10,25,50,100'],
         ]);
@@ -38,6 +40,7 @@ final class MetadataController extends Controller
         $state = $storage->state();
         $snapshot = $publisher->snapshot($state);
         $inventory = $pages->resolver($snapshot)->inventory();
+        $pageNames = $pages->displayNames($snapshot, $inventory);
         $query = mb_strtolower($input['q'] ?? '');
 
         // One grouped query for workflow badges, not one query per page.
@@ -69,23 +72,24 @@ final class MetadataController extends Controller
         foreach ($inventory as $page) {
             $statuses[$page->id] = [
                 'draft' => ($latest[$page->id]->kind ?? null) === 'draft',
-                'published' => isset($published[$page->id]),
+                'published' => $page->published,
+                'custom' => isset($published[$page->id]),
             ];
             $summary['indexable'] += (int) $page->indexable();
-            $summary['sitemap'] += (int) ($page->sitemap && $page->indexable());
+            $summary['sitemap'] += (int) ($page->sitemap && $page->indexable() && ! $page->canonicalAliasApproved);
             $summary['draft'] += (int) $statuses[$page->id]['draft'];
             $summary['published'] += (int) $statuses[$page->id]['published'];
         }
 
         $filtered = array_values(array_filter(
             $inventory,
-            function ($page) use ($query, $input, $statuses) {
+            function ($page) use ($query, $input, $statuses, $pageNames) {
                 $status = $statuses[$page->id];
 
                 return (
                     $query === ''
                     || str_contains(
-                        mb_strtolower($page->id.' '.$page->title.' '.$page->canonical),
+                        mb_strtolower($pageNames[$page->id].' '.$page->id.' '.$page->title.' '.$page->canonical),
                         $query
                     )
                 )
@@ -95,14 +99,16 @@ final class MetadataController extends Controller
                         default => true,
                     })
                     && (match ($input['sitemap'] ?? '') {
-                        'included' => $page->sitemap && $page->indexable(),
-                        'excluded' => ! ($page->sitemap && $page->indexable()),
+                        'included' => $page->sitemap && $page->indexable() && ! $page->canonicalAliasApproved,
+                        'excluded' => ! ($page->sitemap && $page->indexable() && ! $page->canonicalAliasApproved),
                         default => true,
                     })
                     && (match ($input['status'] ?? '') {
                         'draft' => $status['draft'],
                         'published' => $status['published'],
-                        'default' => ! $status['draft'] && ! $status['published'],
+                        'unpublished' => ! $status['published'],
+                        // Preserve existing automatic-only links without changing stored workflow values.
+                        'default' => ! $status['draft'] && ! $status['custom'],
                         default => true,
                     });
             }
@@ -120,11 +126,35 @@ final class MetadataController extends Controller
             'perPage' => $perPage,
             'filters' => $input,
             'statuses' => $statuses,
+            'pageNames' => $pageNames,
             'summary' => $summary,
             'query' => $input['q'] ?? '',
             'state' => $state,
             'warnings' => $pages->warnings($snapshot),
             'images' => $snapshot->images,
+        ]);
+    }
+
+    public function downloadSitemap(SeoResolver $resolver, SeoSitemap $sitemap)
+    {
+        try {
+            if (! $resolver->publicationAvailable()) {
+                throw new \RuntimeException('Publication storage unavailable.');
+            }
+            $xml = $sitemap->xml();
+        } catch (Throwable $exception) {
+            Log::warning('SEO sitemap download unavailable.', ['exception' => $exception::class]);
+
+            return response('Sitemap unavailable. Please try again.', 503, [
+                'Content-Type' => 'text/plain; charset=UTF-8',
+                'Cache-Control' => 'no-store',
+            ]);
+        }
+
+        return response($xml, 200, [
+            'Content-Type' => 'application/xml; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="sitemap.xml"',
+            'Cache-Control' => 'private, no-store',
         ]);
     }
 
@@ -154,6 +184,10 @@ final class MetadataController extends Controller
 
         return view('admin.seo.edit', [
             'page' => $current,
+            'pageName' => $pages->displayNames($snapshot, [$current])[$current->id],
+            'customSeo' => collect($snapshot->overrides)->contains(
+                fn ($override) => $override->published && $override->pageId === $page && $override->locale === $current->locale
+            ),
             'fields' => $fields,
             'draft' => $draft,
             'history' => $history,

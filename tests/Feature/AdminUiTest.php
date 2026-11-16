@@ -117,6 +117,7 @@ class AdminUiTest extends TestCase
         $html = view('admin.seo.index', [
             'pages' => [$data['page']],
             'summary' => ['total' => 501, 'published' => 400, 'draft' => 32, 'indexable' => 490, 'sitemap' => 480],
+            'pageNames' => ['home' => 'Home'],
             'statuses' => ['home' => ['draft' => true, 'published' => true]],
             'count' => 501, 'number' => 2, 'lastPage' => 21, 'perPage' => 25,
             'filters' => ['q' => 'Home', 'status' => 'draft'], 'query' => 'Home',
@@ -132,14 +133,27 @@ class AdminUiTest extends TestCase
         $this->assertStringContainsString('status=draft', $html);
         $this->assertSame(1, $xpath->query('//nav[@aria-label="Inventory pagination"]//a[@aria-current="page"]')->length);
         $this->assertStringNotContainsString('Add Page', $html);
+        $this->assertStringNotContainsString('matching pages', $html);
+        $this->assertSame(0, $xpath->query('//*[@id="inventory-title"]')->length);
+        $this->assertSame(1, $xpath->query('//*[@class="inventory-actions"]/a[@href="#image-library"]')->length);
         $this->assertStringNotContainsString('/admin/studios', $html);
         $this->assertSame(
-            ['Page', 'URL', 'Status', 'Sitemap', 'Edit'],
+            ['Page', 'URL', 'Status', 'SEO Type', 'Sitemap', 'Edit'],
             array_map(fn ($node) => trim($node->textContent), iterator_to_array($xpath->query('//table/thead/tr/th'))),
         );
         $this->assertSame(1, $xpath->query('//select[@name="per_page"]/option[@value="10"]')->length);
         $this->assertSame(1, $xpath->query('//details[@data-filter-panel]/summary/span[contains(., "1 active")]')->length);
-        $this->assertSame(1, $xpath->query('//td[@data-label="Status"]//span[contains(@class, "pill")]')->length);
+        $this->assertSame(2, $xpath->query('//td[@data-label="Status"]//span[contains(@class, "pill")]')->length);
+        $this->assertSame('Automatic', $xpath->evaluate('normalize-space(//td[@data-label="SEO Type"])'));
+        $this->assertSame(0, $xpath->query('//td[@data-label="Status"]//*[contains(@class, "seo-type")]')->length);
+        $this->assertSame(0, $xpath->query('//*[@class="section-heading"]//*[@class="sitemap-controls"]')->length);
+        $this->assertSame(1, $xpath->query('//*[@class="page-heading"]//*[@class="seo-header-actions"]//*[@class="sitemap-controls"]')->length);
+        $this->assertSame(1, $xpath->query('//*[@class="seo-header-actions"]//*[@class="version"]')->length);
+        $this->assertSame(2, $xpath->query('//*[@class="sitemap-actions"]/a')->length);
+        $this->assertStringNotContainsString('480 URLs', $html);
+        $this->assertSame(0, $xpath->query('//*[@id="sitemap-title"]')->length);
+        $this->assertSame(1, $xpath->query('//*[@role="group"][@aria-label="Sitemap actions"]')->length);
+        $this->assertStringNotContainsString('sitemap-overview', $html);
         $this->assertSame(1, $xpath->query('//a[@aria-label="Edit SEO for Home"]')->length);
         $this->assertSame(3, $xpath->query('//*[@data-overview-tab]')->length);
         $this->assertSame(3, $xpath->query('//*[@data-overview-panel][not(@hidden)]')->length);
@@ -203,6 +217,7 @@ class AdminUiTest extends TestCase
         $html = view('admin.seo.index', [
             'pages' => [$data['page']],
             'summary' => ['total' => 1, 'published' => 1, 'draft' => 0, 'indexable' => 1, 'sitemap' => 1],
+            'pageNames' => ['home' => 'Home'],
             'statuses' => ['home' => ['draft' => false, 'published' => true]],
             'count' => 1, 'number' => 1, 'lastPage' => 1, 'perPage' => 10,
             'filters' => [], 'query' => '',

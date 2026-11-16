@@ -1110,7 +1110,7 @@ class SeoAdminTest extends TestCase
         $this->login();
         $this->visit('/admin/seo?q=qa.new-public')
             ->assertOk()
-            ->assertSee('1 matching pages')
+            ->assertViewHas('count', 1)
             ->assertSee('qa.new-public');
         $this->visit('/admin/seo/pages/qa.new-public')
             ->assertOk()
@@ -1268,7 +1268,7 @@ class SeoAdminTest extends TestCase
         $this->visit('/admin/seo?q=qa.page.500')
             ->assertOk()
             ->assertSee('qa.page.500')
-            ->assertSee('1 matching pages');
+            ->assertViewHas('count', 1);
         $result = $this->visit('/admin/seo?q=qa.page.&per_page=100&page=5')->assertOk();
         $this->assertCount(100, $result->viewData('pages'));
         $this->assertSame(500, $result->viewData('count'));
@@ -1337,12 +1337,12 @@ class SeoAdminTest extends TestCase
         $response = $this->visit('/admin/seo?status=draft')->assertOk();
         $this->assertSame(['fofo.show'], array_map(fn ($page) => $page->id, $response->viewData('pages')));
         $this->assertSame(1, $response->viewData('summary')['draft']);
-        $this->assertSame(0, $response->viewData('summary')['published']);
+        $this->assertSame(14, $response->viewData('summary')['published']);
         $this->publish($draft)->assertRedirect();
         $response = $this->visit('/admin/seo?status=published')->assertOk();
-        $this->assertSame(['fofo.show'], array_map(fn ($page) => $page->id, $response->viewData('pages')));
+        $this->assertContains('fofo.show', array_map(fn ($page) => $page->id, $response->viewData('pages')));
         $this->assertSame(0, $response->viewData('summary')['draft']);
-        $this->assertSame(1, $response->viewData('summary')['published']);
+        $this->assertSame(14, $response->viewData('summary')['published']);
         foreach (['indexing=noindex', 'sitemap=excluded'] as $filter) {
             $response = $this->visit('/admin/seo?'.$filter)->assertOk();
             $this->assertNotEmpty($response->viewData('pages'));
@@ -1356,6 +1356,71 @@ class SeoAdminTest extends TestCase
         }
         $response = $this->visit('/admin/seo?status=unknown');
         $response->assertRedirect()->assertSessionHasErrors('status');
+    }
+
+    public function test_live_automatic_custom_and_unpublished_states_keep_drafts_separate(): void
+    {
+        Route::view('/qa-studio/{slug}', 'layouts.app')->name('qa.studio');
+        Route::getRoutes()->refreshNameLookups();
+        SeoFixtureContentProvider::$records = [
+            new ContentMetadata('studio.501', 'studio', 'qa.studio', ['slug' => 'jaipur'], 'Detailing Devils Jaipur', published: true, sitemap: true),
+            new ContentMetadata('studio.502', 'studio', 'qa.studio', ['slug' => 'future'], 'Future Studio', published: false, sitemap: true),
+        ];
+        config()->set('seo.content_providers', [SeoFixtureContentProvider::class]);
+        $this->app->forgetInstance(SeoResolver::class);
+        $this->login();
+        $response = $this->visit('/admin/seo?status=published&per_page=100')->assertOk();
+        $this->assertSame(14, $response->viewData('summary')['published']);
+        $response->assertSee('Published')->assertSee('Automatic')->assertDontSee('Not yet published');
+        $this->assertSame(14, $response->viewData('summary')['sitemap']);
+        $response->assertDontSee('14 URLs')->assertSee('https://www.detailingdevils.com/sitemap.xml', false);
+        $this->assertNotContains('studio.502', array_map(fn ($page) => $page->id, $response->viewData('pages')));
+        $this->visit('/admin/seo?status=unpublished')->assertOk()->assertSee('Future Studio');
+        $fields = app(SeoAdminPages::class)->fields(app(SeoAdminPages::class)->page('studio.501'))
+            + ['expected_version' => $this->version()];
+        $fields['title'] = 'A custom search title';
+        $this->send('/admin/seo/pages/studio.501/draft', $fields)->assertRedirect();
+        $this->publish($this->latestDraft())->assertRedirect();
+        $fields['expected_version'] = $this->version();
+        $this->send('/admin/seo/pages/studio.501/draft', $fields)->assertRedirect();
+        $response = $this->visit('/admin/seo?q=Jaipur')->assertOk();
+        $response->assertSee('Detailing Devils Jaipur')->assertSee('Published')->assertSee('Draft changes')->assertSee('Custom');
+        $this->assertSame(1, $response->viewData('count'));
+        $response = $this->visit('/admin/seo/pages/studio.501')->assertOk();
+        $response->assertSee('Detailing Devils Jaipur')->assertSee('Custom SEO')->assertSee('Draft changes')->assertDontSee('Studio 501');
+        $this->visit('/admin/seo?status=draft')->assertOk()->assertSee('Detailing Devils Jaipur');
+        $this->visit('/admin/seo?status=default&q=Jaipur')->assertOk()->assertDontSee('Edit SEO for Detailing Devils Jaipur');
+        $this->assertSame(1, DB::table('seo_metadata')->count());
+    }
+
+    public function test_sitemap_download_is_current_authorized_xml_and_fails_without_an_attachment(): void
+    {
+        $this->visit('/admin/seo/sitemap/download')->assertRedirect('/admin/login');
+        $this->login();
+        Route::view('/qa-fresh-sitemap-page', 'layouts.app')->name('qa.fresh.sitemap');
+        Route::getRoutes()->refreshNameLookups();
+        $this->app->forgetInstance(SeoResolver::class);
+        $before = (array) DB::table('seo_metadata')->first();
+        $response = $this->visit('/admin/seo/sitemap/download')->assertOk()
+            ->assertHeader('Content-Disposition', 'attachment; filename="sitemap.xml"')
+            ->assertHeader('Content-Type', 'application/xml; charset=UTF-8');
+        $urls = app(SeoSitemap::class)->urls($response->getContent());
+        $this->assertCount(14, $urls);
+        $this->assertContains('https://www.detailingdevils.com/qa-fresh-sitemap-page', $urls);
+        $this->assertSame($before, (array) DB::table('seo_metadata')->first());
+        $this->assertSame(0, DB::table('seo_revisions')->count());
+        $this->visit('/admin/seo')->assertOk()->assertDontSee('14 URLs')->assertSee('Download XML');
+        $this->app->instance(MetadataRepository::class, new class implements MetadataRepository
+        {
+            public function snapshot(): SeoSnapshot
+            {
+                throw new \RuntimeException('Synthetic storage failure');
+            }
+        });
+        $this->app->forgetInstance(SeoResolver::class);
+        $response = $this->visit('/admin/seo/sitemap/download')->assertStatus(503);
+        $response->assertHeaderMissing('Content-Disposition')->assertSee('Please try again.');
+        $this->assertSame($before, (array) DB::table('seo_metadata')->first());
     }
 
     public function test_offline_provisioning_creates_one_hashed_authorized_user(): void

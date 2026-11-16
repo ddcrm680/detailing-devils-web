@@ -25,6 +25,7 @@ Route::prefix('admin')
                 ->name('seo.')
                 ->group(function () {
                     Route::get('/', [MetadataController::class, 'index'])->name('index');
+                    Route::get('/sitemap/download', [MetadataController::class, 'downloadSitemap'])->name('sitemap.download');
                     Route::get('/pages/{page}', [MetadataController::class, 'edit'])->name('edit');
                     Route::post('/pages/{page}/draft', [MetadataController::class, 'save'])->name('draft');
                     Route::post('/pages/{page}/preview', [MetadataController::class, 'preview'])->name('preview');

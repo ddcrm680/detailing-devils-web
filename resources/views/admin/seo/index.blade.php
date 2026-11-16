@@ -17,7 +17,15 @@
             <h1>SEO Management</h1>
             <p class="muted">Update how your pages appear in search and when shared.</p>
         </div>
-        <span class="version">Publication <strong>{{ $state->version }}</strong></span>
+        <div class="seo-header-actions">
+            <span class="version">Publication <strong>{{ $state->version }}</strong></span>
+            <div class="sitemap-controls" role="group" aria-label="Sitemap actions">
+                <div class="sitemap-actions">
+                    <a class="button secondary small-button" href="{{ rtrim(config('seo.origin'), '/') }}/sitemap.xml" target="_blank" rel="noopener"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i> View Sitemap</a>
+                    <a class="button secondary small-button" href="{{ route('admin.seo.sitemap.download') }}"><i class="bi bi-download" aria-hidden="true"></i> Download XML</a>
+                </div>
+            </div>
+        </div>
     </div>
     <div class="overview-tabs" data-overview-tabs hidden aria-label="SEO workspace">
         <button type="button" id="pages-overview-tab" data-overview-tab="pages" aria-controls="pages-panel">Pages</button>
@@ -25,12 +33,13 @@
         <button type="button" id="review-overview-tab" data-overview-tab="review" aria-controls="seo-review">SEO Review</button>
     </div>
     <section id="pages-panel" data-overview-panel="pages" aria-label="Pages">
+        <p class="small muted">Site-wide totals</p>
         <section class="stats" aria-label="SEO overview">
             @foreach ([
                 ['total', 'Pages', 'blue', 'globe2'],
                 ['published', 'Published', 'green', 'check-circle'],
                 ['draft', 'Pending drafts', 'amber', 'pencil-square'],
-                ['indexable', 'Indexable', 'neutral', 'eye'],
+                ['indexable', 'Indexing allowed', 'neutral', 'eye'],
             ] as [$key, $label, $color, $icon])
                 <div class="stat {{ $color }}">
                     <i class="bi bi-{{ $icon }}" aria-hidden="true"></i>
@@ -39,13 +48,9 @@
                 </div>
             @endforeach
         </section>
-        <section class="panel inventory" aria-labelledby="inventory-title">
-            <div class="section-heading">
-                <div>
-                    <h2 id="inventory-title">Pages</h2>
-                    <p class="muted small">{{ $count }} matching pages</p>
-                </div>
-                <a class="text-link" href="#image-library">Manage Images &rarr;</a>
+        <section class="panel inventory" aria-label="SEO pages">
+            <div class="inventory-actions">
+                <a class="text-link small" href="#image-library">Manage Images &rarr;</a>
             </div>
             <form action="{{ route('admin.seo.index') }}" method="get" class="inventory-filters">
                 <div class="field search-field">
@@ -72,9 +77,10 @@
                             <select id="status" name="status">
                                 @foreach ([
                                     '' => 'All statuses',
-                                    'draft' => 'Has draft',
-                                    'published' => 'Published SEO',
-                                    'default' => 'Not yet published',
+                                    'draft' => 'Draft changes',
+                                    'published' => 'Published',
+                                    'unpublished' => 'Unpublished',
+                                    ...(($filters['status'] ?? '') === 'default' ? ['default' => 'Automatic SEO (no draft)'] : []),
                                 ] as $value => $label)
                                     <option value="{{ $value }}" @selected(($filters['status'] ?? '') === $value)>{{ $label }}</option>
                                 @endforeach
@@ -84,8 +90,8 @@
                             <label for="indexing">Indexing</label>
                             <select id="indexing" name="indexing">
                                 <option value="">All pages</option>
-                                <option value="indexable" @selected(($filters['indexing'] ?? '') === 'indexable')>Indexable</option>
-                                <option value="noindex" @selected(($filters['indexing'] ?? '') === 'noindex')>Noindex</option>
+                                <option value="indexable" @selected(($filters['indexing'] ?? '') === 'indexable')>Indexing allowed</option>
+                                <option value="noindex" @selected(($filters['indexing'] ?? '') === 'noindex')>Indexing blocked</option>
                             </select>
                         </div>
                         <div class="field">
@@ -118,6 +124,7 @@
                             <th scope="col">Page</th>
                             <th scope="col">URL</th>
                             <th scope="col">Status</th>
+                            <th scope="col">SEO Type</th>
                             <th scope="col">Sitemap</th>
                             <th scope="col">Edit</th>
                         </tr>
@@ -125,11 +132,7 @@
                     <tbody>
                         @forelse ($pages as $page)
                             @php
-                                $pageName = str($page->id)->replace(['.show', '.index', 'legal.', 'studios.'], '')
-                                    ->replace(['.', ':'], ' ')->headline()->replace(['Fofo', 'Xclusive'], ['FOFO', 'X-Clusive']);
-                                if (str_starts_with($page->id, 'studio.')) {
-                                    $pageName = str($page->title)->beforeLast(' | ');
-                                }
+                                $pageName = $pageNames[$page->id] ?? str($page->title)->beforeLast(' | ');
                             @endphp
                             <tr>
                                 <th scope="row">
@@ -144,17 +147,15 @@
                                 </td>
                                 <td data-label="Status">
                                     <div class="badges">
+                                        <span class="pill {{ $page->published ? 'green' : '' }}">{{ $page->published ? 'Published' : 'Unpublished' }}</span>
                                         @if ($statuses[$page->id]['draft'])
-                                            <span class="pill amber" @if ($statuses[$page->id]['published']) title="A draft is pending. The published version remains live." @endif>Draft</span>
-                                        @elseif ($statuses[$page->id]['published'])
-                                            <span class="pill green">Published</span>
-                                        @else
-                                            <span class="pill">Default</span>
+                                            <span class="pill amber">{{ $page->published ? 'Draft changes' : 'Draft' }}</span>
                                         @endif
                                     </div>
                                 </td>
+                                <td data-label="SEO Type"><span class="seo-kind">{{ ($statuses[$page->id]['custom'] ?? false) ? 'Custom' : 'Automatic' }}</span></td>
                                 <td data-label="Sitemap">
-                                    <span class="sitemap-status">{{ $page->sitemap && $page->indexable() ? 'Included' : 'Excluded' }}</span>
+                                    <span class="sitemap-status">{{ $page->sitemap && $page->indexable() && ! $page->canonicalAliasApproved ? 'Included' : 'Excluded' }}</span>
                                 </td>
                                 <td>
                                     <a
@@ -166,7 +167,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="5" class="empty-state">No registered pages match these filters. <a href="{{ route('admin.seo.index') }}">Clear filters</a>
+                                <td colspan="6" class="empty-state">No registered pages match these filters. <a href="{{ route('admin.seo.index') }}">Clear filters</a>
                                 </td>
                             </tr>
                         @endforelse
