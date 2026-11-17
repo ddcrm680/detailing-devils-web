@@ -457,7 +457,7 @@ class LeadWebhookDeliveryTest extends TestCase
     }
 
     #[DataProvider('reviewResponses')]
-    public function test_unconfirmed_and_permanent_responses_require_review(int $status, mixed $body, string $error, array $headers = []): void
+    public function test_non_success_statuses_require_attention_without_resending(int $status, mixed $body, string $error, array $headers = []): void
     {
         $this->activate();
         $this->lead();
@@ -477,29 +477,9 @@ class LeadWebhookDeliveryTest extends TestCase
             'duplicate' => [409, ['duplicate' => true], 'conflict'],
             'bad request' => [400, ['message' => 'Invalid phone'], 'validation_rejected'],
             'invalid' => [422, ['errors' => ['phone' => 'private number']], 'validation_rejected'],
-            'HTML 200' => [200, '<html>Login</html>', 'unconfirmed_acknowledgement'],
-            'HTML content type' => [201, '', 'unconfirmed_acknowledgement', ['Content-Type' => 'text/html']],
-            'HTML fragment' => [200, '<form action="/login"><input name="password"></form>', 'unconfirmed_acknowledgement'],
-            'malformed JSON' => [200, '{broken', 'unconfirmed_acknowledgement'],
-            'invalid JSON content type' => [200, 'OK', 'unconfirmed_acknowledgement', ['Content-Type' => 'application/json']],
-            'false stored flag' => [200, ['stored' => false], 'provider_rejected'],
-            'false success flag' => [201, ['success' => false], 'provider_rejected'],
-            'case insensitive false flag' => [200, ['success' => ' FALSE '], 'provider_rejected'],
-            'zero accepted flag' => [200, ['accepted' => 0], 'provider_rejected'],
-            'nested errors' => [200, ['result' => ['errors' => ['phone' => 'Invalid value']]], 'provider_rejected'],
-            'error string' => [201, ['error' => 'Could not save'], 'provider_rejected'],
-            'failed status' => [200, ['status' => 'failed'], 'provider_rejected'],
-            'failed state' => [200, ['data' => ['state' => 'validation_failed']], 'provider_rejected'],
-            'error status code' => [200, ['status_code' => 422], 'provider_rejected'],
-            'failure message' => [200, ['message' => 'Authentication required'], 'provider_rejected'],
-            'plain login' => [200, 'Please log in to continue.', 'provider_rejected'],
-            'plain error' => [200, 'Error: request failed.', 'provider_rejected'],
-            'JSON false' => [200, 'false', 'provider_rejected'],
-            'JSON null' => [200, 'null', 'unconfirmed_acknowledgement'],
-            'oversized response' => [200, str_repeat('x', 65537), 'unconfirmed_acknowledgement'],
-            'redirect' => [302, [], 'unconfirmed_acknowledgement'],
-            '202 accepted only' => [202, ['stored' => true], 'unconfirmed_acknowledgement'],
-            '204 not agreed' => [204, '', 'unconfirmed_acknowledgement'],
+            'redirect' => [302, [], 'unexpected_http_status'],
+            '202 accepted only' => [202, ['stored' => true], 'unexpected_http_status'],
+            '204 not agreed' => [204, '', 'unexpected_http_status'],
         ];
     }
 
@@ -585,7 +565,7 @@ class LeadWebhookDeliveryTest extends TestCase
     }
 
     #[DataProvider('acceptedResponses')]
-    public function test_confirmed_200_and_201_acceptance_does_not_require_json_acknowledgement(int $status, mixed $body, array $headers = []): void
+    public function test_200_and_201_are_delivered_regardless_of_body_and_never_resent(int $status, mixed $body, array $headers = []): void
     {
         $this->activate();
         $this->lead();
@@ -595,6 +575,8 @@ class LeadWebhookDeliveryTest extends TestCase
         $this->assertSame($status, $this->delivery()->last_http_status);
         $this->assertNotNull($this->delivery()->delivered_at);
         $this->assertNull($this->delivery()->last_error);
+        $this->assertNull($this->delivery()->next_attempt_at);
+        $this->assertNull($this->delivery()->processing_token);
         Http::assertSent(fn (Request $request) => $request->hasHeader('Authorization', 'Bearer synthetic-test-token'));
         $this->runDelivery();
         Http::assertSentCount(1);
@@ -611,6 +593,26 @@ class LeadWebhookDeliveryTest extends TestCase
             'no errors' => [200, ['error' => null, 'errors' => [], 'success' => true]],
             'plain acceptance' => [201, 'Accepted', ['Content-Type' => 'text/plain']],
             'JSON string' => [200, '"OK"', ['Content-Type' => 'application/json']],
+            'HTML 200' => [200, '<html>Login</html>'],
+            'HTML content type' => [201, '', ['Content-Type' => 'text/html']],
+            'HTML fragment' => [200, '<form action="/login"><input name="password"></form>'],
+            'malformed JSON' => [200, '{broken'],
+            'invalid JSON content type' => [200, 'OK', ['Content-Type' => 'application/json']],
+            'false stored flag' => [200, ['stored' => false]],
+            'false success flag' => [201, ['success' => false]],
+            'case insensitive false flag' => [200, ['success' => ' FALSE ']],
+            'zero accepted flag' => [200, ['accepted' => 0]],
+            'nested errors' => [200, ['result' => ['errors' => ['phone' => 'Invalid value']]]],
+            'error string' => [201, ['error' => 'Could not save']],
+            'failed status' => [200, ['status' => 'failed']],
+            'failed state' => [200, ['data' => ['state' => 'validation_failed']]],
+            'error status code' => [200, ['status_code' => 422]],
+            'failure message' => [200, ['message' => 'Authentication required']],
+            'plain login' => [200, 'Please log in to continue.'],
+            'plain error' => [200, 'Error: request failed.'],
+            'JSON false' => [200, 'false'],
+            'JSON null' => [200, 'null'],
+            'oversized response' => [200, str_repeat('x', 65537)],
         ];
     }
 
@@ -962,8 +964,10 @@ class LeadWebhookDeliveryTest extends TestCase
     public function test_status_preserves_the_provider_rejection_reason_without_exposing_the_response(): void
     {
         $this->statusFixture(1, 'review', ['last_http_status' => 200, 'last_error' => 'provider_rejected']);
+        $this->statusFixture(2, 'review', ['last_http_status' => 202, 'last_error' => 'unexpected_http_status']);
         $this->artisan('leads:deliver', ['--status' => true])
-            ->expectsOutputToContain('provider_rejected')->assertSuccessful();
+            ->expectsOutputToContain('provider_rejected')
+            ->expectsOutputToContain('unexpected_http_status')->assertSuccessful();
         Http::assertNothingSent();
     }
 

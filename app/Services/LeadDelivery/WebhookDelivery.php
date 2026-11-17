@@ -6,7 +6,6 @@ use App\Models\LeadDelivery;
 use DomainException;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Response;
-use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -152,9 +151,7 @@ class WebhookDelivery
             return;
         }
 
-        $responseError = in_array($response->status(), $config['accepted_statuses'], true)
-            ? $this->responseError($response) : 'unconfirmed_acknowledgement';
-        if ($responseError === null) {
+        if (in_array($response->status(), $config['accepted_statuses'], true)) {
             $this->finish($delivery, [
                 'status' => 'delivered',
                 'last_error' => null,
@@ -172,77 +169,9 @@ class WebhookDelivery
                 401, 403 => 'authentication_rejected',
                 409 => 'conflict',
                 400, 422 => 'validation_rejected',
-                default => $responseError,
+                default => 'unexpected_http_status',
             },
         ]);
-    }
-
-    private function responseError(Response $response): ?string
-    {
-        $body = trim($response->body());
-        $contentType = strtolower($response->header('Content-Type'));
-        if (
-            strlen($response->body()) > 65536
-            || str_contains($contentType, 'html')
-            || preg_match('/<\s*(?:!doctype\b|\/?[a-z][^>]*>)/i', $body)
-        ) {
-            return 'unconfirmed_acknowledgement';
-        }
-        if ($body === '') {
-            return null;
-        }
-
-        $json = json_decode($body, true);
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            if (str_contains($contentType, 'json') || in_array($body[0], ['{', '['], true)) {
-                return 'unconfirmed_acknowledgement';
-            }
-
-            return $this->failureText($body) ? 'provider_rejected' : null;
-        }
-        if (! is_array($json)) {
-            return match (true) {
-                $json === false, $json === 0 => 'provider_rejected',
-                $json === true => null,
-                is_string($json) => $this->failureText($json) ? 'provider_rejected' : null,
-                default => 'unconfirmed_acknowledgement',
-            };
-        }
-
-        foreach (Arr::dot($json) as $path => $value) {
-            $keys = explode('.', strtolower((string) $path));
-            $key = end($keys);
-            $flag = is_string($value) ? strtolower(trim($value)) : $value;
-            if (
-                (array_intersect($keys, ['error', 'errors', 'exception']) && ! empty($value))
-                || (
-                    in_array($key, ['success', 'ok', 'accepted', 'stored'], true)
-                    && (in_array($flag, [false, 0, '0', 'false', 'no'], true)
-                        || (is_string($value) && $this->failureText($value)))
-                )
-                || (
-                    in_array($key, ['status', 'state', 'result', 'message', 'detail'], true)
-                    && is_string($value) && $this->failureText($value)
-                )
-                || (
-                    in_array($key, ['code', 'status', 'status_code'], true)
-                    && is_numeric($value) && $value >= 400 && $value <= 599
-                )
-            ) {
-                return 'provider_rejected';
-            }
-        }
-
-        return null;
-    }
-
-    private function failureText(string $value): bool
-    {
-        return (bool) preg_match(
-            '/\A(?:false|no|0)\z|\A(?:error|fail(?:ed|ure)?|reject(?:ed)?|denied|invalid|unauthorized|unauthenticated|forbidden)\b'
-            .'|\b(?:log(?:in| in)|sign in|access denied|authentication (?:failed|required)|validation (?:failed|error))\b/i',
-            str_replace('_', ' ', trim($value))
-        );
     }
 
     private function retry(LeadDelivery $delivery, array $config, string $error, ?Response $response = null): void

@@ -90,8 +90,8 @@ Activation/status work without a webhook URL or delivery credentials. Status sho
 | 401/403 | Retained for review; current batch stops. Pause delivery/cron while correcting credentials. |
 | 400/422 | Retained for review as `validation_rejected`; correct and reconcile before an approved recovery. |
 | 409 | Retained for review as `conflict`; never assume a duplicate response confirms this lead was accepted. |
-| 202, other unapproved statuses, HTML, malformed JSON or oversized response | Retained for review as `unconfirmed_acknowledgement`; no automatic completed-delivery claim or replay. |
-| Explicit error body with 200/201 | Retained for review as `provider_rejected`; no success notification based on the status alone. |
+| 200/201, regardless of body | Marked Delivered immediately; no further retries. The receiver is responsible for acceptance and storage. |
+| 202 or other unexpected statuses | Needs Attention (internal `review`) as `unexpected_http_status`; no completed-delivery claim or automatic replay. |
 | Exhausted retries | Retained for review; reconcile before an approved recovery. Never force duplicates. |
 
 `--status` includes review rows, failed pending retries and expired processing leases. Unknown error text is redacted. Logs contain only safe reference/reason metadata. Review entries are not automatically reset or replayed.
@@ -100,9 +100,9 @@ To pause/roll back, disable delivery and its cron; preserve the table, checkpoin
 
 ### Response handling
 
-Confirmed 200/201 responses can be empty, JSON without a success flag, or plain text. HTML/login responses, malformed declared JSON and bodies larger than 64 KiB are not accepted. Recognizable JSON failures include nonempty `error`/`errors`/`exception` fields, negative success/accepted/stored flags, failure statuses/messages and error codes. Recognizable plain-text failures/login prompts are also rejected. Response bodies and secret URLs are not logged.
+Delivery results use HTTP status only. Every HTTP 200/201 response marks the delivery complete, including empty, HTML, malformed JSON and explicit error bodies. No JSON acknowledgement, reference echo or body inspection is performed. Confirm with the receiving provider that those statuses represent successful acceptance; its API is responsible for storing the lead and returning an appropriate failure status otherwise. Response bodies and secret URLs are not logged.
 
-These checks are defensive heuristics, not proof of CRM storage. Unfamiliar provider error formats may require a small sender adjustment after sandbox verification. HTTP 202 is retained for reconciliation, not automatically marked delivered or retried as completed. A timeout may occur after acceptance; every retry keeps the same UUID and snapshot, but only receiver-side idempotency can prevent a second CRM lead.
+HTTP 202 and unexpected responses require attention; they are not automatically marked delivered or replayed. HTTP 400/422, 401/403 and 409 require validation, authentication or conflict review respectively. Temporary statuses and timeouts retain the existing backoff behavior. A timeout may occur after acceptance; every retry keeps the same UUID and snapshot, but only receiver-side idempotency can prevent a second CRM lead. Legacy body-rejection reason codes remain readable in status output for existing history.
 
 ## Reference: source identities
 

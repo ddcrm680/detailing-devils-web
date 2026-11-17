@@ -35,6 +35,7 @@ class DeliverLeadsCommand extends Command
         'validation_rejected',
         'unconfirmed_acknowledgement',
         'provider_rejected',
+        'unexpected_http_status',
         'connection_failure',
         'temporary_http_failure',
         'retry_limit_reached',
