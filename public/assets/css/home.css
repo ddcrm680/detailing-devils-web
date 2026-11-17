@@ -110,6 +110,8 @@ html:has(.home-header) {
 .marq .brand-group {
     display: flex;
     align-items: center;
+    justify-content: space-around;
+    min-width: 100vw;
     flex-shrink: 0;
 }
 
@@ -118,40 +120,17 @@ html:has(.home-header) {
     align-items: center;
     justify-content: center;
     flex: 0 0 auto;
-    width: clamp(100px, 9vw, 132px);
+    width: clamp(132px, 11vw, 160px);
     height: clamp(58px, 5vw, 72px);
     padding-inline: 10px;
 }
 
 .marq img {
     display: block;
-    width: clamp(58px, 5vw, 72px);
-    height: clamp(58px, 5vw, 72px);
-    max-width: none;
+    width: clamp(112px, 10vw, 144px);
+    height: clamp(48px, 4vw, 56px);
+    max-width: 100%;
     object-fit: contain;
-}
-
-.marq .brand-wide img {
-    transform: scale(1.35);
-}
-
-.marq .brand-fine img {
-    transform: scale(1.5);
-}
-
-.marq .brand-tall img {
-    transform: scale(1.15);
-}
-
-.marq .brand-logo-dark {
-    filter: drop-shadow(.5px 0 0 #9c9a96)
-        drop-shadow(-.5px 0 0 #9c9a96)
-        drop-shadow(0 .5px 0 #9c9a96)
-        drop-shadow(0 -.5px 0 #9c9a96);
-}
-
-.marq img[src$="/car-brands/mahindra.webp"] {
-    filter: brightness(0) invert(.9);
 }
 
 .marq:focus-visible {

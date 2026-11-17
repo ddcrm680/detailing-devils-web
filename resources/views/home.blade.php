@@ -36,32 +36,15 @@
     </div>
     @php
         $carBrands = [
-            'chevrolet' => 'Chevrolet',
-            'kia' => 'Kia',
-            'volvo' => 'Volvo',
-            'fiat' => 'Fiat',
-            'volkswagen' => 'Volkswagen',
-            'toyota' => 'Toyota',
-            'skoda' => 'Škoda',
-            'mercedes-benz' => 'Mercedes-Benz',
-            'lexus' => 'Lexus',
-            'mahindra' => 'Mahindra',
-            'jaguar' => 'Jaguar',
-            'porsche' => 'Porsche',
-            'honda' => 'Honda',
-            'ford' => 'Ford',
-            'hyundai' => 'Hyundai',
-            'mitsubishi' => 'Mitsubishi',
-            'nissan' => 'Nissan',
-            'datsun' => 'Datsun',
-            'suzuki' => 'Suzuki',
-            'harley-davidson' => 'Harley-Davidson',
-            'rolls-royce' => 'Rolls-Royce',
-            'land-rover' => 'Land Rover',
-            'kawasaki' => 'Kawasaki',
-            'tvs' => 'TVS',
+            'aston-martin' => 'Aston Martin',
             'audi' => 'Audi',
-            'mclaren' => 'McLaren',
+            'bentley' => 'Bentley',
+            'jaguar' => 'Jaguar',
+            'landrover' => 'Land Rover',
+            'maclearn' => 'McLaren',
+            'mercedes' => 'Mercedes',
+            'porsche' => 'Porsche',
+            'rolls-royce' => 'Rolls-Royce',
         ];
     @endphp
     <div class="marq" role="region" aria-label="Vehicle brands we work on" tabindex="0">
@@ -69,24 +52,12 @@
             @foreach ([false, true] as $duplicate)
                 <div class="brand-group" role="list" aria-hidden="{{ $duplicate ? 'true' : 'false' }}">
                     @foreach ($carBrands as $slug => $brand)
-                        <span
-                            @class([
-                                'brand',
-                                'brand-wide' => in_array($slug, [
-                                    'chevrolet', 'kia', 'toyota', 'ford', 'hyundai',
-                                    'datsun', 'land-rover', 'kawasaki', 'tvs', 'audi', 'mclaren',
-                                ], true),
-                                'brand-fine' => $slug === 'jaguar',
-                                'brand-tall' => $slug === 'rolls-royce',
-                            ])
-                            role="listitem"
-                        >
+                        <span class="brand" role="listitem">
                             <img
-                                @class(['brand-logo-dark' => in_array($slug, ['lexus', 'mahindra', 'jaguar'], true)])
-                                src="{{ asset('img/car-brands/'.$slug.'.webp') }}"
+                                src="{{ asset('img/car-brands/'.$slug.'.svg') }}"
                                 alt="{{ $duplicate ? '' : $brand }}"
-                                width="400"
-                                height="400"
+                                width="144"
+                                height="56"
                                 decoding="async"
                                 fetchpriority="low"
                             >
