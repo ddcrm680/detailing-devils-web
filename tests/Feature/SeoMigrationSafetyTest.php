@@ -117,11 +117,12 @@ class SeoMigrationSafetyTest extends TestCase
             '2026_11_02_000001_create_website_seo_store',
             '2026_11_12_000000_create_studio_cms_tables',
             '2026_11_16_000000_create_content_urls',
+            '2026_11_17_000000_create_lead_deliveries_table',
         ], $pending);
 
         $this->artisan('migrate', ['--force' => true])->assertSuccessful();
 
-        $this->assertSame(7, DB::table('migrations')->count());
+        $this->assertSame(8, DB::table('migrations')->count());
         $this->assertSame(
             $frameworkLedger,
             DB::table('migrations')->where('batch', 1)->orderBy('id')->get()->toJson()
@@ -136,6 +137,8 @@ class SeoMigrationSafetyTest extends TestCase
         $this->assertTrue(Schema::hasTable('seo_revisions'));
         $this->assertTrue(Schema::hasTable('studios'));
         $this->assertTrue(Schema::hasTable('studio_images'));
+        $this->assertTrue(Schema::hasTable('lead_deliveries'));
+        $this->assertSame(0, DB::table('lead_deliveries')->count());
 
         $ledgerBefore = DB::table('migrations')->orderBy('id')->get()->toJson();
         $this->artisan('migrate', ['--force' => true])->assertSuccessful();
