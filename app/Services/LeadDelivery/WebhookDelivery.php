@@ -30,7 +30,7 @@ class WebhookDelivery
             || isset($parts['fragment'])
             || str_contains((string) $url, '\\')
         ) {
-            throw new DomainException('Configure and confirm the HTTPS webhook, acknowledgement and idempotency contract first.');
+            throw new DomainException('Configure and confirm the HTTPS webhook, acceptance and idempotency contract first.');
         }
         foreach (['auth_header', 'reference_header'] as $key) {
             if (
@@ -50,34 +50,15 @@ class WebhookDelivery
         }
         if (
             strcasecmp($config['auth_header'], $config['reference_header']) === 0
-            || ! is_string($config['token'])
-            || trim($config['token']) === ''
-            || preg_match('/[\r\n\x00]/', $config['token'])
-            || ! preg_match('/\A[A-Za-z0-9_-]*\z/', (string) $config['auth_scheme'])
+            || ($config['token'] !== null && ! is_string($config['token']))
+            || preg_match('/[\r\n\x00]/', (string) $config['token'])
+            || ! is_string($config['auth_scheme'])
+            || ! preg_match('/\A[A-Za-z0-9_-]*\z/', $config['auth_scheme'])
         ) {
             throw new DomainException('Configure valid webhook authentication and reference headers.');
         }
-        $raw = $config['ack_value'];
-        $config['ack_value'] = match ($config['ack_type']) {
-            'boolean' => is_bool($raw) ? $raw : null,
-            'integer' => filter_var($raw, FILTER_VALIDATE_INT, FILTER_NULL_ON_FAILURE),
-            'string' => is_bool($raw)
-                ? ($raw ? 'true' : 'false')
-                : (is_string($raw) ? $raw : null),
-            default => null,
-        };
         if (
-            $raw === null
-            || $config['ack_value'] === null
-            || $config['ack_value'] === ''
-            || ! is_string($config['ack_path'])
-            || $config['ack_path'] === ''
-            || ($config['ack_reference_path'] !== null && ! is_string($config['ack_reference_path']))
-            || ! $config['ack_statuses']
-            || array_filter(
-                $config['ack_statuses'],
-                fn ($status) => ! is_int($status) || $status < 200 || $status > 299
-            )
+            $config['accepted_statuses'] !== [200, 201]
             || $config['connect_timeout'] < 1
             || $config['timeout'] < $config['connect_timeout']
             || $config['timeout'] > 30
@@ -91,7 +72,7 @@ class WebhookDelivery
             || $config['run_seconds'] < $config['timeout'] + 5
             || $config['run_seconds'] > 50
         ) {
-            throw new DomainException('Configure valid webhook acknowledgement, timeout and retry settings.');
+            throw new DomainException('Configure valid webhook acceptance, timeout and retry settings.');
         }
 
         return $config;
@@ -144,15 +125,16 @@ class WebhookDelivery
         $delivery->refresh();
 
         try {
+            $headers = [$config['reference_header'] => $delivery->reference];
+            if (filled($config['token'])) {
+                $headers[$config['auth_header']] = trim($config['auth_scheme'].' '.$config['token']);
+            }
             $response = Http::asJson()
                 ->acceptJson()
                 ->withoutRedirecting()
                 ->connectTimeout($config['connect_timeout'])
                 ->timeout($config['timeout'])
-                ->withHeaders([
-                    $config['auth_header'] => trim($config['auth_scheme'].' '.$config['token']),
-                    $config['reference_header'] => $delivery->reference,
-                ])
+                ->withHeaders($headers)
                 ->post($config['endpoint'], $payload);
         } catch (ConnectionException) {
             $this->retry($delivery, $config, 'connection_failure');
@@ -170,17 +152,9 @@ class WebhookDelivery
             return;
         }
 
-        $ack = strlen($response->body()) <= 65536 ? $response->json(flags: 0) : null;
-        if (
-            in_array($response->status(), $config['ack_statuses'], true)
-            && is_array($ack)
-            && Arr::has($ack, $config['ack_path'])
-            && data_get($ack, $config['ack_path']) === $config['ack_value']
-            && (
-                ! filled($config['ack_reference_path'])
-                || data_get($ack, $config['ack_reference_path']) === $delivery->reference
-            )
-        ) {
+        $responseError = in_array($response->status(), $config['accepted_statuses'], true)
+            ? $this->responseError($response) : 'unconfirmed_acknowledgement';
+        if ($responseError === null) {
             $this->finish($delivery, [
                 'status' => 'delivered',
                 'last_error' => null,
@@ -197,10 +171,78 @@ class WebhookDelivery
             'last_error' => match ($response->status()) {
                 401, 403 => 'authentication_rejected',
                 409 => 'conflict',
-                422 => 'validation_rejected',
-                default => 'unconfirmed_acknowledgement',
+                400, 422 => 'validation_rejected',
+                default => $responseError,
             },
         ]);
+    }
+
+    private function responseError(Response $response): ?string
+    {
+        $body = trim($response->body());
+        $contentType = strtolower($response->header('Content-Type'));
+        if (
+            strlen($response->body()) > 65536
+            || str_contains($contentType, 'html')
+            || preg_match('/<\s*(?:!doctype\b|\/?[a-z][^>]*>)/i', $body)
+        ) {
+            return 'unconfirmed_acknowledgement';
+        }
+        if ($body === '') {
+            return null;
+        }
+
+        $json = json_decode($body, true);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            if (str_contains($contentType, 'json') || in_array($body[0], ['{', '['], true)) {
+                return 'unconfirmed_acknowledgement';
+            }
+
+            return $this->failureText($body) ? 'provider_rejected' : null;
+        }
+        if (! is_array($json)) {
+            return match (true) {
+                $json === false, $json === 0 => 'provider_rejected',
+                $json === true => null,
+                is_string($json) => $this->failureText($json) ? 'provider_rejected' : null,
+                default => 'unconfirmed_acknowledgement',
+            };
+        }
+
+        foreach (Arr::dot($json) as $path => $value) {
+            $keys = explode('.', strtolower((string) $path));
+            $key = end($keys);
+            $flag = is_string($value) ? strtolower(trim($value)) : $value;
+            if (
+                (array_intersect($keys, ['error', 'errors', 'exception']) && ! empty($value))
+                || (
+                    in_array($key, ['success', 'ok', 'accepted', 'stored'], true)
+                    && (in_array($flag, [false, 0, '0', 'false', 'no'], true)
+                        || (is_string($value) && $this->failureText($value)))
+                )
+                || (
+                    in_array($key, ['status', 'state', 'result', 'message', 'detail'], true)
+                    && is_string($value) && $this->failureText($value)
+                )
+                || (
+                    in_array($key, ['code', 'status', 'status_code'], true)
+                    && is_numeric($value) && $value >= 400 && $value <= 599
+                )
+            ) {
+                return 'provider_rejected';
+            }
+        }
+
+        return null;
+    }
+
+    private function failureText(string $value): bool
+    {
+        return (bool) preg_match(
+            '/\A(?:false|no|0)\z|\A(?:error|fail(?:ed|ure)?|reject(?:ed)?|denied|invalid|unauthorized|unauthenticated|forbidden)\b'
+            .'|\b(?:log(?:in| in)|sign in|access denied|authentication (?:failed|required)|validation (?:failed|error))\b/i',
+            str_replace('_', ' ', trim($value))
+        );
     }
 
     private function retry(LeadDelivery $delivery, array $config, string $error, ?Response $response = null): void

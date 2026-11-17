@@ -7,8 +7,10 @@ use App\Services\LeadDelivery\LeadSources;
 use App\Services\LeadDelivery\WebhookDelivery;
 use Carbon\CarbonImmutable;
 use Closure;
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\UniqueConstraintViolationException;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Cache;
@@ -46,9 +48,6 @@ class LeadWebhookDeliveryTest extends TestCase
             'franchise_sources_confirmed' => true,
             'endpoint' => 'https://receiver.example.test/webhook',
             'token' => 'synthetic-test-token',
-            'ack_path' => 'stored',
-            'ack_value' => true,
-            'ack_reference_path' => 'reference',
         ]));
         Http::preventStrayRequests();
         Http::fake(fn (Request $request) => $this->response
@@ -127,8 +126,26 @@ class LeadWebhookDeliveryTest extends TestCase
     public function test_disabled_command_does_not_even_require_delivery_storage(): void
     {
         Schema::drop('lead_deliveries');
+        config()->set('lead_delivery.contract_confirmed', false);
+        config()->set('lead_delivery.franchise_sources_confirmed', false);
+        DB::enableQueryLog();
+        DB::flushQueryLog();
         $this->artisan('leads:deliver')->expectsOutput('Lead delivery is disabled.')->assertSuccessful();
+        $this->assertSame([], DB::getQueryLog());
         Http::assertNothingSent();
+    }
+
+    public function test_lead_delivery_is_scheduled_once_every_minute_with_overlap_protection(): void
+    {
+        $events = array_values(array_filter(
+            app(Schedule::class)->events(),
+            fn ($event) => str_contains((string) $event->command, 'leads:deliver')
+        ));
+        $this->assertCount(1, $events);
+        $this->assertSame('* * * * *', $events[0]->expression);
+        $this->assertTrue($events[0]->withoutOverlapping);
+        $this->assertStringNotContainsString('--activate', $events[0]->command);
+        $this->assertStringNotContainsString('cron-test.log', file_get_contents(base_path('routes/console.php')));
     }
 
     #[DataProvider('missingWebhookUrls')]
@@ -201,10 +218,10 @@ class LeadWebhookDeliveryTest extends TestCase
             [
                 'endpoint',
                 'invalid-url',
-                'Configure and confirm the HTTPS webhook, acknowledgement and idempotency contract first.',
+                'Configure and confirm the HTTPS webhook, acceptance and idempotency contract first.',
             ],
-            ['token', null, 'Configure valid webhook authentication and reference headers.'],
-            ['ack_path', '', 'Configure valid webhook acknowledgement, timeout and retry settings.'],
+            ['token', "invalid\r\ntoken", 'Configure valid webhook authentication and reference headers.'],
+            ['accepted_statuses', [200, 202], 'Configure valid webhook acceptance, timeout and retry settings.'],
         ];
     }
 
@@ -440,11 +457,11 @@ class LeadWebhookDeliveryTest extends TestCase
     }
 
     #[DataProvider('reviewResponses')]
-    public function test_unconfirmed_and_permanent_responses_require_review(int $status, mixed $body, string $error): void
+    public function test_unconfirmed_and_permanent_responses_require_review(int $status, mixed $body, string $error, array $headers = []): void
     {
         $this->activate();
         $this->lead();
-        $this->response = fn () => Http::response($body, $status);
+        $this->response = fn () => Http::response($body, $status, $headers);
         $this->runDelivery();
         $this->assertSame('review', $this->delivery()->status);
         $this->assertSame($error, $this->delivery()->last_error);
@@ -458,21 +475,31 @@ class LeadWebhookDeliveryTest extends TestCase
             'unauthorized' => [401, ['error' => 'private response'], 'authentication_rejected'],
             'forbidden' => [403, [], 'authentication_rejected'],
             'duplicate' => [409, ['duplicate' => true], 'conflict'],
+            'bad request' => [400, ['message' => 'Invalid phone'], 'validation_rejected'],
             'invalid' => [422, ['errors' => ['phone' => 'private number']], 'validation_rejected'],
-            'empty 200' => [200, [], 'unconfirmed_acknowledgement'],
             'HTML 200' => [200, '<html>Login</html>', 'unconfirmed_acknowledgement'],
+            'HTML content type' => [201, '', 'unconfirmed_acknowledgement', ['Content-Type' => 'text/html']],
+            'HTML fragment' => [200, '<form action="/login"><input name="password"></form>', 'unconfirmed_acknowledgement'],
             'malformed JSON' => [200, '{broken', 'unconfirmed_acknowledgement'],
-            'false ack' => [200, ['stored' => false], 'unconfirmed_acknowledgement'],
-            'wrong reference' => [
-                200,
-                [
-                    'stored' => true,
-                    'reference' => 'another-lead',
-                ],
-                'unconfirmed_acknowledgement',
-            ],
+            'invalid JSON content type' => [200, 'OK', 'unconfirmed_acknowledgement', ['Content-Type' => 'application/json']],
+            'false stored flag' => [200, ['stored' => false], 'provider_rejected'],
+            'false success flag' => [201, ['success' => false], 'provider_rejected'],
+            'case insensitive false flag' => [200, ['success' => ' FALSE '], 'provider_rejected'],
+            'zero accepted flag' => [200, ['accepted' => 0], 'provider_rejected'],
+            'nested errors' => [200, ['result' => ['errors' => ['phone' => 'Invalid value']]], 'provider_rejected'],
+            'error string' => [201, ['error' => 'Could not save'], 'provider_rejected'],
+            'failed status' => [200, ['status' => 'failed'], 'provider_rejected'],
+            'failed state' => [200, ['data' => ['state' => 'validation_failed']], 'provider_rejected'],
+            'error status code' => [200, ['status_code' => 422], 'provider_rejected'],
+            'failure message' => [200, ['message' => 'Authentication required'], 'provider_rejected'],
+            'plain login' => [200, 'Please log in to continue.', 'provider_rejected'],
+            'plain error' => [200, 'Error: request failed.', 'provider_rejected'],
+            'JSON false' => [200, 'false', 'provider_rejected'],
+            'JSON null' => [200, 'null', 'unconfirmed_acknowledgement'],
+            'oversized response' => [200, str_repeat('x', 65537), 'unconfirmed_acknowledgement'],
             'redirect' => [302, [], 'unconfirmed_acknowledgement'],
-            '202 without agreed contract' => [202, ['stored' => true], 'unconfirmed_acknowledgement'],
+            '202 accepted only' => [202, ['stored' => true], 'unconfirmed_acknowledgement'],
+            '204 not agreed' => [204, '', 'unconfirmed_acknowledgement'],
         ];
     }
 
@@ -557,25 +584,144 @@ class LeadWebhookDeliveryTest extends TestCase
         $this->assertSame(1, LeadDelivery::query()->where('status', 'pending')->count());
     }
 
-    #[DataProvider('acknowledgementTypes')]
-    public function test_documented_typed_acknowledgements_are_configurable(string $type, mixed $value, mixed $response): void
+    #[DataProvider('acceptedResponses')]
+    public function test_confirmed_200_and_201_acceptance_does_not_require_json_acknowledgement(int $status, mixed $body, array $headers = []): void
     {
         $this->activate();
         $this->lead();
-        config()->set('lead_delivery.ack_path', 'result.status');
-        config()->set('lead_delivery.ack_type', $type);
-        config()->set('lead_delivery.ack_value', $value);
-        $this->response = fn (Request $request) => Http::response([
-            'result' => ['status' => $response],
-            'reference' => $request['lead_reference'],
-        ], 200);
+        $this->response = fn () => Http::response($body, $status, $headers);
         $this->runDelivery();
         $this->assertSame('delivered', $this->delivery()->status);
+        $this->assertSame($status, $this->delivery()->last_http_status);
+        $this->assertNotNull($this->delivery()->delivered_at);
+        $this->assertNull($this->delivery()->last_error);
+        Http::assertSent(fn (Request $request) => $request->hasHeader('Authorization', 'Bearer synthetic-test-token'));
+        $this->runDelivery();
+        Http::assertSentCount(1);
     }
 
-    public static function acknowledgementTypes(): array
+    public static function acceptedResponses(): array
     {
-        return [['boolean', true, true], ['string', 'stored', 'stored'], ['integer', '0', 0]];
+        return [
+            'empty 200' => [200, ''],
+            'empty 201' => [201, ''],
+            'empty array' => [200, []],
+            'created object without flags' => [201, ['id' => 'synthetic-provider-id']],
+            'unrelated response reference' => [200, ['reference' => 'provider-reference']],
+            'no errors' => [200, ['error' => null, 'errors' => [], 'success' => true]],
+            'plain acceptance' => [201, 'Accepted', ['Content-Type' => 'text/plain']],
+            'JSON string' => [200, '"OK"', ['Content-Type' => 'application/json']],
+        ];
+    }
+
+    #[DataProvider('optionalTokens')]
+    public function test_url_only_authentication_omits_the_auth_header_and_preserves_idempotency(?string $token): void
+    {
+        $this->activate();
+        $this->lead();
+        config()->set('lead_delivery.token', $token);
+        config()->set('lead_delivery.endpoint', 'https://receiver.example.test/webhook?key=synthetic-url-secret');
+        $this->runDelivery();
+        $this->assertSame('delivered', $this->delivery()->status);
+        Http::assertSent(fn (Request $request) => ! $request->hasHeader('Authorization')
+            && $request->hasHeader('Idempotency-Key', $this->delivery()->reference)
+            && $request['lead_reference'] === $this->delivery()->reference);
+    }
+
+    public static function optionalTokens(): array
+    {
+        return [[null], [''], ['   ']];
+    }
+
+    public function test_url_only_timeout_retries_the_original_snapshot_without_logging_the_secret_url(): void
+    {
+        $this->activate();
+        $this->lead();
+        Log::spy();
+        config()->set('lead_delivery.token', null);
+        config()->set('lead_delivery.endpoint', 'https://receiver.example.test/webhook?key=synthetic-url-secret');
+        $requests = [];
+        $this->response = function (Request $request) use (&$requests) {
+            $requests[] = [
+                'payload' => $request->data(),
+                'reference' => $request->header('Idempotency-Key'),
+                'authenticated' => $request->hasHeader('Authorization'),
+            ];
+            if (count($requests) === 1) {
+                throw new ConnectionException('Synthetic timeout: '.$request->url());
+            }
+
+            return Http::response('', 201);
+        };
+        $this->runDelivery();
+        $delivery = $this->delivery();
+        $this->assertSame('pending', $delivery->status);
+        $this->assertSame('connection_failure', $delivery->last_error);
+        $this->travel(2)->minutes();
+        $this->runDelivery();
+        $this->assertSame('delivered', $delivery->fresh()->status);
+        $this->assertCount(2, $requests);
+        $this->assertSame($requests[0], $requests[1]);
+        $this->assertSame($delivery->payload, $requests[0]['payload']);
+        $this->assertSame([$delivery->reference], $requests[0]['reference']);
+        $this->assertFalse($requests[0]['authenticated']);
+        $this->assertStringNotContainsString('synthetic-url-secret', Artisan::output());
+        Log::shouldNotHaveReceived('warning');
+    }
+
+    public function test_configuration_exposes_only_connection_and_approval_environment_settings(): void
+    {
+        $source = file_get_contents(config_path('lead_delivery.php'));
+        preg_match_all("/env\('([^']+)'/", $source, $matches);
+        $this->assertSame([
+            'LEAD_DELIVERY_ENABLED',
+            'LEAD_DELIVERY_CONTRACT_CONFIRMED',
+            'LEAD_DELIVERY_FRANCHISE_SOURCES_CONFIRMED',
+            'LEAD_DELIVERY_WEBHOOK_URL',
+            'LEAD_DELIVERY_TOKEN',
+        ], $matches[1]);
+        $config = require config_path('lead_delivery.php');
+        $this->assertSame([200, 201], $config['accepted_statuses']);
+        $this->assertSame(3, $config['connect_timeout']);
+        $this->assertSame(10, $config['timeout']);
+        $this->assertSame(8, $config['max_attempts']);
+        $this->assertSame([60, 300, 900, 3600, 21600], $config['retry_delays']);
+        $this->assertArrayNotHasKey('ack_path', $config);
+        $this->assertArrayNotHasKey('ack_reference_path', $config);
+        preg_match_all('/^LEAD_DELIVERY_[A-Z_]+=.*$/m', file_get_contents(base_path('.env.example')), $example);
+        $this->assertSame([
+            'LEAD_DELIVERY_ENABLED=false',
+            'LEAD_DELIVERY_WEBHOOK_URL=',
+            'LEAD_DELIVERY_TOKEN=',
+            'LEAD_DELIVERY_CONTRACT_CONFIRMED=false',
+            'LEAD_DELIVERY_FRANCHISE_SOURCES_CONFIRMED=false',
+        ], array_map('trim', $example[0]));
+    }
+
+    #[DataProvider('temporaryStatuses')]
+    public function test_temporary_statuses_retry_with_the_original_reference(int $status): void
+    {
+        $this->activate();
+        $this->lead();
+        $this->response = fn () => Http::response([], $status);
+        $this->runDelivery();
+        $first = $this->delivery();
+        $this->assertSame('pending', $first->status);
+        $this->assertSame('temporary_http_failure', $first->last_error);
+        $this->travel(2)->minutes();
+        $this->response = fn () => Http::response('', 201);
+        $this->runDelivery();
+        $this->assertSame('delivered', $first->fresh()->status);
+        Http::assertSentCount(2);
+        foreach (Http::recorded() as [$request]) {
+            $this->assertTrue($request->hasHeader('Idempotency-Key', $first->reference));
+            $this->assertSame($first->reference, $request['lead_reference']);
+        }
+    }
+
+    public static function temporaryStatuses(): array
+    {
+        return [[408], [425], [429], [500], [503]];
     }
 
     public function test_stale_processing_token_cannot_overwrite_a_newer_claim(): void
@@ -718,13 +864,12 @@ class LeadWebhookDeliveryTest extends TestCase
             ['endpoint', 'https://user:secret@receiver.example.test/webhook'],
             ['contract_confirmed', false],
             ['franchise_sources_confirmed', false],
-            ['token', null],
+            ['token', false],
+            ['token', "secret\nInjected"],
             ['auth_header', "X-Test\r\nInjected"],
             ['auth_header', 'Host'],
             ['reference_header', 'Authorization'],
-            ['ack_value', null],
-            ['ack_path', ''],
-            ['ack_statuses', [200, 409]],
+            ['accepted_statuses', [200, 409]],
             ['timeout', 60],
             ['max_attempts', 0],
             ['retry_delays', [0]],
@@ -814,6 +959,14 @@ class LeadWebhookDeliveryTest extends TestCase
         Http::assertNothingSent();
     }
 
+    public function test_status_preserves_the_provider_rejection_reason_without_exposing_the_response(): void
+    {
+        $this->statusFixture(1, 'review', ['last_http_status' => 200, 'last_error' => 'provider_rejected']);
+        $this->artisan('leads:deliver', ['--status' => true])
+            ->expectsOutputToContain('provider_rejected')->assertSuccessful();
+        Http::assertNothingSent();
+    }
+
     public function test_status_limits_attention_to_ten_most_recent_entries(): void
     {
         $this->activate();
@@ -860,7 +1013,7 @@ class LeadWebhookDeliveryTest extends TestCase
         foreach ([
             '## Setup',
             '### Required configuration',
-            '### Optional settings',
+            '### Fixed defaults',
             '## Activation',
             '## Cron',
             '## Manual commands',
@@ -875,10 +1028,11 @@ class LeadWebhookDeliveryTest extends TestCase
         foreach ([
             'php artisan leads:deliver --activate',
             'php artisan leads:deliver --status',
-            '/APP_ROOT/artisan leads:deliver --limit=25',
+            'php artisan schedule:list',
+            'Do not create a second cron',
             'Webhook not configured; delivery skipped.',
             'permanently exclude all existing IDs',
-            'No connected migration',
+            'URL-only authentication',
         ] as $instruction) {
             $this->assertStringContainsString($instruction, $guide);
         }
