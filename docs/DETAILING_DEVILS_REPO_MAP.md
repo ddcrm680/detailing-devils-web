@@ -9,6 +9,7 @@ This map describes the current Laravel checkout. The original `devils-new-web.zi
 - GSAP 3.12.5, ScrollTrigger and Lenis 1.1.13 load from CDNs on the homepage. The scroll-driven canvas uses the owner-supplied 121 JPEGs in `public/frames/`.
 - Vite/Tailwind are configured in `package.json`, `vite.config.js`, `resources/css/app.css` and `resources/js/app.js`; the current homepage does not load those Vite entrypoints.
 - The backend provides disabled-by-default CRM enquiry submission, optional email notification, and a token-protected deployment route.
+- Independent webhook delivery is implemented but disabled/unactivated: `leads:deliver` polls newly accepted, classified lead rows without changing submission controllers or the existing franchise save action. See `docs/LEAD_WEBHOOK_DELIVERY.md` before any migration/activation.
 
 ## Directory and file ownership
 
@@ -27,6 +28,8 @@ Laravel HTML error views live in `resources/views/errors/`: explicit 403/404/419
 | `routes/studios.php`, `app/Http/Controllers/StudioController.php`, `app/Models/Studio.php` | Public locator reads active records from the new `studios` table, ordered by `sort_order` then `id`, using the existing CMS status validation conventions. Draft/inactive records stay out of cards, counts, state filters and quick chips. No JSON, gallery or legacy CRM query is made; the same route file separately provides the presentation-only Studio Tour route |
 | `app/Http/Controllers/HomeController.php` | Passes `config('site')` to the home view |
 | `app/Http/Controllers/EnquiryController.php` | Disabled-by-default CRM enquiry validation, insert, and optional mail attempt |
+| `app/Console/Commands/DeliverLeadsCommand.php`, `app/Services/LeadDelivery/LeadSources.php`, `WebhookDelivery.php` | One bounded cron command, fixed source cutoffs, allowlisted stored-field mapping, acknowledged HTTPS delivery and controlled retries; existing lead tables are read-only |
+| `app/Models/LeadDelivery.php`, `database/migrations/2026_11_17_000000_create_lead_deliveries_table.php`, `config/lead_delivery.php` | Single additive table for immutable activation checkpoints/source UUIDs, encrypted payload snapshots and delivery states; disabled by default, no queue worker or automatic activation; migration is not applied to the connected database |
 | `app/Http/Requests/Franchise/StorePrimeRequest.php` | Prime server-side validation, CRM column-length checks, and normalized phone numbers |
 | `app/Actions/Franchise/SaveFranchiseLeadAction.php` | Separate Prime, FOFO and X-Clusive CRM mappings with a shared transactional save path; FOFO/X-Clusive share contact/location mapping, verification, duplicate protection and image handling |
 | `app/Services/Franchise/PhoneNumberNormalizer.php` | Shared libphonenumber validation, E.164 normalization, and visible-number consistency checks for franchise forms |
