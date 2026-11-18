@@ -944,3 +944,160 @@
     width: fit-content;
     min-height: 44px;
 }
+
+/* Studio URL confirmation only; other Admin dialogs keep their shared styling. */
+.swal2-popup.studio-url-dialog {
+    width: 580px;
+    max-width: 100%;
+    padding: 18px 20px;
+    border: 1px solid #d5d9df;
+    border-radius: 12px;
+    background: #fff;
+    color: #171a20;
+}
+
+.studio-url-dialog .swal2-close {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 44px;
+    height: 44px;
+    color: #5c6673;
+}
+
+.studio-url-dialog .studio-url-dialog__icon {
+    width: 54px;
+    height: 54px;
+    margin: 0 auto 10px;
+    border: 2px solid #7ca6b9;
+    background: #f6fafc;
+    color: #7ca6b9;
+}
+
+.studio-url-dialog__icon i {
+    font-size: 30px;
+}
+
+.studio-url-dialog .studio-url-dialog__title {
+    padding: 0;
+    color: #171a20;
+    font-size: 30px;
+    font-weight: 700;
+    line-height: 1.3;
+}
+
+.studio-url-dialog .studio-url-dialog__content {
+    margin: 10px 0 0;
+    padding: 0;
+    overflow: visible;
+    color: #171a20;
+    font-size: 14px;
+    text-align: left;
+}
+
+.studio-url-dialog__context {
+    margin: 0 0 12px;
+    color: #535b65;
+    font-size: 18px;
+    line-height: 1.5;
+    text-align: center;
+}
+
+.studio-url-dialog__context strong {
+    display: block;
+    margin-top: 3px;
+    color: #171a20;
+    overflow-wrap: anywhere;
+}
+
+.studio-url-dialog__urls dl {
+    display: grid;
+    grid-template-columns: 100px minmax(0, 1fr);
+    align-items: center;
+    gap: 10px;
+    margin: 0;
+    padding: 10px;
+    border-radius: 8px;
+}
+
+.studio-url-dialog__urls dt {
+    padding: 5px 8px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 700;
+    text-align: center;
+}
+
+.studio-url-dialog__urls dd {
+    margin: 0;
+    color: #171a20;
+    font-size: 18px;
+    overflow-wrap: anywhere;
+    line-height: 1.5;
+}
+
+.studio-url-dialog__current { background: #fff1f2; }
+.studio-url-dialog__current dt { background: #ffdadd; color: #8a1921; }
+.studio-url-dialog__new { background: #eff8ed; }
+.studio-url-dialog__new dt { background: #d9f1d2; color: #185a24; }
+
+.studio-url-dialog__arrow {
+    display: block;
+    margin: 2px 0;
+    color: #526174;
+    font-size: 22px;
+    text-align: center;
+}
+
+.studio-url-dialog__notice {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-top: 12px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: #edf4fc;
+    color: #273b55;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.studio-url-dialog__notice i {
+    color: #2468a7;
+    font-size: 20px;
+    line-height: 1;
+}
+
+.studio-url-dialog__notice p { margin: 0; }
+
+.studio-url-dialog .studio-url-dialog__actions {
+    gap: 10px;
+    margin: 14px auto 0;
+}
+
+.studio-url-dialog .button {
+    min-width: 116px;
+    min-height: 44px;
+    padding: 8px 14px;
+    font-size: 14px;
+}
+
+.studio-url-dialog .button.secondary {
+    border-color: #697584;
+    background: #fff;
+    color: #171a20;
+}
+
+.studio-url-dialog .button.secondary:hover { background: #f1f3f5; }
+
+@media (max-width: 600px) {
+    .swal2-popup.studio-url-dialog { padding: 16px 14px; }
+    .studio-url-dialog .studio-url-dialog__title { font-size: 22px; }
+    .studio-url-dialog__context { font-size: 14px; }
+    .studio-url-dialog__urls dl { grid-template-columns: minmax(0, 1fr); gap: 6px; padding: 10px; }
+    .studio-url-dialog__urls dt { justify-self: start; }
+    .studio-url-dialog__urls dd { font-size: 13px; }
+    .studio-url-dialog__notice { margin-top: 12px; padding: 10px; }
+    .studio-url-dialog .studio-url-dialog__actions { width: 100%; }
+    .studio-url-dialog .button { flex: 1; min-width: 0; }
+}

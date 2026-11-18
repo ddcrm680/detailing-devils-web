@@ -121,6 +121,7 @@ class StudioUrlTest extends TestCase
             $slug = 'reviewed-'.str_replace('_', '-', $role);
             $this->actingAs($actor)->get('/admin/studios/'.$studio->id.'/edit')->assertOk()
                 ->assertSee('Change URL')->assertSee('name="slug_mode" value="preserve"', false)
+                ->assertSee('data-studio-name="Isolated Jaipur"', false)
                 ->assertDontSee('data-slug-editor', false);
             $this->post($endpoint, [
                 'slug' => $slug, 'expected_slug' => $studio->fresh()->slug, 'confirm_url_change' => '1',

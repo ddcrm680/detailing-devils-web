@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 
 globalThis.window = {};
 const { updatePhoneRows, generatedStudioSlug, mountStudioSlug, photoSnapshot, mountStudioSlider, mountStudioUrl, studioUrlConfirmation } = await import('../../public/assets/js/admin/studios.js');
+const escapeHtml = globalThis.window.escapeHtml;
 delete globalThis.window;
 
 function urlFixture({ dirty = false, valid = true, answer = true } = {}) {
@@ -13,7 +14,7 @@ function urlFixture({ dirty = false, valid = true, answer = true } = {}) {
     let focused = 0;
     const button = { focus() { focused++; } };
     const form = {
-        dataset: { currentUrl: 'https://www.detailingdevils.com/detailing-studios/old', urlPrefix: 'https://www.detailingdevils.com/detailing-studios/' },
+        dataset: { studioName: 'Detailing Devils Head Office', currentUrl: 'https://www.detailingdevils.com/detailing-studios/old', urlPrefix: 'https://www.detailingdevils.com/detailing-studios/' },
         elements: { slug: { value: 'new' } },
         addEventListener(name, fn) { events[name] = fn; },
         getAttribute() { return null; },
@@ -26,6 +27,7 @@ function urlFixture({ dirty = false, valid = true, answer = true } = {}) {
         },
     };
     const win = {
+        escapeHtml,
         addEventListener() {},
         Swal: { async fire(options) { dialogs.push(options); return { isConfirmed: answer }; } },
         showNotification(options) { notifications.push(options); },
@@ -39,9 +41,43 @@ test('URL confirmation shows both trusted URLs and submits only after confirmati
     const f = urlFixture();
     await f.submit();
     assert.equal(f.requests(), 1);
-    assert.equal(f.dialogs[0].text, studioUrlConfirmation(f.form.dataset.currentUrl, f.form.dataset.urlPrefix, 'new').text);
+    assert.equal(f.dialogs[0].titleText, 'Change Studio Page URL?');
+    assert.ok(f.dialogs[0].html.includes('<strong>Detailing Devils Head Office.</strong>'));
+    assert.ok(f.dialogs[0].html.includes('<dt>Current URL</dt>'));
+    assert.ok(f.dialogs[0].html.includes('<dt>New URL</dt>'));
+    assert.ok(f.dialogs[0].html.includes(f.form.dataset.currentUrl));
+    assert.ok(f.dialogs[0].html.includes(`${f.form.dataset.urlPrefix}new`));
+    assert.ok(f.dialogs[0].html.includes('Your previous Studio Page URL will automatically redirect to the new URL.'));
     assert.equal(f.dialogs[0].focusCancel, true);
-    assert.equal(f.dialogs[0].html, undefined);
+    assert.equal(f.dialogs[0].showCloseButton, true);
+    assert.equal(f.dialogs[0].customClass.popup, 'studio-url-dialog');
+});
+
+test('URL confirmation safely escapes studio names and URL text', async () => {
+    const f = urlFixture();
+    f.form.dataset.studioName = '<img src=x onerror="alert(1)"> & Studio';
+    f.form.dataset.currentUrl += '?text=<script>alert(1)</script>&other=1';
+    await f.submit();
+    assert.ok(f.dialogs[0].html.includes(escapeHtml(f.form.dataset.studioName)));
+    assert.ok(f.dialogs[0].html.includes(escapeHtml(f.form.dataset.currentUrl)));
+    assert.ok(!f.dialogs[0].html.includes('<img'));
+    assert.ok(!f.dialogs[0].html.includes('<script>'));
+});
+
+test('native confirmation fallback keeps the same confirm and cancel submission behavior', async () => {
+    for (const answer of [false, true]) {
+        const f = urlFixture();
+        delete f.win.Swal;
+        f.win.confirm = message => {
+            const copy = studioUrlConfirmation(f.form.dataset.currentUrl, f.form.dataset.urlPrefix, 'new', f.form.dataset.studioName);
+            assert.equal(message, `${copy.title} ${copy.text}`);
+            assert.ok(message.includes('Current URL:'));
+            assert.ok(message.includes('New URL:'));
+            return answer;
+        };
+        await f.submit();
+        assert.equal(f.requests(), Number(answer));
+    }
 });
 
 test('Studio Page URL preview uses the canonical prefix and preserves customized segments', () => {

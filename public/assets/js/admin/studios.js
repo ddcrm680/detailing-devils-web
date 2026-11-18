@@ -262,8 +262,15 @@ export function mountStudioSlug(form) {
     update();
 }
 
-export function studioUrlConfirmation(current, prefix, slug) {
-    return { title: 'Change studio URL?', text: `${current} → ${prefix}${slug}` };
+export function studioUrlConfirmation(current, prefix, slug, studioName = 'this studio') {
+    const newUrl = `${prefix}${slug}`;
+    return {
+        title: 'Change Studio Page URL?',
+        studioName,
+        currentUrl: current,
+        newUrl,
+        text: `You’re about to change the Studio Page URL for ${studioName}.\n\nCurrent URL: ${current}\n\nNew URL: ${newUrl}\n\nYour previous Studio Page URL will automatically redirect to the new URL.`,
+    };
 }
 
 export function mountStudioUrl(form, isStudioDirty, win = window) {
@@ -287,14 +294,28 @@ export function mountStudioUrl(form, isStudioDirty, win = window) {
             return;
         }
         const button = event.submitter;
-        const copy = studioUrlConfirmation(form.dataset.currentUrl, form.dataset.urlPrefix, form.elements.slug.value);
+        const copy = studioUrlConfirmation(form.dataset.currentUrl, form.dataset.urlPrefix, form.elements.slug.value, form.dataset.studioName);
         confirming = true;
         try {
             const confirmed = win.Swal
                 ? (await win.Swal.fire({
-                    titleText: copy.title, text: copy.text, icon: 'question', showCancelButton: true,
+                    titleText: copy.title,
+                    html: `<p class="studio-url-dialog__context">You’re about to change the Studio Page URL for <strong>${win.escapeHtml(copy.studioName)}.</strong></p>
+                        <div class="studio-url-dialog__urls">
+                            <dl class="studio-url-dialog__current"><dt>Current URL</dt><dd>${win.escapeHtml(copy.currentUrl)}</dd></dl>
+                            <span class="studio-url-dialog__arrow bi bi-arrow-down" aria-hidden="true"></span>
+                            <dl class="studio-url-dialog__new"><dt>New URL</dt><dd>${win.escapeHtml(copy.newUrl)}</dd></dl>
+                        </div>
+                        <div class="studio-url-dialog__notice"><i class="bi bi-info-circle" aria-hidden="true"></i><p>Your previous Studio Page URL will automatically redirect to the new URL.</p></div>`,
+                    icon: 'question', iconHtml: '<i class="bi bi-link-45deg" aria-hidden="true"></i>',
+                    showCancelButton: true, showCloseButton: true, closeButtonAriaLabel: 'Cancel URL change',
                     confirmButtonText: 'Change URL', cancelButtonText: 'Cancel', focusCancel: true,
-                    buttonsStyling: false, customClass: { confirmButton: 'button', cancelButton: 'button secondary' },
+                    buttonsStyling: false,
+                    customClass: {
+                        popup: 'studio-url-dialog', icon: 'studio-url-dialog__icon', title: 'studio-url-dialog__title',
+                        htmlContainer: 'studio-url-dialog__content', actions: 'studio-url-dialog__actions',
+                        confirmButton: 'button', cancelButton: 'button secondary',
+                    },
                 })).isConfirmed
                 : win.confirm(`${copy.title} ${copy.text}`);
             if (!confirmed) return;
