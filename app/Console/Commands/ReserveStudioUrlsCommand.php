@@ -25,15 +25,16 @@ class ReserveStudioUrlsCommand extends Command
             $missing = 0;
             $unprotected = 0;
             foreach ($studios as $studio) {
-                $path = StudioUrls::path($studio->slug);
-                $owner = ContentUrl::query()->where('path', $path)->first();
-                if ($owner && ($owner->content_type !== ContentUrl::STUDIO || $owner->content_id !== $studio->id)) {
-                    throw new \RuntimeException('URL ownership conflict. No reservations were changed.');
-                }
-                if (! $owner) {
-                    $missing++;
-                    if (! $this->option('check')) {
-                        app(ContentUrls::class)->reserve(ContentUrl::STUDIO, $studio->id, $path);
+                foreach (StudioUrls::paths($studio->slug) as $path) {
+                    $owner = ContentUrl::query()->where('path', $path)->first();
+                    if ($owner && ($owner->content_type !== ContentUrl::STUDIO || $owner->content_id !== $studio->id)) {
+                        throw new \RuntimeException('URL ownership conflict. No reservations were changed.');
+                    }
+                    if (! $owner) {
+                        $missing++;
+                        if (! $this->option('check')) {
+                            app(ContentUrls::class)->reserve(ContentUrl::STUDIO, $studio->id, $path);
+                        }
                     }
                 }
                 if ($studio->status === 'active' && $studio->url_locked_at === null) {

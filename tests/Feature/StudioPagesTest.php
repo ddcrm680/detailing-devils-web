@@ -109,8 +109,8 @@ class StudioPagesTest extends TestCase
     public function test_active_studio_renders_unique_server_side_metadata_contact_and_verified_schema(): void
     {
         $studio = $this->studio();
-        $canonical = config('seo.origin').'/studios/'.$studio->slug;
-        $html = $this->get('/studios/'.$studio->slug.'?utm_source=fixture')->assertOk()->getContent();
+        $canonical = config('seo.origin').'/detailing-studios/'.$studio->slug;
+        $html = $this->get('/detailing-studios/'.$studio->slug.'?utm_source=fixture')->assertOk()->getContent();
         $xpath = $this->xpath($html);
         $this->assertSame($studio->name, $xpath->evaluate('string(//h1)'));
         $this->assertSame($canonical, $xpath->evaluate('string(/html/head/link[@rel="canonical"]/@href)'));
@@ -141,7 +141,7 @@ class StudioPagesTest extends TestCase
         $this->assertSame($canonical, $breadcrumbs['itemListElement'][2]['item']);
         $other = $this->studio(['name' => 'Detailing Devils Noida', 'city' => null, 'state' => 'Uttar Pradesh']);
         $this->app->forgetInstance(SeoResolver::class);
-        $second = $this->xpath($this->get('/studios/'.$other->slug)->assertOk()->getContent());
+        $second = $this->xpath($this->get('/detailing-studios/'.$other->slug)->assertOk()->getContent());
         foreach (['title', 'meta[@name="description"]/@content'] as $field) {
             $this->assertNotSame($xpath->evaluate('string(/html/head/'.$field.')'), $second->evaluate('string(/html/head/'.$field.')'));
         }
@@ -151,10 +151,10 @@ class StudioPagesTest extends TestCase
     {
         foreach (['inactive', 'draft'] as $status) {
             $studio = $this->studio(['name' => 'Hidden '.$status, 'status' => $status]);
-            $this->get('/studios/'.$studio->slug)->assertNotFound()->assertDontSee($studio->address);
+            $this->get('/detailing-studios/'.$studio->slug)->assertNotFound()->assertDontSee($studio->address);
         }
-        $this->get('/studios/unknown-studio')->assertNotFound();
-        $this->get('/studios/Invalid-Slug')->assertNotFound();
+        $this->get('/detailing-studios/unknown-studio')->assertNotFound();
+        $this->get('/detailing-studios/Invalid-Slug')->assertNotFound();
     }
 
     public function test_gallery_uses_only_existing_owned_photos_cover_first_and_real_coordinates(): void
@@ -176,7 +176,7 @@ class StudioPagesTest extends TestCase
             $image->forceFill(['path' => $path, 'width' => 400, 'height' => 300]);
             $studio->images()->save($image);
         }
-        $html = $this->get('/studios/'.$studio->slug)->assertOk()->getContent();
+        $html = $this->get('/detailing-studios/'.$studio->slug)->assertOk()->getContent();
         $this->assertStringContainsString('Fixture reception', $html);
         $this->assertStringContainsString('Fixture bay', $html);
         $this->assertLessThan(strpos($html, $images[0]->path), strpos($html, $images[1]->path));
@@ -188,7 +188,7 @@ class StudioPagesTest extends TestCase
         $this->assertCount(1, $business['image']);
         File::delete(public_path('uploads/studios/'.$images[1]->path));
         $this->app->forgetInstance(SeoResolver::class);
-        $html = $this->get('/studios/'.$studio->slug)->assertOk()->getContent();
+        $html = $this->get('/detailing-studios/'.$studio->slug)->assertOk()->getContent();
         $this->assertStringNotContainsString('property="og:image"', $html);
         $this->assertStringNotContainsString($images[1]->path, $html);
     }
@@ -210,7 +210,7 @@ class StudioPagesTest extends TestCase
         $inactive->update(['status' => 'active']);
         $this->assertCount(count($base) + 2, $this->sitemap());
         $studio->update(['status' => 'draft']);
-        $this->assertNotContains(config('seo.origin').'/studios/'.$studio->slug, $this->sitemap());
+        $this->assertNotContains(config('seo.origin').'/detailing-studios/'.$studio->slug, $this->sitemap());
         $this->assertStringContainsString('Sitemap: '.config('seo.origin').'/sitemap.xml', file_get_contents(base_path('public/robots.txt')));
     }
 
@@ -232,11 +232,11 @@ class StudioPagesTest extends TestCase
         app(StudioUrls::class)->change($studio, 'reviewed-jaipur-studio', $oldSlug, $actor);
         $studio->refresh();
         $this->app->forgetInstance(SeoResolver::class);
-        $this->get('/studios/'.$studio->slug)->assertOk()->assertSee('<title>Reviewed studio title</title>', false)
-            ->assertSee('rel="canonical" href="'.config('seo.origin').'/studios/'.$studio->slug.'"', false);
-        $this->get('/studios/'.$oldSlug)->assertStatus(301)->assertRedirect(config('seo.origin').'/studios/'.$studio->slug);
-        $this->assertContains(config('seo.origin').'/studios/'.$studio->slug, $this->sitemap());
-        $this->assertNotContains(config('seo.origin').'/studios/'.$oldSlug, $this->sitemap());
+        $this->get('/detailing-studios/'.$studio->slug)->assertOk()->assertSee('<title>Reviewed studio title</title>', false)
+            ->assertSee('rel="canonical" href="'.config('seo.origin').'/detailing-studios/'.$studio->slug.'"', false);
+        $this->get('/detailing-studios/'.$oldSlug)->assertStatus(301)->assertRedirect(config('seo.origin').'/detailing-studios/'.$studio->slug);
+        $this->assertContains(config('seo.origin').'/detailing-studios/'.$studio->slug, $this->sitemap());
+        $this->assertNotContains(config('seo.origin').'/detailing-studios/'.$oldSlug, $this->sitemap());
         $this->assertSame($studio->name, $studio->fresh()->name);
     }
 
@@ -244,8 +244,8 @@ class StudioPagesTest extends TestCase
     {
         $studio = $this->studio();
         $this->publication(new SeoSnapshot([new SeoOverride('studio.'.$studio->id, ['robots' => 'noindex, follow', 'sitemap' => false], true, true)]));
-        $this->get('/studios/'.$studio->slug)->assertOk()->assertSee('name="robots" content="noindex, follow"', false);
-        $this->assertNotContains(config('seo.origin').'/studios/'.$studio->slug, $this->sitemap());
+        $this->get('/detailing-studios/'.$studio->slug)->assertOk()->assertSee('name="robots" content="noindex, follow"', false);
+        $this->assertNotContains(config('seo.origin').'/detailing-studios/'.$studio->slug, $this->sitemap());
         $this->app->forgetInstance(SeoResolver::class);
         $provider = new class implements ContentMetadataProvider
         {
@@ -275,7 +275,7 @@ class StudioPagesTest extends TestCase
         $actor = new User(['name' => 'Isolated Admin', 'email' => 'editor@example.test', 'password' => 'Synthetic-password']);
         $actor->forceFill(['role' => 'admin'])->save();
         $this->actingAs($actor);
-        $this->get('/studios/'.$studio->slug)->assertOk()->assertSee($studio->address);
+        $this->get('/detailing-studios/'.$studio->slug)->assertOk()->assertSee($studio->address);
         $fields = $studio->only([
             'name', 'slug', 'address', 'city', 'state', 'country_code', 'phones',
             'map_url', 'latitude', 'longitude', 'status', 'sort_order',
@@ -284,22 +284,22 @@ class StudioPagesTest extends TestCase
         $fields['phones'] = ['+91 99887 76655', '(+91) 98765 43210'];
         $this->put('/admin/studios/'.$studio->id, $fields)->assertSessionHasNoErrors();
         $this->app->forgetInstance(SeoResolver::class);
-        $html = $this->get('/studios/'.$studio->slug)->assertOk()->assertSee($fields['address'])->getContent();
+        $html = $this->get('/detailing-studios/'.$studio->slug)->assertOk()->assertSee($fields['address'])->getContent();
         $xpath = $this->xpath($html);
         $this->assertSame('tel:+919988776655', $xpath->evaluate('string(//a[contains(@class,"studio-detail__button--red")]/@href)'));
         $business = json_decode($xpath->query('/html/head/script[@type="application/ld+json"]')->item(0)->textContent, true);
         $this->assertSame($fields['address'], $business['address']['streetAddress']);
         $fields['status'] = 'inactive';
         $this->put('/admin/studios/'.$studio->id, $fields)->assertSessionHasNoErrors();
-        $this->get('/studios/'.$studio->slug)->assertNotFound();
-        $this->assertNotContains(config('seo.origin').'/studios/'.$studio->slug, $this->sitemap());
+        $this->get('/detailing-studios/'.$studio->slug)->assertNotFound();
+        $this->assertNotContains(config('seo.origin').'/detailing-studios/'.$studio->slug, $this->sitemap());
         $this->assertSame(0, DB::table('seo_revisions')->count());
     }
 
     public function test_studio_content_is_escaped_in_html_and_json_ld_without_inventing_missing_location_data(): void
     {
         $studio = $this->studio(['name' => 'Studio </script><script>alert(1)</script>', 'city' => null, 'country_code' => null, 'map_url' => null]);
-        $html = $this->get('/studios/'.$studio->slug)->assertOk()->getContent();
+        $html = $this->get('/detailing-studios/'.$studio->slug)->assertOk()->getContent();
         $this->assertStringNotContainsString('</script><script>alert(1)</script>', $html);
         $this->assertStringContainsString('&lt;script&gt;alert(1)&lt;/script&gt;', $html);
         $nodes = $this->xpath($html)->query('/html/head/script[@type="application/ld+json"]');

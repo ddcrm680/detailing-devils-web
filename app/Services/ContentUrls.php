@@ -12,7 +12,7 @@ final class ContentUrls
     public function reserve(string $type, int $id, string $path, ?int $actorId = null): void
     {
         if ($id < 1 || ! preg_match('/^[a-z][a-z0-9_-]{0,31}$/D', $type)
-            || ! preg_match('~^/[a-z0-9]+(?:[/-][a-z0-9]+)*$~D', $path) || strlen($path) > 255) {
+            || ! preg_match('~^/[a-z0-9]+(?:[/.-][a-z0-9]+)*$~D', $path) || strlen($path) > 255) {
             throw ValidationException::withMessages(['slug' => 'Enter a valid URL.']);
         }
         $existing = ContentUrl::query()->where('path', $path)->first();

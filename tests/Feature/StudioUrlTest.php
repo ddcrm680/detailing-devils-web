@@ -94,7 +94,7 @@ class StudioUrlTest extends TestCase
         $studio = $this->studio(['status' => 'draft']);
         $this->assertNull($studio->url_locked_at);
         $studio->update(['slug' => 'custom-before-publication']);
-        $this->assertSame(2, ContentUrl::count());
+        $this->assertSame(4, ContentUrl::count());
         $this->assertSame('isolated-jaipur-2', $this->studio(['status' => 'inactive'])->slug);
         $studio->update(['status' => 'active']);
         $locked = $studio->url_locked_at;
@@ -125,7 +125,7 @@ class StudioUrlTest extends TestCase
             $this->post($endpoint, [
                 'slug' => $slug, 'expected_slug' => $studio->fresh()->slug, 'confirm_url_change' => '1',
             ])->assertSessionHasNoErrors()->assertRedirect(route('admin.studios.edit', $studio));
-            $this->assertSame($actor->id, ContentUrl::where('path', '/studios/'.$slug)->firstOrFail()->created_by);
+            $this->assertSame($actor->id, ContentUrl::where('path', '/detailing-studios/'.$slug)->firstOrFail()->created_by);
         }
     }
 
@@ -187,27 +187,33 @@ class StudioUrlTest extends TestCase
         $studio = $this->studio(['slug' => 'first']);
         $this->change($studio, 'second');
         $this->change($studio, 'third');
-        foreach (['first', 'second'] as $old) {
-            $this->get('/studios/'.$old)->assertStatus(301)
-                ->assertHeader('Location', config('seo.origin').'/studios/third')
-                ->assertHeader('Cache-Control', 'max-age=0, no-store, private');
+        foreach (['/studios/', '/detailing-studios/'] as $prefix) {
+            foreach (['first', 'second'] as $old) {
+                $this->get($prefix.$old)->assertStatus(301)
+                    ->assertHeader('Location', config('seo.origin').'/detailing-studios/third')
+                    ->assertHeader('Cache-Control', 'max-age=0, no-store, private');
+            }
         }
-        $this->get('/studios/third')->assertOk()->assertSee('rel="canonical" href="'.config('seo.origin').'/studios/third"', false);
+        $this->get('/studios/third')->assertStatus(301)
+            ->assertHeader('Location', config('seo.origin').'/detailing-studios/third');
+        $this->get('/detailing-studios/third')->assertOk()->assertSee('rel="canonical" href="'.config('seo.origin').'/detailing-studios/third"', false);
         $this->app->forgetInstance(SeoResolver::class);
-        $this->get('/sitemap.xml')->assertOk()->assertSee('/studios/third', false)
-            ->assertDontSee('/studios/first', false)->assertDontSee('/studios/second', false);
-        $this->get('/locate-a-store')->assertOk()->assertSee('/studios/third', false)->assertDontSee('/studios/first', false);
+        $this->get('/sitemap.xml')->assertOk()->assertSee('/detailing-studios/third', false)
+            ->assertDontSee('/detailing-studios/first', false)->assertDontSee('/detailing-studios/second', false);
+        $this->get('/locate-a-store')->assertOk()->assertSee('/detailing-studios/third', false)->assertDontSee('/detailing-studios/first', false);
         foreach (['draft', 'inactive'] as $status) {
             $studio->update(['status' => $status]);
             foreach (['first', 'second', 'third'] as $slug) {
-                $this->get('/studios/'.$slug)->assertNotFound();
+                foreach (['/studios/', '/detailing-studios/'] as $prefix) {
+                    $this->get($prefix.$slug)->assertNotFound();
+                }
             }
         }
         $studio->update(['status' => 'active']);
-        $this->get('/studios/first')->assertStatus(301);
-        $this->get('/studios/not-a-real-studio')->assertNotFound();
-        $this->get('/studios/Uppercase')->assertNotFound();
-        $this->get('/studios/double--hyphen')->assertNotFound();
+        $this->get('/detailing-studios/first')->assertStatus(301);
+        $this->get('/detailing-studios/not-a-real-studio')->assertNotFound();
+        $this->get('/detailing-studios/Uppercase')->assertNotFound();
+        $this->get('/detailing-studios/double--hyphen')->assertNotFound();
     }
 
     public function test_historical_paths_cannot_be_reused_even_by_the_same_owner_and_ownership_is_database_unique(): void
@@ -217,26 +223,26 @@ class StudioUrlTest extends TestCase
         $this->rejected(fn () => $this->change($studio, 'reserved'), 'reserved');
         $this->rejected(fn () => $this->studio(['slug' => 'reserved', 'name' => 'Other']), 'reserved');
         $this->assertSame(1, Studio::count());
-        $this->rejected(fn () => app(ContentUrls::class)->reserve('blog', 1, '/studios/reserved'), 'reserved');
+        $this->rejected(fn () => app(ContentUrls::class)->reserve('blog', 1, '/detailing-studios/reserved'), 'reserved');
         $this->expectException(UniqueConstraintViolationException::class);
-        DB::table('content_urls')->insert(['content_type' => 'blog', 'content_id' => 2, 'path' => '/studios/reserved']);
+        DB::table('content_urls')->insert(['content_type' => 'blog', 'content_id' => 2, 'path' => '/detailing-studios/reserved']);
     }
 
     public function test_registry_ownership_is_immutable_and_redirect_targets_do_not_trust_request_hosts(): void
     {
         $studio = $this->studio(['slug' => 'trusted-old']);
         $owner = ContentUrl::firstOrFail();
-        foreach ([fn () => $owner->update(['path' => '/studios/reassigned']), fn () => $owner->delete()] as $operation) {
+        foreach ([fn () => $owner->update(['path' => '/detailing-studios/reassigned']), fn () => $owner->delete()] as $operation) {
             try {
                 $operation();
                 $this->fail('A reservation was changed.');
             } catch (\LogicException) {
-                $this->assertSame('/studios/trusted-old', $owner->fresh()->path);
+                $this->assertSame('/detailing-studios/trusted-old', $owner->fresh()->path);
             }
         }
         $this->change($studio, 'trusted-new');
-        $this->withHeader('Host', 'untrusted.example.test')->get('/studios/trusted-old')
-            ->assertStatus(301)->assertHeader('Location', config('seo.origin').'/studios/trusted-new');
+        $this->withHeader('Host', 'untrusted.example.test')->get('/detailing-studios/trusted-old')
+            ->assertStatus(301)->assertHeader('Location', config('seo.origin').'/detailing-studios/trusted-new');
     }
 
     public function test_only_url_and_modification_time_change_while_gallery_and_seo_history_stay_intact(): void
@@ -255,7 +261,7 @@ class StudioUrlTest extends TestCase
         $this->assertSame($studio->id, $photo->fresh()->studio_id);
         $this->assertSame($metadata, (array) DB::table('seo_metadata')->first());
         $this->assertSame(0, DB::table('seo_revisions')->count());
-        $this->get('/studios/reviewed-jaipur')->assertOk()->assertSee('<title>Reviewed Jaipur title</title>', false);
+        $this->get('/detailing-studios/reviewed-jaipur')->assertOk()->assertSee('<title>Reviewed Jaipur title</title>', false);
     }
 
     public function test_explicit_own_and_inbound_canonical_aliases_block_without_overwriting_seo_decisions(): void
@@ -263,13 +269,13 @@ class StudioUrlTest extends TestCase
         $studio = $this->studio();
         foreach ([
             new SeoOverride('studio.'.$studio->id, ['canonical' => config('seo.origin').'/locate-a-store'], true, true),
-            new SeoOverride('home', ['canonical' => config('seo.origin').'/studios/'.$studio->slug], true, true),
+            new SeoOverride('home', ['canonical' => config('seo.origin').'/detailing-studios/'.$studio->slug], true, true),
         ] as $alias) {
             $this->publication([$alias]);
             $before = (array) DB::table('seo_metadata')->first();
             $this->rejected(fn () => $this->change($studio, 'blocked'), 'canonical');
             $this->assertSame($before, (array) DB::table('seo_metadata')->first());
-            $this->assertSame(1, ContentUrl::count());
+            $this->assertSame(2, ContentUrl::count());
         }
     }
 
@@ -279,7 +285,7 @@ class StudioUrlTest extends TestCase
         $actor = $this->actor();
         foreach (['studio.'.$studio->id, 'home'] as $id) {
             DB::table('seo_revisions')->insert([
-                'page_id' => $id, 'kind' => 'draft', 'fields' => json_encode(['canonical' => config('seo.origin').'/studios/'.$studio->slug]),
+                'page_id' => $id, 'kind' => 'draft', 'fields' => json_encode(['canonical' => config('seo.origin').'/detailing-studios/'.$studio->slug]),
                 'base_version' => 0, 'administrator_id' => $actor->id, 'created_at' => now(),
             ]);
             $this->rejected(fn () => $this->change($studio, 'blocked'), 'pending SEO draft');
@@ -313,9 +319,9 @@ class StudioUrlTest extends TestCase
         $old = $studio->slug;
         $this->change($studio, 'deleted-studio');
         $studio->delete(); // There is no Admin deletion endpoint; exercise unavailable-owner handling.
-        $this->get('/studios/'.$old)->assertNotFound();
-        $this->get('/studios/deleted-studio')->assertNotFound();
-        $this->assertSame(2, ContentUrl::count());
+        $this->get('/detailing-studios/'.$old)->assertNotFound();
+        $this->get('/detailing-studios/deleted-studio')->assertNotFound();
+        $this->assertSame(4, ContentUrl::count());
         $this->rejected(fn () => $this->studio(['slug' => 'deleted-studio']), 'reserved');
     }
 
@@ -341,8 +347,76 @@ class StudioUrlTest extends TestCase
         $this->assertSame($before, $after);
         $this->artisan('studios:reserve-urls')->assertSuccessful();
         $this->artisan('studios:reserve-urls', ['--check' => true])->assertSuccessful();
-        $this->assertSame(3, ContentUrl::count());
+        $this->assertSame(6, ContentUrl::count());
         $this->assertSame(1, DB::table('studios')->whereNotNull('url_locked_at')->count());
+    }
+
+    public function test_prefix_transition_preserves_existing_studios_and_old_reservations(): void
+    {
+        $studio = $this->studio(['slug' => 'unchanged']);
+        // Simulate the deployed state: only the original prefix has a reservation.
+        DB::table('content_urls')->where('path', '/detailing-studios/unchanged')->delete();
+        app(ContentUrls::class)->reserve(ContentUrl::STUDIO, $studio->id, '/studios/earlier');
+        $before = $studio->refresh()->getRawOriginal();
+        $oldReservations = DB::table('content_urls')->orderBy('id')->get()->map(fn ($row) => (array) $row)->all();
+        $this->artisan('studios:reserve-urls', ['--check' => true])->assertFailed();
+        $this->assertSame(2, ContentUrl::count());
+        $this->get('/detailing-studios/unchanged')->assertOk();
+        $this->get('/studios/unchanged')->assertStatus(301)
+            ->assertHeader('Location', config('seo.origin').'/detailing-studios/unchanged');
+        $this->artisan('studios:reserve-urls')->assertSuccessful();
+        $this->artisan('studios:reserve-urls')->assertSuccessful();
+        $this->artisan('studios:reserve-urls', ['--check' => true])->assertSuccessful();
+        $this->assertSame($before, $studio->fresh()->getRawOriginal());
+        $this->assertSame($oldReservations, DB::table('content_urls')->whereIn('id', array_column($oldReservations, 'id'))
+            ->orderBy('id')->get()->map(fn ($row) => (array) $row)->all());
+        $this->assertSame(3, ContentUrl::count());
+        foreach (['/studios/earlier', '/detailing-studios/earlier'] as $path) {
+            $this->get($path)->assertStatus(301)->assertHeader('Location', config('seo.origin').'/detailing-studios/unchanged');
+        }
+    }
+
+    public function test_dotted_history_requires_an_explicit_mapping_and_never_changes_a_slug(): void
+    {
+        $studio = $this->studio(['slug' => 'jaipur-3']);
+        $this->get('/detailing-studios/jaipur-3.0')->assertNotFound();
+        app(ContentUrls::class)->reserve(ContentUrl::STUDIO, $studio->id, '/detailing-studios/jaipur-3.0');
+        $this->get('/detailing-studios/jaipur-3.0')->assertStatus(301)
+            ->assertHeader('Location', config('seo.origin').'/detailing-studios/jaipur-3');
+        $this->assertSame('jaipur-3', $studio->fresh()->slug);
+        $this->rejected(fn () => $this->change($studio, 'jaipur-3.0'), 'lowercase');
+        $this->change($studio, 'jaipur-4');
+        foreach (['/detailing-studios/jaipur-3.0', '/studios/jaipur-3', '/detailing-studios/jaipur-3'] as $path) {
+            $this->get($path)->assertStatus(301)->assertHeader('Location', config('seo.origin').'/detailing-studios/jaipur-4');
+        }
+        $studio->update(['status' => 'inactive']);
+        $this->get('/detailing-studios/jaipur-3.0')->assertNotFound();
+        foreach (['/detailing-studios/../escape', '/detailing-studios/photo.jpg/extra', '/detailing-studios/jaipur-3.'] as $path) {
+            $this->get($path)->assertNotFound();
+        }
+    }
+
+    public function test_old_prefix_reservations_block_both_manual_and_automatic_reuse(): void
+    {
+        app(ContentUrls::class)->reserve(ContentUrl::STUDIO, 999, '/studios/reserved');
+        $this->rejected(fn () => $this->studio(['slug' => 'reserved']), 'reserved');
+        $this->assertSame(0, Studio::count());
+        $studio = $this->studio(['name' => 'Reserved']);
+        $this->assertSame('reserved-2', $studio->slug);
+        $this->actingAs($this->actor())->get('/admin/studios/create')->assertOk()
+            ->assertSee('Studio Page URL')->assertSee('Customize URL')->assertDontSee('Edit slug');
+        $this->get('/admin/studios/'.$studio->id.'/edit')->assertOk()
+            ->assertSee('Studio Page URL')->assertSee('/detailing-studios/reserved-2', false)
+            ->assertSee('data-studio-url-preview', false)->assertDontSee('Edit slug');
+    }
+
+    public function test_old_prefix_canonical_dependencies_are_preserved_and_block_url_changes(): void
+    {
+        $studio = $this->studio();
+        $this->publication([new SeoOverride('home', ['canonical' => config('seo.origin').'/studios/'.$studio->slug], true, true)]);
+        $before = (array) DB::table('seo_metadata')->first();
+        $this->rejected(fn () => $this->change($studio, 'blocked'), 'canonical');
+        $this->assertSame($before, (array) DB::table('seo_metadata')->first());
     }
 
     public function test_backfill_rolls_back_the_entire_batch_on_conflicting_ownership(): void
@@ -353,7 +427,7 @@ class StudioUrlTest extends TestCase
                 'phones' => '[]', 'status' => 'active', 'sort_order' => 1,
             ]);
         }
-        app(ContentUrls::class)->reserve('blog', 999, '/studios/two');
+        app(ContentUrls::class)->reserve('blog', 999, '/detailing-studios/two');
         try {
             $this->artisan('studios:reserve-urls')->run();
             $this->fail('Expected ownership conflict.');

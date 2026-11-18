@@ -18,7 +18,13 @@ final class StudioUrls
 {
     public static function path(string $slug): string
     {
-        return '/studios/'.$slug;
+        return '/detailing-studios/'.$slug;
+    }
+
+    /** Canonical path and the permanently supported previous route prefix. */
+    public static function paths(string $slug): array
+    {
+        return [self::path($slug), '/studios/'.$slug];
     }
 
     /** Same first lock as the SEO publisher: SEO state, then Studio, then path reservation. */
@@ -47,7 +53,9 @@ final class StudioUrls
                 $saved = $persist();
                 if ($saved) {
                     $this->validateSlug($studio->slug);
-                    app(ContentUrls::class)->reserve(ContentUrl::STUDIO, $studio->id, self::path($studio->slug));
+                    foreach (self::paths($studio->slug) as $path) {
+                        app(ContentUrls::class)->reserve(ContentUrl::STUDIO, $studio->id, $path);
+                    }
                 }
 
                 return $saved;
@@ -66,7 +74,7 @@ final class StudioUrls
 
     private function available(string $slug): void
     {
-        if (ContentUrl::query()->where('path', self::path($slug))->exists()
+        if (ContentUrl::query()->whereIn('path', self::paths($slug))->exists()
             || Studio::query()->where('slug', $slug)->exists()) {
             $this->fail('This URL is reserved. Please choose another.');
         }
@@ -90,8 +98,9 @@ final class StudioUrls
                 if ($publication) {
                     $this->checkSeo($current, $publication);
                 }
-                app(ContentUrls::class)->reserve(ContentUrl::STUDIO, $current->id, self::path($current->slug), $actor->id);
-                app(ContentUrls::class)->reserve(ContentUrl::STUDIO, $current->id, self::path($slug), $actor->id);
+                foreach (array_merge(self::paths($current->slug), self::paths($slug)) as $path) {
+                    app(ContentUrls::class)->reserve(ContentUrl::STUDIO, $current->id, $path, $actor->id);
+                }
                 Studio::query()->whereKey($current->id)->update(['slug' => $slug, 'updated_at' => now()]);
                 app()->forgetInstance(SeoResolver::class);
             });
@@ -103,18 +112,18 @@ final class StudioUrls
     private function checkSeo(Studio $studio, object $state): void
     {
         $id = 'studio.'.$studio->id;
-        $canonical = rtrim(config('seo.origin'), '/').self::path($studio->slug);
+        $canonicals = array_map(fn ($path) => rtrim(config('seo.origin'), '/').$path, self::paths($studio->slug));
         $snapshot = app(SeoPublicationCodec::class)->decode($state->payload);
         foreach ($snapshot->overrides as $override) {
             if ($override->published && isset($override->fields['canonical'])
-                && ($override->pageId === $id || $override->fields['canonical'] === $canonical)) {
+                && ($override->pageId === $id || in_array($override->fields['canonical'], $canonicals, true))) {
                 $this->fail('Review the existing canonical settings in SEO Management before changing this URL.');
             }
         }
         $latest = DB::table('seo_revisions')->selectRaw('MAX(id)')->groupBy('page_id');
         foreach (DB::table('seo_revisions')->whereIn('id', $latest)->where('kind', 'draft')->get() as $draft) {
             $fields = json_decode($draft->fields, true, flags: JSON_THROW_ON_ERROR);
-            if ($draft->page_id === $id || ($fields['canonical'] ?? null) === $canonical) {
+            if ($draft->page_id === $id || in_array($fields['canonical'] ?? null, $canonicals, true)) {
                 $this->fail('Review the pending SEO draft before changing this URL.');
             }
         }

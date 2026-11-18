@@ -53,7 +53,9 @@ class StudioController extends Controller
     {
         return view('admin.studios.edit', [
             'studio' => new Studio(['phones' => [''], 'status' => 'draft', 'sort_order' => 0]),
-            'existingSlugs' => ContentUrl::query()->where('path', 'like', '/studios/%')->pluck('path')->map(fn ($path) => substr($path, 9)),
+            'existingSlugs' => ContentUrl::query()->where(function ($query) {
+                $query->where('path', 'like', '/detailing-studios/%')->orWhere('path', 'like', '/studios/%');
+            })->pluck('path')->map(fn ($path) => basename($path))->unique()->values(),
         ]);
     }
 
@@ -62,7 +64,7 @@ class StudioController extends Controller
         try {
             $studio = Studio::create($request->validated());
         } catch (UniqueConstraintViolationException) {
-            throw ValidationException::withMessages(['slug' => 'This slug was just taken. Please try again or choose another.']);
+            throw ValidationException::withMessages(['slug' => 'This URL was just taken. Please try again or choose another.']);
         }
 
         return redirect()->route('admin.studios.edit', $studio)->with('status', 'Studio created.');

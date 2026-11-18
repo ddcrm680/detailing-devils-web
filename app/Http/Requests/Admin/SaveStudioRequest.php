@@ -58,7 +58,7 @@ class SaveStudioRequest extends FormRequest
                 function ($attribute, $value, $fail) {
                     $studio = $this->route('studio');
                     if ((! $studio || $value !== $studio->slug)
-                        && ContentUrl::query()->where('path', StudioUrls::path($value))->exists()) {
+                        && ContentUrl::query()->whereIn('path', StudioUrls::paths($value))->exists()) {
                         $fail('This URL is reserved. Please choose another.');
                     }
                 },
@@ -105,8 +105,8 @@ class SaveStudioRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'slug.unique' => 'This slug is already in use. Please choose another.',
-            'slug.regex' => 'Use lowercase letters, numbers and single hyphens for the slug.',
+            'slug.unique' => 'This URL is already in use. Please choose another.',
+            'slug.regex' => 'Use lowercase letters, numbers and single hyphens.',
             'phones.*.regex' => 'Enter a phone number with its country code; spaces and brackets are allowed.',
             'country_code.regex' => 'Enter a verified two-letter uppercase country code, or leave it blank.',
         ];
@@ -115,6 +115,7 @@ class SaveStudioRequest extends FormRequest
     public function attributes(): array
     {
         return [
+            'slug' => 'Studio Page URL',
             'phones.*' => 'phone number',
             'map_url' => 'Google Maps link',
             'country_code' => 'country code',

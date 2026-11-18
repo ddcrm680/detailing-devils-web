@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 globalThis.window = {};
-const { updatePhoneRows, generatedStudioSlug, photoSnapshot, mountStudioSlider, mountStudioUrl, studioUrlConfirmation } = await import('../../public/assets/js/admin/studios.js');
+const { updatePhoneRows, generatedStudioSlug, mountStudioSlug, photoSnapshot, mountStudioSlider, mountStudioUrl, studioUrlConfirmation } = await import('../../public/assets/js/admin/studios.js');
 delete globalThis.window;
 
 function urlFixture({ dirty = false, valid = true, answer = true } = {}) {
@@ -13,7 +13,7 @@ function urlFixture({ dirty = false, valid = true, answer = true } = {}) {
     let focused = 0;
     const button = { focus() { focused++; } };
     const form = {
-        dataset: { currentUrl: 'https://www.detailingdevils.com/studios/old', urlPrefix: 'https://www.detailingdevils.com/studios/' },
+        dataset: { currentUrl: 'https://www.detailingdevils.com/detailing-studios/old', urlPrefix: 'https://www.detailingdevils.com/detailing-studios/' },
         elements: { slug: { value: 'new' } },
         addEventListener(name, fn) { events[name] = fn; },
         getAttribute() { return null; },
@@ -42,6 +42,44 @@ test('URL confirmation shows both trusted URLs and submits only after confirmati
     assert.equal(f.dialogs[0].text, studioUrlConfirmation(f.form.dataset.currentUrl, f.form.dataset.urlPrefix, 'new').text);
     assert.equal(f.dialogs[0].focusCancel, true);
     assert.equal(f.dialogs[0].html, undefined);
+});
+
+test('Studio Page URL preview uses the canonical prefix and preserves customized segments', () => {
+    const events = {}, input = { value: '', dispatchEvent() {}, focus() {}, addEventListener(type, fn) { events.segment = fn; } };
+    const mode = { value: 'auto' }, output = {}, preview = {}, edit = {};
+    const name = { value: 'Jaipur', addEventListener(type, fn) { events[type] = fn; } };
+    edit.addEventListener = (type, fn) => { events.customize = fn; };
+    const elements = { '[name="slug"]': input, '[name="slug_mode"]': mode, '[data-slug-preview]': preview, '[data-slug-output]': output, '[data-slug-edit]': edit };
+    const field = { dataset: { new: 'true', slugs: '["jaipur"]', urlPrefix: 'https://www.detailingdevils.com/detailing-studios/' }, querySelector(selector) { return elements[selector]; } };
+    mountStudioSlug({ querySelector(selector) { return selector === '[data-slug-editor]' ? field : name; } });
+    assert.equal(input.value, 'jaipur-2');
+    assert.equal(output.textContent, 'https://www.detailingdevils.com/detailing-studios/jaipur-2');
+    assert.equal(input.hidden, true);
+    events.customize();
+    input.value = 'jaipur-3';
+    name.value = 'Renamed studio';
+    events.input();
+    assert.equal(mode.value, 'manual');
+    assert.equal(input.hidden, false);
+    assert.equal(input.value, 'jaipur-3');
+    events.segment();
+    assert.equal(output.textContent, 'https://www.detailingdevils.com/detailing-studios/jaipur-3');
+    assert.equal(preview.hidden, false);
+});
+
+test('Change URL preview updates without submitting and clears on cancel', () => {
+    const f = urlFixture(), events = {}, preview = {};
+    f.form.ownerDocument = { querySelector() { return preview; } };
+    f.form.elements.slug.addEventListener = (type, fn) => { events[type] = fn; };
+    f.form.addEventListener = (type, fn) => { events[type] = fn; };
+    mountStudioUrl(f.form, () => false, f.win);
+    f.form.elements.slug.value = 'jaipur-3';
+    events.input();
+    assert.equal(preview.hidden, false);
+    assert.equal(preview.textContent, `${f.form.dataset.urlPrefix}jaipur-3`);
+    events.reset();
+    assert.equal(preview.hidden, true);
+    assert.equal(f.requests(), 0);
 });
 
 test('cancelled, invalid and unsaved Studio edits prevent URL submission', async () => {

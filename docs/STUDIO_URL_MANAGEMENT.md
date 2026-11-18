@@ -1,5 +1,21 @@
 # Studio URL ownership and redirects
 
+## Canonical prefix update — local, pending deployment approval
+
+The official named route `studios.show` is now `/detailing-studios/{slug}`. `studios.legacy` keeps `/studios/{slug}` as a permanent 301 alias. Both prefixes resolve recorded history directly to the latest active Studio; unavailable content returns 404. Existing slugs are unchanged. Admin uses one **Studio Page URL** control with **Customize URL** for drafts and the existing confirmed **Change URL** flow for protected Studios. Permissions remain `manage-studios`.
+
+`StudioUrls::paths()` covers both prefixes. New saves/URL changes reserve both paths atomically. The existing `studios:reserve-urls` command checks/reserves both current paths and preserves existing reservations. It does not import legacy data. A verified historical dotted alias can be added with the existing `ContentUrls::reserve('studio', $id, $exactPath, $actorId)` inside an approved transaction. No alias has been added to shared MySQL by this implementation. Newly authored slugs still reject dots; no automatic `3.0` to `3` conversion occurs.
+
+### Separately approved rollout
+
+1. Verify the exact hosting database and take a verified backup. Pause Studio and SEO writes for the transition. Review explicit published canonical aliases and pending drafts referring to `/studios/`; do not rewrite their stored decisions automatically. Automatic/self-canonical URLs derive from the named route.
+2. Stage the updated reservation command and its URL-service/model dependencies while keeping the old public routes active. Run `php artisan studios:reserve-urls --check` first. For the audited 69 current old-prefix reservations, expect 69 missing canonical reservations. Stop on an ownership conflict; do not rename any slug.
+3. Only with separate database approval, run `php artisan studios:reserve-urls`, followed by `--check` again. Confirm 138 current-prefix reservations in this specific audited starting state, unchanged Studio IDs/slugs/statuses/timestamps and unchanged existing reservation rows. The command is repeatable and transactional. No migration is needed. Future history may make the total larger.
+4. Activate the updated public routes/controller, Admin controller/request/view and JavaScript together. Verify new URLs return 200 and old/current/historical URLs return one 301 to the new named canonical route. The controller also recognizes pre-transition history when only its old-prefix reservation exists. Keep intentionally disabled route caching disabled; do not regenerate route/config caches. Refresh compiled views only if necessary through the approved hosting process.
+5. Check locator links, public metadata, sitemap, gallery and Admin controls before resuming writes. If application rollback is needed, restore the previous application files and retain all URL reservations; never drop history. Once new canonical URLs have been exposed, retain compatibility for them during rollback to avoid introducing 404s.
+
+This rollout has **not** been executed. Local automated/browser writes use isolated SQLite fixtures only.
+
 Implementation and development verification are complete; Apache rollout requires separate owner approval. The owner-authorized connected development migration and backfill were completed on 16 November 2026; see the verification records below. Subsequent URL tests changed only explicitly authorized temporary Studios, which were deleted after testing. No original Studio URL or Apache/production file was changed during development verification.
 
 ## Architecture and permissions

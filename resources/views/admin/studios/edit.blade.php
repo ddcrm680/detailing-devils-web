@@ -8,6 +8,7 @@
 @section('content')
     @php
         $protectedUrl = $studio->exists && ($studio->url_locked_at || $studio->status === 'active');
+        $studioUrlPrefix = rtrim(config('seo.origin'), '/').\App\Services\StudioUrls::path('');
     @endphp
     <div class="studio-admin">
         <div class="page-heading">
@@ -40,18 +41,20 @@
                     <span class="muted small">* Required</span>
                 </div>
                 <div class="studio-field-grid">
-                    @foreach (['name' => ['Studio name', 255], 'slug' => ['Slug', 191]] as $field => [$label, $limit])
-                        <div class="field" @if ($field === 'slug' && ! $protectedUrl) data-slug-editor data-new="{{ $studio->exists ? 'false' : 'true' }}" data-slugs="{{ json_encode($existingSlugs ?? []) }}" @endif>
+                    @foreach (['name' => ['Studio name', 255], 'slug' => ['Studio Page URL', 191]] as $field => [$label, $limit])
+                        <div class="field" @if ($field === 'slug' && ! $protectedUrl) data-slug-editor data-url-prefix="{{ $studioUrlPrefix }}" data-new="{{ $studio->exists ? 'false' : 'true' }}" data-slugs="{{ json_encode($existingSlugs ?? []) }}" @endif>
                             @if ($field === 'slug' && $protectedUrl)
-                                <span class="studio-url-label">Studio URL</span>
+                                <span class="studio-url-label">Studio Page URL</span>
                                 <a class="studio-current-url" href="{{ rtrim(config('seo.origin'), '/').route('studios.show', ['slug' => $studio->slug], false) }}" target="_blank" rel="noopener">{{ rtrim(config('seo.origin'), '/').route('studios.show', ['slug' => $studio->slug], false) }}</a>
                                 <input type="hidden" name="slug_mode" value="preserve">
                                 <details class="studio-url-editor" @if ($errors->hasAny(['slug', 'expected_slug', 'confirm_url_change'])) open @endif>
                                     <summary>Change URL</summary>
                                     <div class="form-stack">
                                         <label for="new-studio-slug">New URL</label>
-                                        <div class="studio-url-prefix">{{ rtrim(config('seo.origin'), '/') }}/studios/</div>
+                                        <div class="studio-url-prefix">{{ $studioUrlPrefix }}</div>
                                         <input id="new-studio-slug" name="slug" form="studio-url-form" required maxlength="191" pattern="[a-z0-9]+(-[a-z0-9]+)*" value="{{ old('expected_slug') ? old('slug') : '' }}" placeholder="e.g. detailing-devils-jaipur" @if ($errors->has('slug')) aria-invalid="true" aria-describedby="studio-url-error" @endif>
+                                        <output class="studio-current-url" for="new-studio-slug" data-studio-url-preview hidden></output>
+                                        <p class="muted small">Your previous Studio Page URL will automatically redirect to the new URL.</p>
                                         @error('slug')<span class="invalid-feedback" id="studio-url-error">{{ $message }}</span>@enderror
                                         @error('expected_slug')<span class="invalid-feedback">{{ $message }}</span>@enderror
                                         <label class="check"><input type="checkbox" name="confirm_url_change" value="1" form="studio-url-form" required> I confirm this URL change.</label>
@@ -77,9 +80,9 @@
                                 <input type="hidden" name="slug_mode" value="{{ old('slug_mode', $studio->exists ? 'preserve' : 'auto') }}">
                                 <div class="studio-slug-preview" data-slug-preview hidden>
                                     <output for="name" data-slug-output></output>
-                                    <button class="button secondary" type="button" data-slug-edit>Edit slug</button>
+                                    <button class="button secondary" type="button" data-slug-edit>Customize URL</button>
                                 </div>
-                                <noscript><label class="check"><input type="checkbox" name="slug_mode" value="manual">Edit slug</label></noscript>
+                                <noscript><label class="check"><input type="checkbox" name="slug_mode" value="manual">Customize URL</label></noscript>
                             @endif
                             @error($field)
                                 <span class="invalid-feedback" id="{{ $field }}-error">{{ $message }}</span>
@@ -270,7 +273,7 @@
             </details>
         </form>
         @if ($protectedUrl)
-            <form id="studio-url-form" action="{{ route('admin.studios.url.update', $studio) }}" method="post" data-studio-url-form data-current-url="{{ rtrim(config('seo.origin'), '/').route('studios.show', ['slug' => $studio->slug], false) }}" data-url-prefix="{{ rtrim(config('seo.origin'), '/') }}/studios/">
+            <form id="studio-url-form" action="{{ route('admin.studios.url.update', $studio) }}" method="post" data-studio-url-form data-current-url="{{ rtrim(config('seo.origin'), '/').route('studios.show', ['slug' => $studio->slug], false) }}" data-url-prefix="{{ $studioUrlPrefix }}">
                 @csrf
                 <input type="hidden" name="expected_slug" value="{{ $studio->slug }}">
             </form>

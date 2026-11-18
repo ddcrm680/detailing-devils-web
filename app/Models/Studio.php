@@ -37,7 +37,7 @@ class Studio extends Model
         $base = rtrim(substr(Str::slug($name) ?: 'studio', 0, 180), '-');
         $slug = $base;
         for ($suffix = 2; static::query()->where('slug', $slug)->exists()
-            || ContentUrl::query()->where('path', StudioUrls::path($slug))->exists(); $suffix++) {
+            || ContentUrl::query()->whereIn('path', StudioUrls::paths($slug))->exists(); $suffix++) {
             $slug = $base.'-'.$suffix;
         }
 

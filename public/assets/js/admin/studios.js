@@ -243,20 +243,22 @@ export function mountStudioSlug(form) {
     const existing = JSON.parse(field.dataset.slugs);
     const update = () => {
         if (field.dataset.new === 'true' && mode.value === 'auto') input.value = generatedStudioSlug(name.value, existing);
-        output.textContent = input.value;
+        output.textContent = `${field.dataset.urlPrefix || ''}${input.value}`;
     };
     if (mode.value !== 'manual') {
         input.hidden = true;
-        preview.hidden = false;
     }
+    preview.hidden = false;
+    edit.hidden = mode.value === 'manual';
     edit.addEventListener('click', () => {
         mode.value = 'manual';
-        preview.hidden = true;
+        edit.hidden = true;
         input.hidden = false;
         input.focus();
         input.dispatchEvent(new Event('change', { bubbles: true }));
     });
     name.addEventListener('input', update);
+    input.addEventListener('input', update);
     update();
 }
 
@@ -267,6 +269,15 @@ export function studioUrlConfirmation(current, prefix, slug) {
 export function mountStudioUrl(form, isStudioDirty, win = window) {
     let accepted = false;
     let confirming = false;
+    const preview = form.ownerDocument?.querySelector('[data-studio-url-preview]');
+    const updatePreview = () => {
+        if (!preview) return;
+        preview.textContent = `${form.dataset.urlPrefix}${form.elements.slug.value}`;
+        preview.hidden = form.elements.slug.value === '';
+    };
+    form.elements.slug.addEventListener?.('input', updatePreview);
+    form.addEventListener('reset', () => { if (preview) preview.hidden = true; });
+    updatePreview();
     form.addEventListener('submit', async (event) => {
         if (accepted) return;
         event.preventDefault();

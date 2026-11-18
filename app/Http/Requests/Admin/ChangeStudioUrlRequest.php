@@ -27,4 +27,9 @@ class ChangeStudioUrlRequest extends FormRequest
             'confirm_url_change.accepted' => 'Please confirm the URL change.',
         ];
     }
+
+    public function attributes(): array
+    {
+        return ['slug' => 'Studio Page URL'];
+    }
 }
