@@ -45,6 +45,7 @@ class StudioPagesTest extends TestCase
             '2026_11_02_000001_create_website_seo_store.php',
             '2026_11_12_000000_create_studio_cms_tables.php',
             '2026_11_16_000000_create_content_urls.php',
+            '2026_11_19_000000_add_services_and_opening_hours_to_studios.php',
         ] as $migration) {
             (require database_path('migrations/'.$migration))->up();
         }
@@ -145,6 +146,85 @@ class StudioPagesTest extends TestCase
         foreach (['title', 'meta[@name="description"]/@content'] as $field) {
             $this->assertNotSame($xpath->evaluate('string(/html/head/'.$field.')'), $second->evaluate('string(/html/head/'.$field.')'));
         }
+    }
+
+    public function test_dynamic_services_hours_and_empty_data_use_only_saved_values(): void
+    {
+        $studio = $this->studio([
+            'services' => ['ppf', 'unknown'],
+            'opening_hours' => [
+                'monday' => ['closed' => false, 'opens' => '10:00', 'closes' => '19:00'],
+                'tuesday' => ['closed' => false, 'opens' => '25:00', 'closes' => '19:00'],
+                'sunday' => ['closed' => true, 'opens' => null, 'closes' => null],
+            ],
+        ]);
+        $html = $this->get(route('studios.show', $studio->slug))->assertOk()->getContent();
+        $xpath = $this->xpath($html);
+        $this->assertSame(1, $xpath->query('//article[contains(@class,"service-card")]')->length);
+        $this->assertSame('Paint Protection Film', $xpath->evaluate('string(//article[contains(@class,"service-card")]//h3)'));
+        $this->assertStringContainsString('10:00 am - 7:00 pm', $html);
+        $this->assertStringContainsString('Closed', $html);
+        $this->assertStringContainsString('Not provided', $html);
+        $this->assertSame(0, $xpath->query('//*[@id="gallery"]')->length);
+        $this->assertStringNotContainsString('glide.min.js', $html);
+        $this->assertStringNotContainsString('Design preview', $html);
+        $this->assertStringNotContainsString('00000 00000', $html);
+        $this->assertSame(1, $xpath->query('//*[contains(@class,"service-image--fallback")]')->length);
+        $empty = $this->studio(['name' => 'Studio Without Optional Details', 'phones' => [], 'services' => [], 'opening_hours' => null]);
+        $html = $this->get(route('studios.show', $empty->slug))->assertOk()->getContent();
+        $xpath = $this->xpath($html);
+        $this->assertSame(0, $xpath->query('//article[contains(@class,"service-card")]')->length);
+        $this->assertSame(0, $xpath->query('//*[@id="opening-hours"]')->length);
+        $this->assertSame(0, $xpath->query('//a[starts-with(@href,"tel:")]//ancestor::*[@data-studio-detail]')->length);
+        $this->assertStringContainsString('Explore All Services', $html);
+        $this->assertStringContainsString('Send Enquiry', $html);
+    }
+
+    public function test_phone_lists_preserve_saved_order_and_only_one_action_calls_the_first_available_number(): void
+    {
+        foreach ([
+            ['(+91) 90000 00003', '+91 90000 00001', '91 90000 00002'],
+            ['+91 90000 00004'],
+            [],
+        ] as $index => $numbers) {
+            $studio = $this->studio(['name' => 'Phone Fixture '.$index, 'phones' => $numbers]);
+            $xpath = $this->xpath($this->get(route('studios.show', $studio->slug))->assertOk()->getContent());
+            foreach (['phone-list', 'cta-phones'] as $class) {
+                $links = $xpath->query('//*[contains(concat(" ", normalize-space(@class), " "), " '.$class.' ")]/a');
+                $this->assertCount(count($numbers), $links);
+                foreach ($numbers as $position => $number) {
+                    $this->assertSame($number, $links->item($position)->textContent);
+                    $this->assertSame('tel:+'.preg_replace('/[^0-9]/', '', $number), $links->item($position)->getAttribute('href'));
+                }
+            }
+            $actions = $xpath->query('//*[@data-studio-detail]//a[normalize-space(.)="Call Studio"]');
+            $this->assertCount($numbers ? 1 : 0, $actions);
+            if ($numbers) {
+                $this->assertSame('tel:+'.preg_replace('/[^0-9]/', '', $numbers[0]), $actions->item(0)->getAttribute('href'));
+            } else {
+                $this->assertSame(0, $xpath->query('//*[@data-studio-detail]//a[starts-with(@href,"tel:")]')->length);
+            }
+        }
+    }
+
+    public function test_one_owned_photo_without_cover_has_branded_hero_and_no_navigation(): void
+    {
+        $studio = $this->studio();
+        $path = $studio->id.'/'.Str::uuid().'.jpg';
+        File::ensureDirectoryExists(public_path('uploads/studios/'.$studio->id));
+        $file = UploadedFile::fake()->image('single.jpg', 240, 480);
+        copy($file->getRealPath(), public_path('uploads/studios/'.$path));
+        $image = new StudioImage(['alt_text' => 'Single portrait photo']);
+        $image->forceFill(['path' => $path, 'width' => 240, 'height' => 480, 'is_cover' => false]);
+        $studio->images()->save($image);
+        $html = $this->get(route('studios.show', $studio->slug))->assertOk()->getContent();
+        $xpath = $this->xpath($html);
+        $this->assertSame(1, $xpath->query('//*[contains(@class,"hero-fallback")]')->length);
+        $this->assertSame(1, $xpath->query('//*[@id="gallery"]')->length);
+        $this->assertSame(0, $xpath->query('//*[@data-gallery-next]')->length);
+        $this->assertSame(1, $xpath->query('//*[@data-next][@hidden]')->length);
+        $this->assertStringNotContainsString('glide.min.js', $html);
+        $this->assertStringContainsString('Single portrait photo', $html);
     }
 
     public function test_unknown_inactive_and_draft_studios_return_404_without_leaking_details(): void

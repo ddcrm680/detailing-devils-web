@@ -62,7 +62,7 @@ class StudioController extends Controller
     public function store(SaveStudioRequest $request): RedirectResponse
     {
         try {
-            $studio = Studio::create($request->validated());
+            $studio = Studio::create($request->studioData());
         } catch (UniqueConstraintViolationException) {
             throw ValidationException::withMessages(['slug' => 'This URL was just taken. Please try again or choose another.']);
         }
@@ -95,7 +95,7 @@ class StudioController extends Controller
             if ($current->slug !== $studio->slug) {
                 throw ValidationException::withMessages(['slug' => 'The studio URL changed. Reload this page and try again.']);
             }
-            $current->update($request->validated());
+            $current->update($request->studioData());
         });
 
         return redirect()->route('admin.studios.edit', $studio)->with('status', 'Studio saved.');

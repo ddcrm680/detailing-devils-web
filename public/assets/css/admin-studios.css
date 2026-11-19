@@ -1101,3 +1101,60 @@
     .studio-url-dialog .studio-url-dialog__actions { width: 100%; }
     .studio-url-dialog .button { flex: 1; min-width: 0; }
 }
+
+/* Compact optional Studio details; full weekly controls expand on request. */
+.studio-services, .studio-opening-hours { grid-column: 1 / -1; }
+.studio-editor .studio-services, .studio-editor .studio-opening-hours { padding: 12px 14px; gap: 6px; }
+.studio-services { position: relative; }
+.studio-services[open] > summary { display: flex; align-items: center; min-height: 38px; padding-right: 150px; margin-bottom: 0; }
+.studio-services[open] > .studio-details-tools { position: absolute; right: 14px; top: 14px; gap: 6px; }
+.studio-services-options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 12px; }
+.studio-services-options .check { min-height: 30px; margin: 0; }
+.studio-details-tools { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.studio-opening-hours[open] > summary { margin-bottom: 4px; }
+.studio-hours-compact { display: grid; grid-template-columns: minmax(240px, 320px) max-content minmax(0, 1fr); gap: 12px; align-items: end; }
+.studio-hours-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.studio-hours-pair .field { min-width: 0; }
+.studio-hours-pair input { width: 100%; min-width: 0; }
+.studio-hours-compact > .check { min-height: 34px; margin: 0; }
+.studio-hours-compact > .studio-details-tools { justify-content: flex-end; }
+.studio-hours-meta { display: flex; flex-wrap: wrap; gap: 2px 16px; margin-top: 2px; }
+.studio-hours-customize > summary { padding-block: 7px; font-size: 12px; cursor: pointer; }
+.studio-hours-row, .studio-week-labels { display: grid; grid-template-columns: minmax(90px, 1fr) repeat(2, minmax(0, 165px)) 85px; gap: 10px; align-items: center; }
+.studio-week-labels { color: var(--admin-muted); font-size: 11px; padding-block: 5px; }
+.studio-hours-row { padding-block: 3px; border-top: 1px solid var(--studio-border); }
+.studio-hours-row .field { min-width: 0; }
+.studio-hours-row input[type="time"] { width: 100%; min-width: 0; min-height: 34px; }
+.studio-hours-row input:disabled { opacity: .45; }
+.studio-hours-day { font-size: 12px; }
+.studio-hours-closed { min-height: 34px; margin: 0; }
+.studio-hours-error { grid-column: 1 / -1; }
+@media (max-width: 1000px) {
+    .studio-hours-compact { grid-template-columns: minmax(220px, 1fr) max-content; }
+    .studio-hours-compact > .studio-details-tools { grid-column: 1 / -1; justify-content: flex-start; }
+}
+@media (max-width: 640px) {
+    .studio-services[open] > summary { min-height: 44px; padding-right: 155px; }
+    .studio-services[open] > summary::after { position: absolute; right: 14px; top: 23px; }
+    .studio-services[open] > .studio-details-tools { right: 35px; top: 12px; }
+    .studio-services-options { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 8px; }
+    .studio-services-options .check, .studio-details-tools .button { min-height: 44px; }
+    .studio-hours-compact { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+    .studio-hours-pair input { min-height: 44px; }
+    .studio-hours-compact > .check { min-height: 44px; }
+    .studio-hours-compact > .studio-details-tools { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .studio-hours-meta { gap: 2px; flex-direction: column; }
+    .studio-hours-customize > summary { min-height: 44px; display: flex; align-items: center; gap: 6px; }
+    .studio-hours-customize > summary::before { content: "+"; color: var(--admin-muted); }
+    .studio-hours-customize[open] > summary::before { content: "-"; }
+    .studio-hours-customize > summary { list-style: none; }
+    .studio-hours-customize > summary::-webkit-details-marker { display: none; }
+    .studio-hours-row, .studio-week-labels { grid-template-columns: 62px minmax(0, 1fr) minmax(0, 1fr) 44px; gap: 6px; }
+    .studio-week-labels { font-size: 10px; }
+    .studio-week-labels > :last-child { text-align: center; }
+    .studio-hours-row { padding-block: 4px; }
+    .studio-hours-row input[type="time"] { min-height: 44px; padding-inline: 4px; font-size: 11px; }
+    .studio-hours-day { font-size: 11px; }
+    .studio-hours-closed { min-height: 44px; justify-content: center; }
+    .studio-hours-closed-text { display: none; }
+}

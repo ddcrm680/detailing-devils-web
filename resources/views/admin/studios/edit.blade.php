@@ -271,6 +271,7 @@
                     </div>
                 </div>
             </details>
+            @include('admin.studios.details-fields')
         </form>
         @if ($protectedUrl)
             <form id="studio-url-form" action="{{ route('admin.studios.url.update', $studio) }}" method="post" data-studio-url-form data-studio-name="{{ $studio->name }}" data-current-url="{{ rtrim(config('seo.origin'), '/').route('studios.show', ['slug' => $studio->slug], false) }}" data-url-prefix="{{ $studioUrlPrefix }}">

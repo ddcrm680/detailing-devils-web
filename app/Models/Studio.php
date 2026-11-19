@@ -12,10 +12,15 @@ use Illuminate\Support\Str;
 
 #[Fillable([
     'name', 'slug', 'address', 'city', 'state', 'country_code', 'phones',
-    'map_url', 'latitude', 'longitude', 'status', 'sort_order',
+    'map_url', 'latitude', 'longitude', 'status', 'sort_order', 'services', 'opening_hours',
 ])]
 class Studio extends Model
 {
+    public const WEEKDAYS = [
+        'monday' => 'Monday', 'tuesday' => 'Tuesday', 'wednesday' => 'Wednesday',
+        'thursday' => 'Thursday', 'friday' => 'Friday', 'saturday' => 'Saturday', 'sunday' => 'Sunday',
+    ];
+
     public const STATUSES = ['draft', 'active', 'inactive'];
 
     public function save(array $options = []): bool
@@ -49,6 +54,8 @@ class Studio extends Model
         return [
             'url_locked_at' => 'datetime',
             'phones' => 'array',
+            'services' => 'array',
+            'opening_hours' => 'array',
             'latitude' => 'decimal:7',
             'longitude' => 'decimal:7',
             'sort_order' => 'integer',

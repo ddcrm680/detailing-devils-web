@@ -5,6 +5,7 @@ namespace App\Http\Requests\Admin;
 use App\Models\ContentUrl;
 use App\Models\Studio;
 use App\Services\StudioUrls;
+use App\Support\StudioServices;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -14,6 +15,9 @@ class SaveStudioRequest extends FormRequest
     {
         if (! $this->user()?->can('manage-studios')) {
             return;
+        }
+        if ($this->boolean('studio_details_present')) {
+            $this->merge(['services' => $this->input('services'), 'opening_hours' => $this->input('opening_hours')]);
         }
         $studio = $this->route('studio');
         if ($studio instanceof Studio) {
@@ -37,7 +41,19 @@ class SaveStudioRequest extends FormRequest
 
     public function rules(): array
     {
+        $hours = [];
+        foreach (Studio::WEEKDAYS as $day => $label) {
+            $hours["opening_hours.$day"] = ['required_with:opening_hours', 'array:closed,opens,closes'];
+            $hours["opening_hours.$day.closed"] = ["required_with:opening_hours.$day", 'boolean'];
+            $hours["opening_hours.$day.opens"] = ['nullable', "required_with:opening_hours.$day.closes", 'date_format:H:i'];
+            $hours["opening_hours.$day.closes"] = ['nullable', "required_with:opening_hours.$day.opens", 'date_format:H:i', "after:opening_hours.$day.opens"];
+        }
+
         return [
+            ...$hours,
+            'services' => ['nullable', 'array', 'list', 'max:6'],
+            'services.*' => ['required', 'string', 'distinct', Rule::in(array_keys(StudioServices::all()))],
+            'opening_hours' => ['nullable', 'array:'.implode(',', array_keys(Studio::WEEKDAYS))],
             'name' => [
                 'bail', 'required', 'string', 'max:255',
                 function ($attribute, $value, $fail) {
@@ -102,9 +118,46 @@ class SaveStudioRequest extends FormRequest
         ];
     }
 
+    /** Only fields supplied by the editor are changed; older clients preserve optional details. */
+    public function studioData(): array
+    {
+        $data = $this->validated();
+        if (array_key_exists('services', $data)) {
+            $data['services'] = $data['services'] ?: null;
+        }
+        if (array_key_exists('opening_hours', $data)) {
+            $hours = [];
+            $hasHours = false;
+            foreach ($data['opening_hours'] ?? [] as $day => $row) {
+                $closed = (bool) $row['closed'];
+                $opens = $closed ? null : ($row['opens'] ?? null);
+                $closes = $closed ? null : ($row['closes'] ?? null);
+                $hours[$day] = compact('closed', 'opens', 'closes');
+                $hasHours = $hasHours || $closed || $opens !== null;
+            }
+            $data['opening_hours'] = $hasHours ? $hours : null;
+        }
+
+        return $data;
+    }
+
     public function messages(): array
     {
         return [
+            'services.*.in' => 'Please choose a service from the list.',
+            'services.*.distinct' => 'Please select each service only once.',
+            'services.list' => 'Please choose services from the list.',
+            'opening_hours.array' => 'Please check the weekly schedule.',
+            'opening_hours.*.array' => 'Please check this day in the weekly schedule.',
+            'opening_hours.*.required_with' => 'Please complete each day in the weekly schedule.',
+            'opening_hours.*.closed.required_with' => 'Please choose whether this day is closed.',
+            'services.array' => 'Please choose services from the list.',
+            'opening_hours.*.opens.date_format' => 'Enter a valid opening time.',
+            'opening_hours.*.closes.date_format' => 'Enter a valid closing time.',
+            'opening_hours.*.opens.required_with' => 'Enter an opening time.',
+            'opening_hours.*.closes.required_with' => 'Enter a closing time.',
+            'opening_hours.*.closes.after' => 'Closing time must be after opening time.',
+            'opening_hours.*.closed.boolean' => 'Please choose whether this day is closed.',
             'slug.unique' => 'This URL is already in use. Please choose another.',
             'slug.regex' => 'Use lowercase letters, numbers and single hyphens.',
             'phones.*.regex' => 'Enter a phone number with its country code; spaces and brackets are allowed.',

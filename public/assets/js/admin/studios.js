@@ -425,6 +425,88 @@ export function mountStudioSlider(doc = document, win = window) {
     });
 }
 
+export function mountStudioServices(form) {
+    const tools = form.querySelector('[data-service-actions]');
+    if (!tools) return;
+    tools.hidden = false;
+    const select = (checked) => {
+        form.querySelectorAll('input[name="services[]"]').forEach((input) => { input.checked = checked; });
+        form.dispatchEvent(new Event('change', { bubbles: true }));
+    };
+    tools.querySelector('[data-services-all]').addEventListener('click', () => select(true));
+    tools.querySelector('[data-services-clear]').addEventListener('click', () => select(false));
+}
+
+export function mountOpeningHours(form) {
+    const section = form.querySelector('[data-opening-hours]');
+    if (!section) return;
+    const rows = [...section.querySelectorAll('[data-hours-day]')];
+    const compact = section.querySelector('[data-hours-compact]');
+    const customize = section.querySelector('[data-hours-customize]');
+    const opens = section.querySelector('[data-common-opens]');
+    const closes = section.querySelector('[data-common-closes]');
+    const allDays = section.querySelector('[data-open-all-days]');
+    const status = section.querySelector('[data-hours-status]');
+    const time = (row, key) => row.querySelector(`[data-hours-${key}]`);
+    const closed = (row) => row.querySelector('[data-hours-closed]');
+    const syncClosed = () => rows.forEach((row) => {
+        ['opens', 'closes'].forEach((key) => { time(row, key).disabled = closed(row).checked; });
+    });
+    const refresh = () => {
+        const first = rows[0];
+        const uniform = rows.every((row) => !closed(row).checked
+            && time(row, 'opens').value === time(first, 'opens').value
+            && time(row, 'closes').value === time(first, 'closes').value);
+        opens.value = uniform ? time(first, 'opens').value : '';
+        closes.value = uniform ? time(first, 'closes').value : '';
+        allDays.checked = uniform && opens.value !== '' && closes.value !== '';
+        opens.required = closes.required = false;
+        const empty = rows.every((row) => !closed(row).checked && !time(row, 'opens').value && !time(row, 'closes').value);
+        status.textContent = empty ? 'Hours not set' : allDays.checked ? 'Monday to Sunday' : 'Custom weekly schedule';
+        syncClosed();
+    };
+    const changed = () => form.dispatchEvent(new Event('change', { bubbles: true }));
+    const apply = () => {
+        rows.forEach((row) => {
+            if (allDays.checked) closed(row).checked = false;
+            if (!closed(row).checked) {
+                time(row, 'opens').value = opens.value;
+                time(row, 'closes').value = closes.value;
+            }
+        });
+        syncClosed();
+        status.textContent = allDays.checked ? 'Monday to Sunday' : 'Applied to open days';
+    };
+    compact.hidden = false;
+    customize.open = !!section.querySelector('[aria-invalid="true"]');
+    refresh(); // Reflect saved values without changing any submitted field.
+    section.addEventListener('change', (event) => {
+        if (event.target === opens || event.target === closes) apply();
+        else if (event.target === allDays) {
+            if (allDays.checked) {
+                apply();
+                opens.required = closes.required = true;
+            } else customize.open = true;
+        } else if (event.target.closest('[data-hours-day]')) refresh();
+    });
+    section.querySelector('[data-hours-preset]').addEventListener('click', () => {
+        opens.value = '10:00';
+        closes.value = '19:00';
+        allDays.checked = true;
+        apply();
+        changed();
+    });
+    section.querySelector('[data-hours-clear]').addEventListener('click', () => {
+        rows.forEach((row) => {
+            closed(row).checked = false;
+            time(row, 'opens').value = '';
+            time(row, 'closes').value = '';
+        });
+        refresh();
+        changed();
+    });
+}
+
 export function mountStudios(doc = document, win = window) {
     const list = doc.querySelector('[data-phone-list]');
     const add = doc.querySelector('[data-phone-add]');
@@ -494,6 +576,8 @@ export function mountStudios(doc = document, win = window) {
     const form = doc.querySelector('[data-studio-form]');
     if (form) {
         mountStudioSlug(form);
+        mountOpeningHours(form);
+        mountStudioServices(form);
         const panels = form.querySelectorAll('[data-studio-panel]');
         const compact = win.matchMedia('(max-width: 640px)');
         const arrange = () => panels.forEach((panel) => {
