@@ -3,6 +3,7 @@
 
     function mountStudioDetail(root, win = window) {
         if (!root) return;
+        const reducedMotion = win.matchMedia('(prefers-reduced-motion: reduce)');
         root.querySelectorAll('[data-service-image]').forEach((image) => {
             const fallback = () => {
                 if (image.dataset.failed) return;
@@ -14,6 +15,50 @@
             image.addEventListener('error', fallback);
             if (image.complete && image.naturalWidth === 0) fallback();
         });
+        const services = root.querySelector('[data-services-slider]');
+        if (services && win.Glide) {
+            const slides = [...services.querySelectorAll('.glide__slide')];
+            const navigation = services.querySelector('[data-services-navigation]');
+            if (slides.length > 1) {
+                const previous = services.querySelector('[data-services-previous]');
+                const next = services.querySelector('[data-services-next]');
+                const tablet = win.matchMedia('(max-width: 1024px)');
+                const mobile = win.matchMedia('(max-width: 600px)');
+                const layout = () => ({ perView: mobile.matches ? 1 : tablet.matches ? 2 : 4, gap: mobile.matches ? 14 : 20 });
+                const slider = new win.Glide(services, {
+                    type: 'slider', ...layout(), bound: true, rewind: false,
+                    keyboard: false, autoplay: false, animationDuration: reducedMotion.matches ? 0 : 380,
+                });
+                const sync = () => {
+                    const visible = Number(slider.settings.perView);
+                    const last = Math.max(0, slides.length - visible);
+                    navigation.hidden = slides.length <= visible;
+                    previous.disabled = slider.index === 0;
+                    next.disabled = slider.index >= last;
+                    slides.forEach((slide, index) => {
+                        slide.setAttribute('aria-hidden', String(index < slider.index || index >= slider.index + visible));
+                    });
+                };
+                slider.on(['mount.after', 'run.after', 'resize', 'update'], sync);
+                previous.addEventListener('click', () => slider.go('<'));
+                next.addEventListener('click', () => slider.go('>'));
+                services.addEventListener('keydown', (event) => {
+                    if (!['ArrowLeft', 'ArrowRight'].includes(event.key) || navigation.hidden) return;
+                    event.preventDefault();
+                    slider.go(event.key === 'ArrowRight' ? '>' : '<');
+                });
+                reducedMotion.addEventListener('change', () => {
+                    slider.update({ animationDuration: reducedMotion.matches ? 0 : 380 });
+                });
+                const resize = () => {
+                    const settings = layout();
+                    slider.update({ ...settings, startAt: Math.min(slider.index, Math.max(0, slides.length - settings.perView)) });
+                };
+                tablet.addEventListener('change', resize);
+                mobile.addEventListener('change', resize);
+                slider.mount();
+            }
+        }
         const data = root.querySelector('[data-studio-photos]');
         if (!data) return;
         const photos = JSON.parse(data.textContent);
@@ -21,7 +66,6 @@
         const mobileGallery = root.querySelector('[data-mobile-gallery]');
         const mobileSlides = root.querySelector('[data-mobile-slides]');
         const mobileBreakpoint = win.matchMedia('(max-width: 600px)');
-        const reducedMotion = win.matchMedia('(prefers-reduced-motion: reduce)');
         let mobileGlide = null;
 
         const viewer = root.querySelector('.photo-viewer');

@@ -1,12 +1,16 @@
 @extends('layouts.app')
 
+@php
+    $selectedServices = collect(\App\Support\StudioServices::all())->only(is_array($studio->services) ? $studio->services : []);
+@endphp
+
 @push('css')
     <link rel="stylesheet" href="{{ asset('assets/vendor/glide.core.min.css') }}">
     <link rel="stylesheet" href="{{ asset('assets/css/studio-detail.css') }}">
 @endpush
 
 @push('js')
-    @if ($photos->count() > 1)
+    @if ($photos->count() > 1 || $selectedServices->count() > 1)
         <script src="{{ asset('assets/vendor/glide.min.js') }}" defer></script>
     @endif
     <script src="{{ asset('assets/js/modules/studio-detail.js') }}" defer></script>
@@ -23,7 +27,6 @@
         $primaryCall = $phones->first()['tel'] ?? null;
         $cover = $photos->firstWhere('is_cover', true);
         $desktopPhotos = ($cover && $photos->count() > 1 ? $photos->skip(1) : $photos)->take(4)->values();
-        $selectedServices = collect(\App\Support\StudioServices::all())->only(is_array($studio->services) ? $studio->services : []);
         $savedWeek = is_array($studio->opening_hours) ? $studio->opening_hours : [];
         $week = collect(\App\Models\Studio::WEEKDAYS)->map(function ($label, $day) use ($savedWeek) {
             $row = is_array($savedWeek[$day] ?? null) ? $savedWeek[$day] : [];
@@ -126,13 +129,25 @@
                     @if ($selectedServices->isNotEmpty())<p class="section-caption">Restore the finish. Protect the feeling.<br>Explore the services selected for this studio.</p>@endif
                 </div>
                 @if ($selectedServices->isNotEmpty())
-                    <div class="service-grid">
-                        @foreach ($selectedServices as $service)
-                            <article class="service-card"><div class="service-image {{ is_file(public_path($service['image'])) ? '' : 'service-image--fallback' }}">
-                                @if (is_file(public_path($service['image'])))<img src="{{ asset($service['image']) }}" alt="{{ $service['alt'] }}" data-service-image data-fallback="{{ asset('img/logo.png') }}" width="1200" height="912" loading="lazy">@else<img src="{{ asset('img/logo.png') }}" alt="Detailing Devils" width="1600" height="377" loading="lazy">@endif
-                                <span class="service-number micro">{{ str_pad($loop->iteration, 2, '0', STR_PAD_LEFT) }}</span>
-                            </div><div class="service-copy"><h3>{{ $service['name'] }}</h3><p>{{ $service['description'] }}</p></div></article>
-                        @endforeach
+                    <div class="service-slider glide" role="region" aria-label="Services offered at {{ $studio->name }}" @if ($selectedServices->count() > 1) aria-roledescription="carousel" @endif data-services-slider>
+                        <div class="glide__track" data-glide-el="track">
+                            <ul class="service-grid glide__slides" id="studio-service-cards">
+                                @foreach ($selectedServices as $service)
+                                    <li class="glide__slide" aria-label="Service {{ $loop->iteration }} of {{ $selectedServices->count() }}">
+                                        <article class="service-card"><div class="service-image {{ is_file(public_path($service['image'])) ? '' : 'service-image--fallback' }}">
+                                            @if (is_file(public_path($service['image'])))<img src="{{ asset($service['image']) }}" alt="{{ $service['alt'] }}" data-service-image data-fallback="{{ asset('img/logo.png') }}" width="1200" height="912" loading="lazy">@else<img src="{{ asset('img/logo.png') }}" alt="Detailing Devils" width="1600" height="377" loading="lazy">@endif
+                                            <span class="service-number micro">{{ str_pad($loop->iteration, 2, '0', STR_PAD_LEFT) }}</span>
+                                        </div><div class="service-copy"><h3>{{ $service['name'] }}</h3><p>{{ $service['description'] }}</p></div></article>
+                                    </li>
+                                @endforeach
+                            </ul>
+                        </div>
+                        @if ($selectedServices->count() > 1)
+                            <div class="services-navigation" data-services-navigation hidden>
+                                <button class="icon-button" type="button" aria-label="Previous services" aria-controls="studio-service-cards" data-services-previous><i class="icon bi bi-arrow-left" aria-hidden="true"></i></button>
+                                <button class="icon-button" type="button" aria-label="Next services" aria-controls="studio-service-cards" data-services-next><i class="icon bi bi-arrow-right" aria-hidden="true"></i></button>
+                            </div>
+                        @endif
                     </div>
                 @endif
                 <div class="services-actions"><a class="button button-outline" href="{{ route('home') }}#services">Explore All Services <i class="icon bi bi-arrow-up-right" aria-hidden="true"></i></a></div>

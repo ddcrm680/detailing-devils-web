@@ -180,6 +180,22 @@ class StudioPagesTest extends TestCase
         $this->assertStringContainsString('Send Enquiry', $html);
     }
 
+    public function test_selected_service_sliders_load_glide_independently_of_gallery_and_keep_short_lists_clean(): void
+    {
+        $ids = ['ceramic', 'ppf', 'correction', 'interior', 'window', 'wheel'];
+        foreach ([0, 1, 2, 4, 6] as $count) {
+            $studio = $this->studio(['name' => 'Service slider fixture '.$count, 'services' => array_slice($ids, 0, $count)]);
+            $html = $this->get(route('studios.show', $studio->slug))->assertOk()->getContent();
+            $xpath = $this->xpath($html);
+            $this->assertSame($count, $xpath->query('//article[contains(@class,"service-card")]')->length);
+            $this->assertSame($count > 0 ? 1 : 0, $xpath->query('//*[@data-services-slider]')->length);
+            $this->assertSame($count > 1 ? 1 : 0, $xpath->query('//*[@data-services-navigation][@hidden]')->length);
+            $this->assertSame($count > 1 ? 1 : 0, $xpath->query('//script[contains(@src,"glide.min.js")]')->length);
+            $this->assertSame(0, $xpath->query('//*[@id="gallery"]')->length);
+            $this->assertStringContainsString('Explore All Services', $html);
+        }
+    }
+
     public function test_phone_lists_preserve_saved_order_and_only_one_action_calls_the_first_available_number(): void
     {
         foreach ([
