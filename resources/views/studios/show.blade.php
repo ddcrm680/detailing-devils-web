@@ -183,7 +183,7 @@
                             @endforeach
                         </ul>
                         @if ($primaryCall)
-                            <div class="hours-contact"><a href="tel:{{ $primaryCall }}">Call before you visit <i class="icon bi bi-arrow-up-right" aria-hidden="true"></i></a></div>
+                            <div class="hours-contact"><a href="tel:{{ $primaryCall }}"><i class="icon bi bi-telephone" aria-hidden="true"></i><span>Call before you visit</span><i class="icon bi bi-arrow-up-right" aria-hidden="true"></i></a></div>
                         @endif
                     </section>
                 @endif
