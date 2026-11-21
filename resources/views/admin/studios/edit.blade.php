@@ -132,20 +132,39 @@
                         </div>
                     @endforeach
                 </div>
-                <div class="field">
-                    <label for="map_url">Google Maps URL (optional)</label>
-                    <input
-                        id="map_url"
-                        name="map_url"
-                        type="url"
-                        value="{{ old('map_url', $studio->map_url) }}"
-                        maxlength="2048"
-                        placeholder="https://maps.app.goo.gl/…"
-                        @if ($errors->has('map_url')) aria-invalid="true" aria-describedby="map-error" @endif
-                    >
-                    @error('map_url')
-                        <span class="invalid-feedback" id="map-error">{{ $message }}</span>
-                    @enderror
+                <div class="studio-field-grid">
+                    <div class="field">
+                        <label for="map_url">Google Maps URL (Directions)</label>
+                        <textarea
+                            id="map_url"
+                            name="map_url"
+                            rows="2"
+                            maxlength="2048"
+                            spellcheck="false"
+                            placeholder="https://maps.app.goo.gl/…"
+                            @if ($errors->has('map_url')) aria-invalid="true" aria-describedby="map-error" @endif
+                        >{{ old('map_url', $studio->map_url) }}</textarea>
+                        @error('map_url')
+                            <span class="invalid-feedback" id="map-error">{{ $message }}</span>
+                        @enderror
+                    </div>
+                    <div class="field">
+                        <label for="map_embed_url">Google Map Embed URL (Optional)</label>
+                        <textarea
+                            id="map_embed_url"
+                            name="map_embed_url"
+                            rows="2"
+                            maxlength="12000"
+                            placeholder="Paste embed URL or iframe HTML"
+                            spellcheck="false"
+                            aria-describedby="map-embed-help{{ $errors->has('map_embed_url') ? ' map-embed-error' : '' }}"
+                            @if ($errors->has('map_embed_url')) aria-invalid="true" @endif
+                        >{{ old('map_embed_url', $studio->map_embed_url) }}</textarea>
+                        <p class="muted small" id="map-embed-help">Google Maps → Share → Embed a map → Copy HTML.</p>
+                        @error('map_embed_url')
+                            <span class="invalid-feedback" id="map-embed-error">{{ $message }}</span>
+                        @enderror
+                    </div>
                 </div>
                 <details
                     class="studio-coordinates"

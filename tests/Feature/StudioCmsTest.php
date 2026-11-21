@@ -36,6 +36,7 @@ class StudioCmsTest extends TestCase
             '2026_11_02_000000_add_role_to_users_table.php',
             '2026_11_12_000000_create_studio_cms_tables.php',
             '2026_11_16_000000_create_content_urls.php',
+            '2026_11_20_000000_add_map_embed_url_to_studios.php',
         ] as $migration) {
             (require database_path('migrations/'.$migration))->up();
         }
@@ -62,6 +63,91 @@ class StudioCmsTest extends TestCase
             'map_url' => 'https://www.google.com/maps/search/?api=1&query=studio',
             'latitude' => null, 'longitude' => null, 'status' => 'draft', 'sort_order' => 5,
         ], $overrides);
+    }
+
+    public function test_map_embed_url_and_google_iframe_are_saved_without_changing_directions(): void
+    {
+        $url = 'https://www.google.com/maps/embed?pb=!1m18!2sSynthetic%20Studio';
+        foreach (['admin' => $url, 'super_admin' => '<iframe src="'.$url.'" width="600" height="450" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe>'] as $role => $input) {
+            $this->actingAs($this->actor($role));
+            $slug = 'synthetic-'.str_replace('_', '-', $role);
+            $this->post('/admin/studios', $this->fields([
+                'name' => 'Synthetic '.$role, 'slug' => $slug, 'map_embed_url' => $input,
+            ]))->assertSessionHasNoErrors();
+            $studio = Studio::where('slug', $slug)->sole();
+            $this->assertSame($url, $studio->map_embed_url);
+            $this->assertSame($this->fields()['map_url'], $studio->map_url);
+            $this->assertSame($studio->map_url, $studio->directions_url);
+        }
+    }
+
+    public function test_map_embed_is_optional_and_omission_preserves_it_but_explicit_clear_removes_it(): void
+    {
+        $this->actingAs($this->actor());
+        $this->post('/admin/studios', $this->fields())->assertSessionHasNoErrors();
+        $studio = Studio::sole();
+        $this->assertNull($studio->map_embed_url);
+        $url = 'https://www.google.com/maps/embed?pb=!1m18!2sSynthetic%20Studio';
+        $this->put('/admin/studios/'.$studio->id, $this->fields(['map_embed_url' => $url]))->assertSessionHasNoErrors();
+        $this->put('/admin/studios/'.$studio->id, $this->fields(['address' => 'Updated isolated address']))->assertSessionHasNoErrors();
+        $this->assertSame($url, $studio->fresh()->map_embed_url);
+        foreach (['', null] as $empty) {
+            $this->put('/admin/studios/'.$studio->id, $this->fields(['map_embed_url' => $empty]))->assertSessionHasNoErrors();
+            $this->assertNull($studio->fresh()->map_embed_url);
+        }
+    }
+
+    public function test_map_fields_share_existing_grid_and_embed_errors_preserve_saved_and_old_values(): void
+    {
+        $this->actingAs($this->actor());
+        $url = 'https://www.google.com/maps/embed?pb=!1m18!2sSynthetic%20Studio';
+        $studio = Studio::create($this->fields(['map_embed_url' => $url]));
+        foreach (['/admin/studios/create', '/admin/studios/'.$studio->id.'/edit'] as $page) {
+            $document = new DOMDocument;
+            @$document->loadHTML($this->get($page)->assertOk()->getContent());
+            $xpath = new DOMXPath($document);
+            $this->assertSame(1, $xpath->query('//div[@class="studio-field-grid"][div/textarea[@id="map_url"]][div/textarea[@id="map_embed_url"]]')->length);
+            $this->assertSame(1, $xpath->query('//div[div/textarea[@id="map_embed_url"]]/following-sibling::details[contains(@class,"studio-coordinates")]')->length);
+            $this->assertSame('Google Maps URL (Directions)', $xpath->evaluate('string(//label[@for="map_url"])'));
+            $this->assertSame('Google Map Embed URL (Optional)', $xpath->evaluate('string(//label[@for="map_embed_url"])'));
+            $this->assertSame(2, $xpath->query('//textarea[(@id="map_url" or @id="map_embed_url") and @rows="2"]')->length);
+            $this->assertSame(str_contains($page, '/edit') ? $url : '', $xpath->evaluate('string(//textarea[@id="map_embed_url"])'));
+        }
+        $invalid = '<iframe src="https://evil.example/"></iframe>';
+        $html = $this->from('/admin/studios/'.$studio->id.'/edit')->followingRedirects()
+            ->put('/admin/studios/'.$studio->id, $this->fields(['map_embed_url' => $invalid]))
+            ->assertOk()->assertSee('map-embed-error', false)->getContent();
+        @$document->loadHTML($html);
+        $xpath = new DOMXPath($document);
+        $this->assertSame($invalid, $xpath->evaluate('string(//textarea[@id="map_embed_url"])'));
+        $this->assertSame(1, $xpath->query('//textarea[@id="map_embed_url"][@aria-invalid="true"]')->length);
+        $this->assertSame(0, $xpath->query('//iframe')->length);
+        $this->assertSame($url, $studio->fresh()->map_embed_url);
+        $this->put('/admin/studios/'.$studio->id, $this->fields(['map_embed_url' => $url]))->assertSessionHasNoErrors();
+    }
+
+    public function test_map_embed_validation_rejects_non_strings_and_unauthorized_changes(): void
+    {
+        $studio = Studio::create($this->fields());
+        $this->actingAs($this->actor());
+        foreach ([['pb' => '!1m18'], str_repeat('x', 12001)] as $invalid) {
+            $this->put('/admin/studios/'.$studio->id, $this->fields(['map_embed_url' => $invalid]))->assertSessionHasErrors('map_embed_url');
+        }
+        $this->actingAs($this->actor('seo_admin'));
+        $this->put('/admin/studios/'.$studio->id, $this->fields(['map_embed_url' => 'https://www.google.com/maps/embed?pb=!1m18']))->assertForbidden();
+        $this->assertNull($studio->fresh()->map_embed_url);
+    }
+
+    public function test_map_embed_migration_is_additive_and_preserves_existing_studio_values(): void
+    {
+        $migration = require database_path('migrations/2026_11_20_000000_add_map_embed_url_to_studios.php');
+        $migration->down();
+        $studio = Studio::create($this->fields());
+        $before = (array) DB::table('studios')->find($studio->id);
+        $migration->up();
+        $after = (array) DB::table('studios')->find($studio->id);
+        $this->assertSame($before, array_diff_key($after, ['map_embed_url' => true]));
+        $this->assertNull($after['map_embed_url']);
     }
 
     public function test_only_admin_and_super_admin_can_manage_every_studio_endpoint(): void

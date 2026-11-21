@@ -46,6 +46,7 @@ class StudioPagesTest extends TestCase
             '2026_11_12_000000_create_studio_cms_tables.php',
             '2026_11_16_000000_create_content_urls.php',
             '2026_11_19_000000_add_services_and_opening_hours_to_studios.php',
+            '2026_11_20_000000_add_map_embed_url_to_studios.php',
         ] as $migration) {
             (require database_path('migrations/'.$migration))->up();
         }
@@ -178,6 +179,41 @@ class StudioPagesTest extends TestCase
         $this->assertSame(0, $xpath->query('//a[starts-with(@href,"tel:")]//ancestor::*[@data-studio-detail]')->length);
         $this->assertStringContainsString('Explore All Services', $html);
         $this->assertStringContainsString('Send Enquiry', $html);
+    }
+
+    public function test_studio_map_embeds_are_validated_lazy_accessible_and_keep_one_location_directions_action(): void
+    {
+        $url = 'https://www.google.com/maps/embed?pb=!1m18!2sIsolated%20Studio';
+        $studio = $this->studio([
+            'name' => 'Studio <Map> Review', 'map_embed_url' => $url,
+            'opening_hours' => array_fill_keys(array_keys(Studio::WEEKDAYS), ['closed' => false, 'opens' => '10:00', 'closes' => '19:00']),
+        ]);
+        $xpath = $this->xpath($this->get(route('studios.show', $studio->slug))->assertOk()->getContent());
+        $this->assertSame(1, $xpath->query('//section[@id="visit"]//iframe')->length);
+        $this->assertSame($url, $xpath->evaluate('string(//section[@id="visit"]//iframe/@src)'));
+        $this->assertSame('Google Map for '.$studio->name, $xpath->evaluate('string(//section[@id="visit"]//iframe/@title)'));
+        $this->assertSame('lazy', $xpath->evaluate('string(//section[@id="visit"]//iframe/@loading)'));
+        $this->assertSame('strict-origin-when-cross-origin', $xpath->evaluate('string(//section[@id="visit"]//iframe/@referrerpolicy)'));
+        $this->assertSame(1, $xpath->query('//section[@id="visit"]//iframe[@allowfullscreen]')->length);
+        $this->assertSame(1, $xpath->query('//section[@id="visit"]//a[@data-directions]')->length);
+        $this->assertSame($studio->directions_url, $xpath->evaluate('string(//section[@id="visit"]//a[@data-directions]/@href)'));
+        $this->assertSame(1, $xpath->query('//div[@class="location-footer"]//a[@data-directions]')->length);
+        $this->assertSame(7, $xpath->query('//*[@id="opening-hours"]//li')->length);
+        $this->assertSame(0, $xpath->query('//section[@id="visit"]//*[contains(@class,"map-fallback")]')->length);
+    }
+
+    public function test_missing_or_unsafe_stored_embeds_use_the_existing_fallback_without_duplicate_directions(): void
+    {
+        $studio = $this->studio(['map_url' => null]);
+        foreach ([null, '', 'javascript:alert(1)', 'https://www.google.com.evil.example/maps/embed?pb=!1m18', 'https://www.google.com/maps/embed?pb=', '<iframe src="https://evil.example"></iframe>'] as $value) {
+            $studio->update(['map_embed_url' => $value]);
+            $xpath = $this->xpath($this->get(route('studios.show', $studio->slug))->assertOk()->getContent());
+            $this->assertSame(0, $xpath->query('//section[@id="visit"]//iframe')->length);
+            $this->assertSame(1, $xpath->query('//section[@id="visit"]//*[contains(@class,"map-fallback")]')->length);
+            $this->assertSame(1, $xpath->query('//section[@id="visit"]//a[@data-directions]')->length);
+            $this->assertSame($studio->directions_url, $xpath->evaluate('string(//section[@id="visit"]//a[@data-directions]/@href)'));
+            $this->assertSame(0, $xpath->query('//*[@id="opening-hours"]')->length);
+        }
     }
 
     public function test_selected_service_sliders_load_glide_independently_of_gallery_and_keep_short_lists_clean(): void

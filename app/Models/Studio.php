@@ -12,7 +12,7 @@ use Illuminate\Support\Str;
 
 #[Fillable([
     'name', 'slug', 'address', 'city', 'state', 'country_code', 'phones',
-    'map_url', 'latitude', 'longitude', 'status', 'sort_order', 'services', 'opening_hours',
+    'map_url', 'map_embed_url', 'latitude', 'longitude', 'status', 'sort_order', 'services', 'opening_hours',
 ])]
 class Studio extends Model
 {

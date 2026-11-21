@@ -157,22 +157,40 @@
         <section class="visit-section sd-container section" id="visit" aria-labelledby="visit-title">
             <div class="section-heading">
                 <div><p class="eyebrow"><span class="section-number">04 /</span> Plan your visit</p><h2 id="visit-title">Good care starts here<span class="accent">.</span></h2></div>
-                <a class="text-link" href="{{ $studio->directions_url }}" target="_blank" rel="noopener noreferrer" data-directions>Get Directions <i class="icon bi bi-arrow-up-right" aria-hidden="true"></i></a>
             </div>
+            @php
+                $savedEmbed = $studio->map_embed_url;
+                $mapEmbedUrl = is_string($savedEmbed) ? \App\Support\GoogleMapsEmbed::normalize($savedEmbed) : null;
+            @endphp
             <div class="visit-grid {{ $hasHours ? '' : 'visit-grid--no-hours' }}">
                 <div class="location-card">
-                    <!-- Useful no-embed fallback. This illustration is not a geographic map. -->
-                    <div class="map-fallback">
-                        <svg class="map-roads" viewBox="0 0 800 400" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
-                            <g class="map-blocks"><path d="M0 0h165v105H0zm195 0h155v105H195zm185 0h170v105H380zm200 0h220v105H580zM0 140h165v105H0zm195 0h155v105H195zm185 0h170v105H380zm200 0h220v105H580zM0 280h165v120H0zm195 0h155v120H195zm185 0h170v120H380zm200 0h220v120H580z"/></g>
-                            <path class="map-route" d="M-30 337H280V123h310V-20"/>
-                            <path class="map-road" d="m-20 10 870 440M-20 40l870 440"/>
-                        </svg>
-                        <span class="map-label micro">Illustrative location · {{ $studio->city ?: $studio->name }}</span>
-                        <div class="map-pin" aria-hidden="true"><i class="icon bi bi-geo-alt" aria-hidden="true"></i></div>
-                        <div class="map-message"><span class="micro">Map preview unavailable</span><p>We'll point you<br>in the right direction.</p><a class="button button-light" href="{{ $studio->directions_url }}" target="_blank" rel="noopener noreferrer" data-directions>Open Google Maps <i class="icon bi bi-arrow-up-right" aria-hidden="true"></i></a></div>
+                    @if ($mapEmbedUrl)
+                        <div class="studio-map">
+                            <iframe
+                                src="{{ $mapEmbedUrl }}"
+                                title="Google Map for {{ $studio->name }}"
+                                loading="lazy"
+                                referrerpolicy="strict-origin-when-cross-origin"
+                                allowfullscreen
+                            ></iframe>
+                        </div>
+                    @else
+                        <!-- Useful no-embed fallback. This illustration is not a geographic map. -->
+                        <div class="map-fallback">
+                            <svg class="map-roads" viewBox="0 0 800 400" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+                                <g class="map-blocks"><path d="M0 0h165v105H0zm195 0h155v105H195zm185 0h170v105H380zm200 0h220v105H580zM0 140h165v105H0zm195 0h155v105H195zm185 0h170v105H380zm200 0h220v105H580zM0 280h165v120H0zm195 0h155v120H195zm185 0h170v120H380zm200 0h220v120H580z"/></g>
+                                <path class="map-route" d="M-30 337H280V123h310V-20"/>
+                                <path class="map-road" d="m-20 10 870 440M-20 40l870 440"/>
+                            </svg>
+                            <span class="map-label micro">Illustrative location · {{ $studio->city ?: $studio->name }}</span>
+                            <div class="map-pin" aria-hidden="true"><i class="icon bi bi-geo-alt" aria-hidden="true"></i></div>
+                            <div class="map-message"><span class="micro">Map preview unavailable</span><p>We'll point you<br>in the right direction.</p></div>
+                        </div>
+                    @endif
+                    <div class="location-footer">
+                        <div class="location-address"><i class="icon bi bi-geo-alt" aria-hidden="true"></i><div><h3>{{ $studio->name }}</h3><address>{{ $studio->address }}</address></div></div>
+                        <a class="button button-red" href="{{ $studio->directions_url }}" target="_blank" rel="noopener noreferrer" data-directions><i class="icon bi bi-send" aria-hidden="true"></i> Get Directions <i class="icon bi bi-arrow-right" aria-hidden="true"></i></a>
                     </div>
-                    <div class="location-address"><i class="icon bi bi-geo-alt" aria-hidden="true"></i><div><h3>{{ $studio->name }}</h3><address>{{ $studio->address }}</address></div></div>
                 </div>
                 @if ($hasHours)
                     <section class="hours-card" id="opening-hours" aria-labelledby="hours-title">

@@ -5,6 +5,7 @@ namespace App\Http\Requests\Admin;
 use App\Models\ContentUrl;
 use App\Models\Studio;
 use App\Services\StudioUrls;
+use App\Support\GoogleMapsEmbed;
 use App\Support\StudioServices;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -15,6 +16,10 @@ class SaveStudioRequest extends FormRequest
     {
         if (! $this->user()?->can('manage-studios')) {
             return;
+        }
+        $embed = $this->input('map_embed_url');
+        if (is_string($embed) && ($url = GoogleMapsEmbed::normalize($embed)) !== null) {
+            $this->merge(['map_embed_url' => $url]);
         }
         if ($this->boolean('studio_details_present')) {
             $this->merge(['services' => $this->input('services'), 'opening_hours' => $this->input('opening_hours')]);
@@ -111,6 +116,14 @@ class SaveStudioRequest extends FormRequest
                     }
                 },
             ],
+            'map_embed_url' => [
+                'bail', 'nullable', 'string', 'max:12000',
+                function ($attribute, $value, $fail) {
+                    if (GoogleMapsEmbed::normalize($value) === null) {
+                        $fail('Paste a Google Maps embed URL or the iframe HTML from Share → Embed a map.');
+                    }
+                },
+            ],
             'latitude' => ['nullable', 'required_with:longitude', 'numeric', 'between:-90,90'],
             'longitude' => ['nullable', 'required_with:latitude', 'numeric', 'between:-180,180'],
             'status' => ['required', Rule::in(Studio::STATUSES)],
@@ -171,6 +184,7 @@ class SaveStudioRequest extends FormRequest
             'slug' => 'Studio Page URL',
             'phones.*' => 'phone number',
             'map_url' => 'Google Maps link',
+            'map_embed_url' => 'Google Map Embed URL',
             'country_code' => 'country code',
             'sort_order' => 'display order',
         ];
