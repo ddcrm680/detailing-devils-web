@@ -13,7 +13,15 @@ class GoogleMapsEmbed
             return null;
         }
         if (str_starts_with($url, '<')) {
-            if (! preg_match('~\A<iframe\b[^<>]*>\s*</iframe>\z~isD', $url)) {
+            if (! preg_match('~\A<iframe\b([^<>]*)>\s*</iframe>\z~isD', $url, $tag)) {
+                return null;
+            }
+            // Reject ambiguous attributes before libxml can silently discard duplicates.
+            $attributePattern = '/\s+([a-z][a-z0-9:-]*)(?:\s*=\s*(?:"[^"]*"|\'[^\']*\'|[^\s"\'=<>`]+))?/i';
+            preg_match_all($attributePattern, $tag[1], $attributes);
+            $names = array_map('strtolower', $attributes[1]);
+            if (trim(preg_replace($attributePattern, '', $tag[1])) !== ''
+                || count($names) !== count(array_unique($names))) {
                 return null;
             }
             $previous = libxml_use_internal_errors(true);
